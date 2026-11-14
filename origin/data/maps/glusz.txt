@@ -1,0 +1,12 @@
+   ~~~~ Okolice Głuszca ~~~~
+
+      {wzgorze_wartownicze}
+          |
+      {kapliczka_rozstaje}
+          |
+      {gluszec}-----------{bor_klusownikow}----------{kamieniolom}
+          |
+      {bagna_szarej_wody}
+
+   dalekie szlaki (dni drogi)
+      {stary_trakt}    {spalona_osada}    {stara_kopalnia}

@@ -1,0 +1,49 @@
+# Cykl D1 – ledger (ustalenia i odłożone uwagi)
+
+> Wykonanie: superpowers:executing-plans (inline), gałąź cykl-d1, baza f9a8eab. Przegląd końcowy: świeży recenzent (opus).
+
+- Executor: executing-plans (inline), branch cykl-d1, base f9a8eab
+- Pre-flight:
+- - T2→T3: regenerate takes context.phenomenon (T2); advanceTime supplies activePhenomenon (T3) — consistent.
+- - T1→T4: scene combat `loot` validated in T1, executed in T4 — consistent.
+- - T2/T3→T5: setExposed/carriedArtifacts/activePhenomenon consumed by exposureRisk — consistent.
+- - T5→T6: statusBar assertion deferred from T5 to T6 by plan — add Review Focus 3 statusBar assertion in T6.
+- Task 1: Ruling: spec scene `{ type: "phenomenon", id: "<zjawisko>", next }` collides with the scene's own `id` and the engine's `goto` — scene uses `phenomenon: "<id>"` + `goto`; message `story.json › s › phenomenon: nieznane zjawisko "x"` — cost if wrong: rename one field.
+- Task 1: Ruling: `phenomenon` scene schema + its validation test moved to Task 3 (registry test demands a runner per SCENE_TYPES entry; runner needs T3 runtime) — data.js check stays in T1 — cost: none.
+- Task 1: Ruling: added `isWeapon(item)` (weapon or artifact with slot bron) in items.js; artifact uniqueness also enforced in enemy loot (validateLoot shared with scene loot); world.travel limited to normal|slow|dangerous — cost: D2 may extend the enum.
+- Task 1: Ruling: phenomenon validation lives in new src/systems/phenomena.js (T3 adds runtime there) — cost: none.
+- Task 1: complete (commits f9a8eab..611accf, tests: npm test → ℹ duration_ms 6090.9551)
+- Task 2: Ruling: regenerate reads the time-of-day at the start of the stretch (advanceTime will call it before moving the clock) — cost: an hour crossing 20:00 counts as day.
+- Task 2: Ruling: duplicate-artifact refusal also handled in callers now (runActions giveItem skips without event, shop.buy → inv.artifactUnique before payment, reward skips an owned artifact) — Review Focus 1 — cost: none.
+- Task 2: Ruling: save repair warnings for artifacts/phenomenon grouped under one ui key `load.repair.mystic`; malformed phenomenon object → null — cost: none.
+- Task 2: complete (commits 611accf..9f4c462, tests: npm test → ℹ duration_ms 5914.7514)
+- Task 3: Ruling: daily roll happens only when state.world exists (bare combat test states skip it) and consumes the shared rng — RNG paths of existing e2e seeds shifted; two e2e assertions were seed-fragile (bandage regex missed the "Otrzymujesz: Opatrunek." summary form; C1 money ignored the road purse like B2 already did) — fixed the tests, not the engine — cost: if a future seed makes the C1 road a flee, its money formula needs a guard.
+- Task 3: Ruling: rollDaily skips a phenomenon that hits but has no fitting hour left today and tries the next one — spec silent — cost: slightly higher frequency late in the day.
+- Task 3: Ruling: added `announcedPhenomenon(state,data)` (omen shown, not started) for the status bar in T6; inventory_screen test probe now passes an rng to advanceTime (rng is required by contract).
+- Task 3: complete (commits 9f4c462..e4d80c6, tests: npm test → ℹ duration_ms 6015.2221)
+- Task 4: Ruling: extraDamage (ostrze_ognia) applies to every non-thrown weapon blow in `strike` (fists and firearms via strike included); its own roll and type, through mitigate without flat armor, added into the blow's damage with `ev.extra` for UI — spec silent on armor — cost: fire slightly stronger vs armored foes.
+- Task 4: Ruling: ability option/technique entries carry an extra `target` field (self|enemy) for the T6 picker; reason order: noAp → notFull → (viaHp|noHp|noCharge) — cost: none.
+- Task 4: Ruling: phenomenon enemy damage goes in as the `bonus` of rollDamage (before mitigation); `duration` option added to applyEffect/applyToPlayer/applyToEnemy for ability effects — cost: none.
+- Task 4: Ruling: tests for T4 live in new test/artifacts_combat.test.js instead of combat_techniques/combat_turn — cost: none.
+- Task 4: complete (commits e4d80c6..03e4673, tests: npm test → ℹ duration_ms 6442.0923)
+- Task 5: Ruling: the expose question shows whenever an artifact is in the bag unless the scene sets `allowExposure: false` (the field pre-existed in the rest schema; spec asks always) — cost: content must opt out explicitly.
+- Task 5: Ruling: the thief's hour counts as slept (clock + heal for it, then the roll); clearBySleep gets the slept hours; summary shows slept hours plus `rest.interrupted` — matches spec example "2nd hour → heal 2 h, time +2 h".
+- Task 5: complete (commits 03e4673..4d7c0ee, tests: npm test → ℹ duration_ms 6319.6444)
+- Task 6: Ruling: spec says the status bar is cut "as today", but nothing cut it — statusBar now takes `width` (all scene callers pass io.columns; ⚡ counted 2 columns) and cuts the tail with "…" (character/HP part goes first when the line is long) — cost: on narrow terminals HP may be cut.
+- Task 6: Ruling: technique label shows the charge cost as "◆50" ("Artefakt: Płonące ostrze (◆50 · 2 PA)"); available rows carry no extra hint; ability entries carry `effect` for the description — cost: copy tweak.
+- Task 6: Ruling: Kamień Zmierzchu description shortened to fit 80 columns; UI tests in new test/mystic_ui.test.js; Review Focus 3 statusBar check (stolen talisman → no ◆) included there.
+- Task 6: complete (commits 4d7c0ee..2f688cb, tests: npm test → ℹ duration_ms 6425.0926)
+- Task 7: Ruling: driver gained two plan steps: `{ expose }` (answered only if the rest asked, else skipped — keeps old sequences valid on flee paths) and `{ pick: label }` (row number of a label; inventory row numbers depend on the RNG path); existing FROM_COURIER/TTY/cli sequences got `{ expose: "2" }` — cost: none.
+- Task 7: Ruling: spear-class D1 e2e wins the road via the existing SPEAR_TECHNIQUES plan (throw/pickup) — cost: none. Manual pipe run (60 recorded answers, seed 7) exits 0; stone reaches 100% overnight.
+- Task 7: Note: data loot was added before the new e2e was written, so those e2e tests did not fail first (the suite's existing e2e did fail first and were adapted).
+- Task 7: complete (commits 2f688cb..4f697fb, tests: npm test → ℹ duration_ms 6806.5498)
+- Final review: fresh reviewer (opus) — 0 Critical, 2 Important, 6 Minor.
+- Final: fixed I1 status bar hid HP when a phenomenon + artifact were shown at 80 cols — character part now never gives way; mystic tags go short ("⚡ X ~2h", "◆ 64%"), then the phenomenon name is cut, then tags drop — test "statusBar: … HP zostaje widoczne" RED→GREEN, suite 689/689.
+- Final: Ruling: I2 exposing a WORN artifact gives no faster charge (spec only removes the bag ×0.5 and applies phenomenon "exposed" effects) but the prompt promised "ładuje się szybciej" — fixed the copy to the true trade-off (absorbs phenomena, good and bad; thief risk), did not invent an exposure multiplier (new rules number = design call for the user) — test "pytanie o wystawienie nie obiecuje…" RED→GREEN, suite 690/690 — cost if wrong: if the user wants exposure to speed charging, add `rules.artifacts.exposedRegenMultiplier`.
+- Final: minor (deferred): M1 near:<tag> from enemies rarely applies after a win (finishCombat advances time with enemies already dead).
+- Final: minor (deferred): M2 phenomenon start/end inside a fight's minutes only shows after the summary.
+- Final: minor (deferred): M3 "Płonące ostrze" fire bonus also applies to firearm shots and fists.
+- Final: minor (deferred): M4 thief with an empty purse prints "−0 gr".
+- Final: minor (deferred): M5 artifacts can be dropped and lost (needs a no-drop flag before E's Miecz/Włócznia Gwiazd).
+- Final: minor (deferred): M6 a phenomenon running past midnight marks the next day as rolled without a roll.
+- Final: minor (deferred): whenEmpty.costHp 0 passes validation (free ability when empty) — consider min 1.

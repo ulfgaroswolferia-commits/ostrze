@@ -1,0 +1,1823 @@
+{
+ "Pogórze": {
+  "data": [
+   "Pogórzem",
+   "Pogórza",
+   "Pogórze"
+  ]
+ },
+ "Wieś Brzezina / Brzezina": {
+  "data": [
+   "Brzezina",
+   "Brzeziny"
+  ],
+  "extra": [
+   "Brzezinie"
+  ]
+ },
+ "Wilczy Bród": {
+  "data": [
+   "Wilczego Brodu",
+   "Wilczy Bród",
+   "Wilczym Brodzie",
+   "Wilczemu Brodowi"
+  ],
+  "extra": [
+   "Wilczym Brodem"
+  ]
+ },
+ "Bród (krótko)": {
+  "data": [
+   "Brodzie",
+   "Brodu",
+   "Brodowi"
+  ],
+  "extra": [
+   "Brodem",
+   "pod Brodem"
+  ]
+ },
+ "Strażnica Wilczy Bród": {
+  "data": [
+   "Strażnica Wilczy Bród"
+  ]
+ },
+ "Wilcza Nora": {
+  "data": [
+   "Wilcza Nora"
+  ],
+  "extra": [
+   "Wilczej Norze"
+  ]
+ },
+ "Kamienna Przełęcz": {
+  "data": [
+   "Kamienną Przełęczą",
+   "Kamiennej Przełęczy",
+   "Kamienna Przełęcz",
+   "Kamienną Przełęcz"
+  ]
+ },
+ "Las Rubieży": {
+  "data": [
+   "Las Rubieży",
+   "Lasu Rubieży",
+   "Lesie Rubieży",
+   "Lasem Rubieży"
+  ]
+ },
+ "Stary młyn nad rzeką": {
+  "data": [
+   "Stary młyn nad rzeką"
+  ]
+ },
+ "Stary młyn": {
+  "data": [
+   "Stary młyn",
+   "Starym młynie",
+   "Starego młyna",
+   "starym młynie"
+  ]
+ },
+ "Trakt kupiecki": {
+  "data": [
+   "Trakt kupiecki",
+   "Trakcie kupieckim"
+  ],
+  "extra": [
+   "Traktem kupieckim",
+   "trakcie kupieckim",
+   "Trakt Kupiecki"
+  ]
+ },
+ "Leśniczówka": {
+  "data": [
+   "Leśniczówka",
+   "Leśniczówki",
+   "Leśniczówce"
+  ]
+ },
+ "Ruiny strażnicy": {
+  "data": [
+   "Ruiny strażnicy",
+   "ruinach strażnicy",
+   "Ruinach strażnicy"
+  ]
+ },
+ "Ostoja zbójców": {
+  "data": [
+   "Ostoja zbójców"
+  ],
+  "extra": [
+   "Ostoi zbójców"
+  ]
+ },
+ "Twierdza graniczna": {
+  "data": [
+   "Twierdza graniczna"
+  ],
+  "extra": [
+   "twierdzy granicznej"
+  ]
+ },
+ "Osada Głuszec / Głuszec": {
+  "data": [
+   "Głuszcu",
+   "Głuszca",
+   "Głuszec",
+   "Głuszcem"
+  ]
+ },
+ "Okolice Głuszca": {
+  "data": [
+   "Okolice Głuszca"
+  ]
+ },
+ "Bór kłusowników": {
+  "data": [
+   "Bór kłusowników",
+   "Borze kłusowników"
+  ]
+ },
+ "Stary trakt": {
+  "data": [
+   "starym trakcie",
+   "Stary trakt",
+   "Starym trakcie",
+   "Starego traktu",
+   "Starym traktem"
+  ]
+ },
+ "Kapliczka na rozstajach": {
+  "data": [
+   "Kapliczka na rozstajach",
+   "kapliczki na rozstajach",
+   "kapliczce na rozstajach"
+  ]
+ },
+ "Kamieniołom": {
+  "data": [
+   "Kamieniołom",
+   "kamieniołomie",
+   "kamieniołomu"
+  ],
+  "extra": [
+   "Kamieniołomie"
+  ]
+ },
+ "Bagna Szarej Wody": {
+  "data": [
+   "Bagien Szarej Wody",
+   "Bagna Szarej Wody",
+   "Bagnach Szarej Wody"
+  ]
+ },
+ "Wzgórze wartownicze": {
+  "data": [
+   "Wzgórze wartownicze",
+   "Wzgórzu wartowniczym"
+  ]
+ },
+ "Szklane Wzgórza": {
+  "data": [
+   "Szklane Wzgórza",
+   "Szklanymi Wzgórzami"
+  ],
+  "extra": [
+   "Szklanych Wzgórzach",
+   "Szklanych Wzgórz"
+  ]
+ },
+ "Szklane Wzgórze": {
+  "data": [
+   "Szklanym Wzgórzu"
+  ],
+  "extra": [
+   "Szklane Wzgórze",
+   "Szklanego Wzgórza"
+  ]
+ },
+ "Obserwatorium na Szklanym Wzgórzu": {
+  "data": [
+   "Obserwatorium na Szklanym Wzgórzu"
+  ]
+ },
+ "Obserwatorium": {
+  "data": [
+   "Obserwatorium",
+   "obserwatorium"
+  ]
+ },
+ "Pole Szkła": {
+  "data": [
+   "Pole Szkła",
+   "Polu Szkła",
+   "Pola Szkła",
+   "pola szkła"
+  ]
+ },
+ "Krater Spadłej Gwiazdy": {
+  "data": [
+   "Krater Spadłej Gwiazdy"
+  ],
+  "extra": [
+   "Kraterze Spadłej Gwiazdy"
+  ]
+ },
+ "Krąg Menhirów": {
+  "data": [
+   "Krąg Menhirów",
+   "Kręgu Menhirów"
+  ]
+ },
+ "Wrak Maszyny": {
+  "data": [
+   "Wrak Maszyny",
+   "wraku maszyny"
+  ]
+ },
+ "Zapadlisko Ciszy": {
+  "data": [
+   "Zapadlisko Ciszy",
+   "Zapadlisku Ciszy"
+  ]
+ },
+ "Zapadlisko (krótko)": {
+  "data": [
+   "Zapadlisko",
+   "zapadliska",
+   "Zapadlisku",
+   "zapadlisku",
+   "zapadlisko"
+  ]
+ },
+ "Ostatnia Strażnica": {
+  "data": [
+   "Ostatniej Strażnicy",
+   "Ostatnia Strażnica"
+  ]
+ },
+ "Spalona osada": {
+  "data": [
+   "Spalona osada",
+   "spalonej osadzie"
+  ]
+ },
+ "Pogorzelisko": {
+  "data": [
+   "Pogorzelisko",
+   "pogorzeliska",
+   "pogorzelisko"
+  ],
+  "extra": [
+   "pogorzelisku"
+  ]
+ },
+ "Stara kopalnia": {
+  "data": [
+   "Stara kopalnia",
+   "starej kopalni"
+  ]
+ },
+ "łódź z nieba": {
+  "data": [
+   "łódź z nieba"
+  ],
+  "extra": [
+   "łodzi z nieba"
+  ]
+ },
+ "Rozbita łódź z nieba": {
+  "data": [
+   "Rozbita łódź z nieba"
+  ]
+ },
+ "Ruiny stacji": {
+  "data": [
+   "Ruiny stacji"
+  ]
+ },
+ "Wronia Góra": {
+  "data": [
+   "Wroniej Górze",
+   "Wronią Górą",
+   "Wronią Górę"
+  ],
+  "extra": [
+   "Wronia Góra"
+  ]
+ },
+ "Obóz na Wroniej Górze": {
+  "data": [
+   "Obozu na Wroniej Górze",
+   "Obóz na Wroniej Górze",
+   "obozie na Wroniej Górze"
+  ]
+ },
+ "Szara (rzeka)": {
+  "data": [
+   "na Szarej",
+   "Nad Szarą",
+   "i Szara robi"
+  ],
+  "extra": [
+   "wzdłuż Szarej",
+   "Szara płynie"
+  ]
+ },
+ "Front nad Szarą": {
+  "data": [
+   "Front nad Szarą"
+  ],
+  "extra": [
+   "Froncie nad Szarą"
+  ]
+ },
+ "Przeprawa przez Szarą": {
+  "data": [
+   "Przeprawa przez Szarą"
+  ],
+  "extra": [
+   "przeprawie przez Szarą"
+  ]
+ },
+ "Most na Szarej": {
+  "data": [
+   "most na Szarej",
+   "Most na Szarej",
+   "mostu na Szarej",
+   "moście na Szarej"
+  ]
+ },
+ "Pole sprzed trzech dni": {
+  "data": [
+   "Pole sprzed trzech dni"
+  ]
+ },
+ "Skjeldowo": {
+  "data": [
+   "Skjeldowem",
+   "Skjeldowo"
+  ],
+  "extra": [
+   "Skjeldowa"
+  ]
+ },
+ "Ruiny fortu granicznego": {
+  "data": [
+   "Ruiny fortu granicznego"
+  ]
+ },
+ "Przedni obóz cesarski": {
+  "data": [
+   "Przedni obóz cesarski"
+  ],
+  "extra": [
+   "przednim obozie cesarskim"
+  ]
+ },
+ "Przedni obóz Jarnowian": {
+  "data": [
+   "Przedni obóz Jarnowian"
+  ]
+ },
+ "Wzgórze Wisielców": {
+  "data": [
+   "Wzgórza Wisielców",
+   "Wzgórze Wisielców"
+  ]
+ },
+ "Jar Dezerterów": {
+  "data": [
+   "Jar Dezerterów"
+  ],
+  "extra": [
+   "Jarze Dezerterów"
+  ]
+ },
+ "Ulfgród": {
+  "data": [
+   "Ulfgrodu",
+   "Ulfgród",
+   "Ulfgrodzie"
+  ]
+ },
+ "Pod Murem": {
+  "data": [
+   "Pod Murem"
+  ]
+ },
+ "Targ Pod Murem": {
+  "data": [
+   "Targ Pod Murem"
+  ],
+  "extra": [
+   "Targu pod Murem"
+  ]
+ },
+ "Zaułek Szklarzy": {
+  "data": [
+   "Zaułek Szklarzy",
+   "Zaułku Szklarzy"
+  ]
+ },
+ "Zaułek Garncarzy": {
+  "data": [
+   "Zaułka Garncarzy"
+  ]
+ },
+ "Dom Ciszy": {
+  "data": [
+   "Dom Ciszy",
+   "Domu Ciszy"
+  ]
+ },
+ "Krypta Ciszy": {
+  "data": [
+   "Krypta Ciszy"
+  ],
+  "extra": [
+   "Krypcie Ciszy"
+  ]
+ },
+ "Port rzeczny": {
+  "data": [
+   "Port rzeczny"
+  ],
+  "extra": [
+   "porcie rzecznym"
+  ]
+ },
+ "Koszary miejskie": {
+  "data": [
+   "Koszary miejskie"
+  ]
+ },
+ "Cmentarz zbiorowy": {
+  "data": [
+   "Cmentarz zbiorowy",
+   "cmentarzu zbiorowym",
+   "cmentarza zbiorowego"
+  ]
+ },
+ "Pałac cesarski": {
+  "data": [
+   "Pałac cesarski"
+  ]
+ },
+ "wodociągi": {
+  "data": [
+   "wodociągi",
+   "Wodociągi",
+   "wodociągach",
+   "wodociągowy"
+  ]
+ },
+ "Stare wodociągi": {
+  "data": [
+   "Stare wodociągi",
+   "starych wodociągach",
+   "stare wodociągi"
+  ]
+ },
+ "Opuszczony klasztor": {
+  "data": [
+   "Opuszczony klasztor"
+  ]
+ },
+ "Pod pałacem": {
+  "data": [
+   "lochów pod pałacem",
+   "Pod pałacem",
+   "Loch pod pałacem"
+  ],
+  "extra": [
+   "lochu pod pałacem"
+  ]
+ },
+ "Loch pod pałacem": {
+  "data": [
+   "lochów pod pałacem",
+   "Loch pod pałacem"
+  ],
+  "extra": [
+   "lochu pod pałacem"
+  ]
+ },
+ "Jarnowo": {
+  "data": [
+   "Jarnowo",
+   "Jarnowa",
+   "Jarnowie"
+  ]
+ },
+ "Wyspa Jarnowa": {
+  "data": [
+   "Wyspa Jarnowa"
+  ]
+ },
+ "Morze przy Jarnowie": {
+  "data": [
+   "Morze przy Jarnowie"
+  ]
+ },
+ "przystań": {
+  "data": [
+   "Przystani",
+   "Przystań",
+   "przystani",
+   "przystanią"
+  ]
+ },
+ "Przystań Jarnowo": {
+  "data": [
+   "Przystani Jarnowo",
+   "Przystań Jarnowo"
+  ]
+ },
+ "Stocznia": {
+  "data": [
+   "stoczni",
+   "Stocznia",
+   "stocznia",
+   "stocznią"
+  ]
+ },
+ "Kuźnie wyspiarzy": {
+  "data": [
+   "kuźniach wyspiarzy",
+   "Kuźnia wyspiarzy",
+   "Kuźnie wyspiarzy",
+   "kuźni wyspiarzy"
+  ]
+ },
+ "Cmentarz Łodzi": {
+  "data": [
+   "Cmentarzu Łodzi",
+   "Cmentarz Łodzi"
+  ]
+ },
+ "Obóz hetmana": {
+  "data": [
+   "Obóz hetmana",
+   "obozu hetmana",
+   "obozie hetmana",
+   "obóz hetmana"
+  ]
+ },
+ "czarne szkło": {
+  "data": [
+   "czarnym szkle",
+   "czarnego szkła",
+   "Czarnego Szkła",
+   "Czarne Szkło",
+   "Czarne szkło"
+  ]
+ },
+ "Dom z Czarnego Szkła": {
+  "data": [
+   "Dom z Czarnego Szkła",
+   "Domu z Czarnego Szkła"
+  ]
+ },
+ "Wraki floty": {
+  "data": [
+   "Wraki floty"
+  ]
+ },
+ "Łysa Skała": {
+  "data": [
+   "Łysą Skałę",
+   "Łysej Skały",
+   "Łysej Skale",
+   "Łysa Skała"
+  ]
+ },
+ "Wir na Łysej Skale": {
+  "data": [
+   "Wir na Łysej Skale"
+  ]
+ },
+ "Rzeczka": {
+  "data": [
+   "Rzeczce",
+   "Rzeczki",
+   "Rzeczka"
+  ]
+ },
+ "Krwawa Łąka": {
+  "data": [
+   "Krwawą Łąką"
+  ],
+  "extra": [
+   "Krwawej Łące"
+  ]
+ },
+ "Karczma „Pod Zdechłym Kogutem”": {
+  "data": [
+   "Pod Zdechłym Kogutem"
+  ]
+ },
+ "Karczma „Pod Wilczym Kłem”": {
+  "data": [
+   "Pod Wilczym Kłem"
+  ]
+ },
+ "Karczma „Pod Pękniętym Dzwonem”": {
+  "data": [
+   "Pod Pękniętym Dzwonem"
+  ]
+ },
+ "Karczma „Pod Kotwicą”": {
+  "data": [
+   "Pod Kotwicą"
+  ]
+ },
+ "Straż Bramy": {
+  "data": [
+   "Straż Bramy"
+  ]
+ },
+ "Komnata Rdzenia": {
+  "data": [
+   "Komnata Rdzenia",
+   "komnaty Rdzenia"
+  ],
+  "extra": [
+   "Komnacie Rdzenia"
+  ]
+ },
+ "Tablica ogłoszeń": {
+  "data": [
+   "Tablica ogłoszeń",
+   "tablicy ogłoszeń"
+  ]
+ },
+ "grosze (kwota słownie)": {
+  "data": [
+   "Sześćdziesiąt groszy",
+   "dziewięćdziesiąt groszy",
+   "dwóch groszy",
+   "kilka groszy",
+   "pięć groszy",
+   "dwanaście groszy",
+   "sześćdziesięciu groszy",
+   "osiemnaście groszy"
+  ],
+  "extra": [
+   "dwieście groszy"
+  ]
+ },
+ "gr (skrót waluty)": {
+  "data": [
+   "8 gr",
+   "3 gr",
+   "2 gr",
+   "25 gr",
+   "20 gr",
+   "42 gr",
+   "31 gr",
+   "68 gr"
+  ]
+ },
+ "burza iskier": {
+  "data": [
+   "Burza iskier",
+   "burzy iskier",
+   "burza iskier"
+  ]
+ },
+ "kamień z nieba": {
+  "data": [
+   "kamień z nieba"
+  ]
+ },
+ "Matka (bogini)": {
+  "data": [
+   "„Niech cię Matka",
+   "Matką Boską"
+  ]
+ },
+ "Bóg": {
+  "data": [
+   "Bóg",
+   "Boże",
+   "Bogu",
+   "Boga"
+  ]
+ },
+ "Kupała": {
+  "data": [
+   "Kupałę"
+  ]
+ },
+ "zakonnice": {
+  "data": [
+   "Zakonnice",
+   "zakonnice"
+  ]
+ },
+ "Strefa zamknięta": {
+  "data": [
+   "Strefa zamknięta"
+  ]
+ },
+ "ocalały": {
+  "data": [
+   "ocalałych",
+   "ocalałego",
+   "ocalały",
+   "ocalałym"
+  ]
+ },
+ "szkoła ostrza": {
+  "data": [
+   "szkoła ostrza",
+   "Szkoła ostrza",
+   "szkoły ostrza"
+  ],
+  "extra": [
+   "szkole ostrza"
+  ]
+ },
+ "delegacja": {
+  "data": [
+   "delegacji",
+   "Delegacja",
+   "delegacją"
+  ]
+ },
+ "danina": {
+  "data": [
+   "daninę",
+   "Daninę",
+   "daniny",
+   "daniną",
+   "danina"
+  ]
+ },
+ "artefakt": {
+  "data": [
+   "artefaktów",
+   "artefakty",
+   "artefakt",
+   "Artefakt",
+   "artefaktu"
+  ]
+ },
+ "gwiezdny": {
+  "data": [
+   "gwiezdne",
+   "gwiezdnych",
+   "gwiezdnego"
+  ]
+ },
+ "upiór": {
+  "data": [
+   "upiora",
+   "Upiór",
+   "Upiora",
+   "Upiory",
+   "Upiorom",
+   "upiór",
+   "upiory",
+   "upiorów"
+  ]
+ },
+ "Noc upiorów": {
+  "data": [
+   "Noc upiorów"
+  ]
+ },
+ "Istota": {
+  "data": [
+   "Istota",
+   "Istotę",
+   "Istoty",
+   "Istotą"
+  ],
+  "extra": [
+   "Istocie"
+  ]
+ },
+ "Szklanna": {
+  "data": [
+   "Szklanna"
+  ]
+ },
+ "Rdzeń": {
+  "data": [
+   "Rdzenia",
+   "Rdzeniem",
+   "Rdzeniowi"
+  ]
+ },
+ "Pełnomocnik": {
+  "data": [
+   "Pełnomocnik",
+   "Pełnomocnika",
+   "Pełnomocnikiem"
+  ]
+ },
+ "Wir (ten z gwiazd)": {
+  "data": [
+   "Wiru",
+   "Wir"
+  ]
+ },
+ "Ostrze Gwiazd": {
+  "data": [
+   "Ostrze Gwiazd"
+  ],
+  "extra": [
+   "Ostrza Gwiazd"
+  ]
+ },
+ "Para Gwiazd": {
+  "data": [
+   "Para Gwiazd"
+  ],
+  "extra": [
+   "Parze Gwiazd"
+  ]
+ },
+ "Kamień Zmierzchu": {
+  "data": [
+   "Kamień Zmierzchu"
+  ]
+ },
+ "obława": {
+  "data": [
+   "obława",
+   "Obława"
+  ],
+  "extra": [
+   "obławie"
+  ]
+ },
+ "plac ćwiczeń": {
+  "data": [
+   "placem ćwiczeń"
+  ]
+ },
+ "walka ćwiczebna": {
+  "data": [
+   "walkę ćwiczebną",
+   "Walka ćwiczebna"
+  ]
+ },
+ "pała (prolog)": {
+  "data": [
+   "pałę",
+   "pałami"
+  ]
+ },
+ "Wasza Wysokość (do muła)": {
+  "data": [
+   "Wasza Wysokość"
+  ]
+ },
+ "insygnia": {
+  "data": [
+   "Insygnia",
+   "insygnia"
+  ]
+ },
+ "bimber (w prozie)": {
+  "data": [
+   "Bimber",
+   "bimber",
+   "bimbrem"
+  ]
+ },
+ "zbój / zbójca": {
+  "data": [
+   "zbójców",
+   "Zbóje",
+   "Zbójcy",
+   "zbóje",
+   "zbójach",
+   "Zbójów",
+   "zbójów"
+  ]
+ },
+ "rozbójnik": {
+  "data": [
+   "Rozbójnicy"
+  ]
+ },
+ "zbir": {
+  "data": [
+   "Zbiry",
+   "zbirów"
+  ]
+ },
+ "herszt": {
+  "data": [
+   "Herszt",
+   "Herszta",
+   "herszta"
+  ]
+ },
+ "weksel": {
+  "data": [
+   "Weksel",
+   "weksel",
+   "weksla"
+  ]
+ },
+ "pokwitowanie (w prozie)": {
+  "data": [
+   "Pokwitowanie",
+   "pokwitowanie",
+   "pokwitowania"
+  ]
+ },
+ "Cesarstwo": {
+  "data": [
+   "Cesarstwo",
+   "cesarstwa",
+   "cesarstwie"
+  ]
+ },
+ "Cesarz": {
+  "data": [
+   "cesarza",
+   "Cesarz",
+   "cesarzu",
+   "cesarz",
+   "cesarzowi",
+   "Cesarza"
+  ]
+ },
+ "cesarski / cesarscy": {
+  "data": [
+   "Cesarski",
+   "Cesarskiego",
+   "Cesarska",
+   "cesarska",
+   "cesarski",
+   "Cesarscy",
+   "cesarskie",
+   "cesarskimi"
+  ]
+ },
+ "czerwone płaszcze": {
+  "data": [
+   "czerwonym płaszczu",
+   "czerwone płaszcze",
+   "czerwony płaszcz",
+   "czerwonych płaszczach",
+   "Czerwone płaszcze"
+  ]
+ },
+ "Najazd": {
+  "data": [
+   "Najazd"
+  ]
+ },
+ "Jarnowianie / jarnowski": {
+  "data": [
+   "Jarnowski",
+   "Jarnowskiego",
+   "Jarnowian",
+   "Jarnowianie",
+   "jarnowskimi",
+   "jarnowskich",
+   "Jarnowscy",
+   "jarnowski"
+  ]
+ },
+ "wyspiarze": {
+  "data": [
+   "wyspiarzy",
+   "wyspiarze",
+   "wyspiarz",
+   "Wyspiarze",
+   "wyspiarzom",
+   "wyspiarza"
+  ]
+ },
+ "wyspiarski": {
+  "data": [
+   "Wyspiarska"
+  ]
+ },
+ "Cesarscy zwiadowcy": {
+  "data": [
+   "Cesarski zwiadowca",
+   "Cesarskiego zwiadowcę",
+   "zwiadowcy cesarscy",
+   "Cesarscy zwiadowcy"
+  ]
+ },
+ "Komendant": {
+  "data": [
+   "Komendant Wszebor"
+  ],
+  "extra": [
+   "Komendant Bratosław"
+  ]
+ },
+ "Kapitan": {
+  "data": [
+   "Kapitan Bratosław"
+  ]
+ },
+ "Kapral": {
+  "data": [
+   "kaprala Żegoty",
+   "kapralem Żegotą",
+   "Kapral Żegota",
+   "kapral Żegota,"
+  ],
+  "extra": [
+   "Kapral Bratosław",
+   "kaprala Bratosław"
+  ]
+ },
+ "Sierżant": {
+  "data": [
+   "Sierżant Gniewosz"
+  ],
+  "extra": [
+   "Sierżant Bratosław"
+  ]
+ },
+ "Porucznik": {
+  "data": [
+   "Porucznik Rogala"
+  ],
+  "extra": [
+   "Porucznik Bratosław"
+  ]
+ },
+ "Setnik": {
+  "data": [
+   "Setnik Hauk"
+  ],
+  "extra": [
+   "Setnik Bratosław"
+  ]
+ },
+ "Hetman": {
+  "data": [
+   "Hetman Skjeldomir",
+   "hetmanem Skjeldomirem"
+  ],
+  "extra": [
+   "Hetman Bratosław",
+   "hetmanem Bratosław"
+  ]
+ },
+ "Kwatermistrz": {
+  "data": [
+   "Kwatermistrz Dobrogost"
+  ],
+  "extra": [
+   "Kwatermistrz Bratosław"
+  ]
+ },
+ "Marszałek": {
+  "data": [
+   "Marszałek Wsiewłod",
+   "marszałek Wsiewłod",
+   "marszałka Wsiewłoda"
+  ],
+  "extra": [
+   "Marszałek Bratosław",
+   "marszałka Bratosław"
+  ]
+ },
+ "Bosman": {
+  "data": [
+   "Bosman Hjorn"
+  ],
+  "extra": [
+   "Bosman Bratosław"
+  ]
+ },
+ "Szyper": {
+  "data": [
+   "Szyper Wiślak"
+  ],
+  "extra": [
+   "Szyper Bratosław"
+  ]
+ },
+ "Siostra": {
+  "data": [
+   "siostry Haliny.",
+   "Siostra Halina",
+   "siostrze Halinie",
+   "siostra Jadwiga"
+  ],
+  "extra": [
+   "Siostra Bratosław",
+   "siostrze Bratosław",
+   "siostry Bratosław"
+  ]
+ },
+ "Mistrz": {
+  "data": [
+   "mistrza Gnieworada,",
+   "Mistrz Gnieworad"
+  ],
+  "extra": [
+   "Mistrz Bratosław",
+   "mistrza Bratosław"
+  ]
+ },
+ "Instruktor": {
+  "data": [
+   "Instruktor Radogost"
+  ],
+  "extra": [
+   "Instruktor Bratosław"
+  ]
+ },
+ "Mruk": {
+  "data": [
+   "Mrukowymi",
+   "Mruk",
+   "Mrukowi",
+   "Mruka"
+  ]
+ },
+ "Atrament": {
+  "data": [
+   "Atrament"
+  ]
+ },
+ "Pieczątka": {
+  "data": [
+   "Pieczątka"
+  ]
+ },
+ "Łopata": {
+  "data": [
+   "Łopata"
+  ],
+  "extra": [
+   "Łopacie"
+  ]
+ },
+ "Gwóźdź": {
+  "data": [
+   "Gwóźdź",
+   "Gwoździa"
+  ]
+ },
+ "Rzepa": {
+  "data": [
+   "Rzepa"
+  ]
+ },
+ "Zgryzota": {
+  "data": [
+   "Zgryzota"
+  ]
+ },
+ "Żerdź": {
+  "data": [
+   "Żerdź"
+  ]
+ },
+ "Gruby": {
+  "data": [
+   "Sierżant Gruby"
+  ]
+ },
+ "Cienki": {
+  "data": [
+   "Wojmir Cienki"
+  ]
+ },
+ "Burczymucha": {
+  "data": [
+   "Burczymucha"
+  ]
+ },
+ "Gwizd": {
+  "data": [
+   "Gwizd"
+  ]
+ },
+ "Smyk": {
+  "data": [
+   "Smyk",
+   "Smykiem",
+   "Smykowi",
+   "Smyka"
+  ]
+ },
+ "Kruk": {
+  "data": [
+   "Kruka",
+   "Kruk"
+  ]
+ },
+ "Gnat": {
+  "data": [
+   "Gnat"
+  ]
+ },
+ "Kometa": {
+  "data": [
+   "Kometa"
+  ]
+ },
+ "Rudy": {
+  "data": [
+   "Rudy"
+  ]
+ },
+ "PA (punkty akcji)": {
+  "data": [
+   "PA"
+  ]
+ },
+ "Biegłość": {
+  "data": [
+   "Biegłość",
+   "biegłość"
+  ]
+ },
+ "Zasłona Zmierzchu": {
+  "data": [
+   "Zasłona Zmierzchu"
+  ]
+ },
+ "umiejętność wiodąca": {
+  "data": [
+   "Umiejętności wiodące",
+   "umiejętności wiodące",
+   "umiejętność wiodąca"
+  ]
+ },
+ "perk / talent": {
+  "data": [
+   "Perki",
+   "talent",
+   "talentów",
+   "perk"
+  ]
+ },
+ "ładunek": {
+  "data": [
+   "ładunku",
+   "ładunek",
+   "Ładunek"
+  ]
+ },
+ "zjawisko": {
+  "data": [
+   "Zjawisko"
+  ]
+ },
+ "zjawiska (l. mn.)": {
+  "data": [
+   "zjawiska",
+   "zjawisk"
+  ]
+ },
+ "pas (do ekwipunku)": {
+  "data": [
+   "pas",
+   "pasie",
+   "pasa",
+   "Pas"
+  ]
+ },
+ "zadanie": {
+  "data": [
+   "zadania",
+   "zadanie",
+   "Zadanie",
+   "zadań",
+   "zadaniu"
+  ]
+ },
+ "zlecenie": {
+  "data": [
+   "zlecenia",
+   "zlecenie",
+   "Zlecenia",
+   "zleceniu",
+   "Zlecenie",
+   "zleceń"
+  ]
+ },
+ "zdolność": {
+  "data": [
+   "zdolności",
+   "zdolność"
+  ]
+ },
+ "niewypał / zawodzi (broń palna)": {
+  "data": [
+   "Niewypał",
+   "niewypały"
+  ]
+ },
+ "torba": {
+  "data": [
+   "torby",
+   "Torby",
+   "torbą",
+   "torbie",
+   "torbę",
+   "torba",
+   "Torba"
+  ]
+ },
+ "leszy": {
+  "data": [
+   "leszemu",
+   "Leszy"
+  ]
+ },
+ "mora": {
+  "data": [
+   "Mora",
+   "mory"
+  ]
+ },
+ "list gończy": {
+  "data": [
+   "liście gończym"
+  ]
+ },
+ "Zręczność": {
+  "data": [
+   "Zręczność"
+  ]
+ },
+ "Krzepa": {
+  "data": [
+   "Krzepa"
+  ]
+ },
+ "Bystrość": {
+  "data": [
+   "Bystrość"
+  ]
+ },
+ "Ogłada": {
+  "data": [
+   "Ogłada"
+  ]
+ },
+ "Noc bez Gwiazd": {
+  "data": [
+   "Noc bez Gwiazd"
+  ]
+ },
+ "Mgła Ciszy": {
+  "data": [
+   "Mgła Ciszy"
+  ],
+  "extra": [
+   "Mgle Ciszy",
+   "w Mgle Ciszy"
+  ]
+ },
+ "Strażnik Progu": {
+  "data": [
+   "Strażnik Progu",
+   "Strażnika Progu"
+  ]
+ },
+ "Szeptacz": {
+  "data": [
+   "Szeptacz",
+   "Szeptacza"
+  ]
+ },
+ "Kustosz Kabli": {
+  "data": [
+   "Kustosz Kabli",
+   "Kustosza Kabli"
+  ]
+ },
+ "Nieśpiący": {
+  "data": [
+   "Nieśpiący",
+   "Nieśpiącego"
+  ]
+ },
+ "Pełnomocnik Rdzenia": {
+  "data": [
+   "Pełnomocnik Rdzenia",
+   "Pełnomocnika Rdzenia"
+  ]
+ },
+ "Strażnik Wiru": {
+  "data": [
+   "Strażnik Wiru",
+   "Strażnika Wiru"
+  ]
+ },
+ "Sługa Wiru": {
+  "data": [
+   "Sługa Wiru",
+   "Sługę Wiru"
+  ]
+ },
+ "Upiór schodów": {
+  "data": [
+   "Upiór schodów",
+   "Upiora schodów"
+  ]
+ },
+ "(uchwyt)": {
+  "data": [
+   "(uchwyt)"
+  ]
+ },
+ "(ostrzony)": {
+  "data": [
+   "(uchwyt, ostrzony)"
+  ]
+ },
+ "(okuty)": {
+  "data": [
+   "(uchwyt, okuty)"
+  ]
+ },
+ "(łoże)": {
+  "data": [
+   "(łoże)"
+  ]
+ },
+ "(ramię)": {
+  "data": [
+   "(łoże, ramię)"
+  ]
+ },
+ "(muszka)": {
+  "data": [
+   "(muszka)"
+  ]
+ },
+ "(spust)": {
+  "data": [
+   "(muszka, spust)"
+  ]
+ },
+ "(skóra)": {
+  "data": [
+   "(skóra)"
+  ]
+ },
+ "(płyty)": {
+  "data": [
+   "(skóra, płyty)"
+  ]
+ },
+ "Eskorta kupca Ostromira": {
+  "data": [
+   "Eskorta kupca Ostromira"
+  ]
+ },
+ "Lek dla Wrzoska": {
+  "data": [
+   "Lek dla Wrzoska"
+  ]
+ },
+ "Zboże dla młyna": {
+  "data": [
+   "Zboże dla młyna"
+  ]
+ },
+ "Dług kupca": {
+  "data": [
+   "Dług kupca"
+  ]
+ },
+ "List do leśniczego": {
+  "data": [
+   "List do leśniczego"
+  ]
+ },
+ "Kto pyta o ocalałych": {
+  "data": [
+   "Kto pyta o ocalałych"
+  ]
+ },
+ "Światło w młynie": {
+  "data": [
+   "Światło w młynie"
+  ]
+ },
+ "Zaginiony pasterz Borek": {
+  "data": [
+   "Zaginiony pasterz Borek"
+  ]
+ },
+ "Amulet z ruin": {
+  "data": [
+   "Amulet z ruin"
+  ]
+ },
+ "Swój w osadzie": {
+  "data": [
+   "Swój w osadzie"
+  ]
+ },
+ "Kłusownik i gajowy": {
+  "data": [
+   "Kłusownik i gajowy"
+  ]
+ },
+ "Dług młynarza": {
+  "data": [
+   "Dług młynarza"
+  ]
+ },
+ "Listy z tamtej strony": {
+  "data": [
+   "Listy z tamtej strony"
+  ]
+ },
+ "Kto sprzedał ocalałego": {
+  "data": [
+   "Kto sprzedał ocalałego"
+  ]
+ },
+ "Zwiad na wzgórzu": {
+  "data": [
+   "Zwiad na wzgórzu"
+  ]
+ },
+ "Fałszywe papiery": {
+  "data": [
+   "Fałszywe papiery"
+  ]
+ },
+ "Rannego nie zostawia się": {
+  "data": [
+   "Rannego nie zostawia się"
+  ]
+ },
+ "Wdowa po strażniku": {
+  "data": [
+   "Wdowa po strażniku"
+  ]
+ },
+ "Najemnik w karczmie": {
+  "data": [
+   "Najemnik w karczmie"
+  ]
+ },
+ "Zaginiona karawana": {
+  "data": [
+   "Zaginiona karawana"
+  ]
+ },
+ "Co widziała Ragnosława": {
+  "data": [
+   "Co widziała Ragnosława"
+  ]
+ },
+ "Swój w Obserwatorium": {
+  "data": [
+   "Swój w Obserwatorium"
+  ]
+ },
+ "Szkło z krateru": {
+  "data": [
+   "Szkło z krateru"
+  ]
+ },
+ "Pamięć kamieni": {
+  "data": [
+   "Pamięć kamieni"
+  ]
+ },
+ "Cesarski dezerter": {
+  "data": [
+   "Cesarski dezerter"
+  ]
+ },
+ "Dług Istoty": {
+  "data": [
+   "Dług Istoty"
+  ]
+ },
+ "Wieści z Głuszca": {
+  "data": [
+   "Wieści z Głuszca"
+  ]
+ },
+ "Przygotowania": {
+  "data": [
+   "Przygotowania"
+  ]
+ },
+ "Paczka dla młynarki": {
+  "data": [
+   "Paczka dla młynarki"
+  ]
+ },
+ "List od gońca": {
+  "data": [
+   "List od gońca"
+  ]
+ },
+ "Ostatni list żołnierza": {
+  "data": [
+   "Ostatni list żołnierza"
+  ]
+ },
+ "Kobiałka dla zielarki": {
+  "data": [
+   "Kobiałka dla zielarki"
+  ]
+ },
+ "Odłamki dla zbieracza": {
+  "data": [
+   "Odłamki dla zbieracza"
+  ]
+ },
+ "Dokąd dalej: Wilczy Bród": {
+  "data": [
+   "Dokąd dalej: Wilczy Bród"
+  ]
+ },
+ "Dokąd dalej: Głuszec": {
+  "data": [
+   "Dokąd dalej: Głuszec"
+  ]
+ },
+ "Dokąd dalej: Obserwatorium": {
+  "data": [
+   "Dokąd dalej: Obserwatorium"
+  ]
+ },
+ "Żołd dla garnizonu": {
+  "data": [
+   "Żołd dla garnizonu"
+  ]
+ },
+ "Most bez strażnika": {
+  "data": [
+   "Most bez strażnika"
+  ]
+ },
+ "Furman z beczkami": {
+  "data": [
+   "Furman z beczkami"
+  ]
+ },
+ "Studnia pod Skjeldowem": {
+  "data": [
+   "Studnia pod Skjeldowem"
+  ]
+ },
+ "Rannych się nie liczy": {
+  "data": [
+   "Rannych się nie liczy"
+  ]
+ },
+ "Dwóch dezerterów": {
+  "data": [
+   "Dwóch dezerterów"
+  ]
+ },
+ "Dokąd dalej: front": {
+  "data": [
+   "Dokąd dalej: front"
+  ]
+ },
+ "Ogień w Zaułku Szklarzy": {
+  "data": [
+   "Ogień w Zaułku Szklarzy"
+  ]
+ },
+ "Zaginiony skarbnik": {
+  "data": [
+   "Zaginiony skarbnik"
+  ]
+ },
+ "Wino dla koszar": {
+  "data": [
+   "Wino dla koszar"
+  ]
+ },
+ "Dług przekupki": {
+  "data": [
+   "Dług przekupki"
+  ]
+ },
+ "Cmentarz bez nazwisk": {
+  "data": [
+   "Cmentarz bez nazwisk"
+  ]
+ },
+ "List dla marszałka": {
+  "data": [
+   "List dla marszałka"
+  ]
+ },
+ "Przemyt z portu": {
+  "data": [
+   "Przemyt z portu"
+  ]
+ },
+ "Smyk i klucz": {
+  "data": [
+   "Smyk i klucz"
+  ]
+ },
+ "Dokąd dalej: Ulfgród": {
+  "data": [
+   "Dokąd dalej: Ulfgród"
+  ]
+ },
+ "Dokąd dalej: Pod pałacem": {
+  "data": [
+   "Dokąd dalej: Pod pałacem"
+  ]
+ },
+ "Łódź bez załogi": {
+  "data": [
+   "Łódź bez załogi"
+  ]
+ },
+ "Kowal i jego rusznice": {
+  "data": [
+   "Kowal i jego rusznice"
+  ]
+ },
+ "Wieści z lądu": {
+  "data": [
+   "Wieści z lądu"
+  ]
+ },
+ "Przejście Smyka": {
+  "data": [
+   "Przejście Smyka"
+  ]
+ },
+ "Rozpoznanie urządzenia": {
+  "data": [
+   "Rozpoznanie urządzenia"
+  ]
+ },
+ "Dokąd dalej: Jarnowo": {
+  "data": [
+   "Dokąd dalej: Jarnowo"
+  ]
+ },
+ "Dokąd dalej: Wir": {
+  "data": [
+   "Dokąd dalej: Wir"
+  ]
+ },
+ "Siodło dla zwiadowców": {
+  "data": [
+   "Siodło dla zwiadowców"
+  ]
+ },
+ "Świece na kapliczkę": {
+  "data": [
+   "Świece na kapliczkę"
+  ]
+ },
+ "Zwój dla pustelnika": {
+  "data": [
+   "Zwój dla pustelnika"
+  ]
+ },
+ "Żołd przegrany w kości": {
+  "data": [
+   "Żołd przegrany w kości"
+  ]
+ },
+ "Muł imieniem Cesarz": {
+  "data": [
+   "Muł imieniem Cesarz"
+  ]
+ },
+ "Jar bez wyjścia": {
+  "data": [
+   "Jar bez wyjścia"
+  ]
+ },
+ "Buty dla wartownika": {
+  "data": [
+   "Buty dla wartownika"
+  ]
+ },
+ "Chleb dla grabarza": {
+  "data": [
+   "Chleb dla grabarza"
+  ]
+ },
+ "Gwoździe dla stoczni": {
+  "data": [
+   "Gwoździe dla stoczni"
+  ]
+ }
+}

@@ -1,0 +1,44 @@
+{
+  "name": "ostrze",
+  "version": "0.3.0",
+  "description": "Voided: na przekór gwiazdom. Terminalowe RPG po polsku i po angielsku w mrocznym słowiańskim fantasy: ocalały z rzezi, wojna, stolica w stanie wojennym i dług u kogoś z gwiazd.",
+  "license": "MIT AND CC-BY-NC-SA-4.0",
+  "author": "Daniel Twiist Antonik <twisterson@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Twisterson/ostrze-gwiazd-cliRpgGame.git"
+  },
+  "homepage": "https://github.com/Twisterson/ostrze-gwiazd-cliRpgGame#readme",
+  "bugs": {
+    "url": "https://github.com/Twisterson/ostrze-gwiazd-cliRpgGame/issues"
+  },
+  "type": "module",
+  "bin": {
+    "ostrze": "bin/game.js"
+  },
+  "keywords": [
+    "rpg",
+    "terminal",
+    "cli",
+    "game",
+    "polish",
+    "fantasy",
+    "text-adventure"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "bin",
+    "src",
+    "data",
+    "README.md",
+    "README.en.md",
+    "LICENSE",
+    "LICENSE-TRESC.md"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "prepublishOnly": "node bin/game.js --validate && npm test"
+  }
+}

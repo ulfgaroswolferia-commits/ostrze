@@ -1,0 +1,47 @@
+{
+  "id": "ostromir_trakt",
+  "start": "wozu",
+  "nodes": {
+    "wozu": {
+      "speaker": "Kupiec Ostromir",
+      "text": "Ostromir siedzi na koźle i liczy coś na palcach, a wychodzi mu za mało. „Wędrowiec! Albo czegoś chcesz, albo coś sprzedajesz, albo mnie okradniesz. Które, gadaj?”",
+      "options": [
+        {
+          "text": "Mam weksel od Wrzoska.",
+          "goto": "weksel",
+          "id": "weksel",
+          "requires": {
+            "item": "weksel"
+          }
+        },
+        {
+          "text": "Bywaj.",
+          "goto": "end",
+          "id": "bywaj"
+        }
+      ]
+    },
+    "weksel": {
+      "speaker": "Kupiec Ostromir",
+      "text": "Ostromir krzywi się na widok weksla. „Wrzosek. A jakże. Trzy beczki piwa, których nie wypiłem, bo się w drodze skwasiło.” Bazgrze coś na kawałku kory i podaje ci. „Pokwitowanie. Niech je ściska i niech nie skamle.”",
+      "options": [
+        {
+          "text": "Przekażę.",
+          "goto": "end"
+        }
+      ],
+      "actions": [
+        {
+          "takeItem": "weksel"
+        },
+        {
+          "giveItem": "pokwitowanie"
+        },
+        {
+          "setFlag": "ostromir_dlug"
+        }
+      ]
+    }
+  },
+  "portrait": "portret_ostromir"
+}

@@ -1,0 +1,12 @@
+   ~~~~ Rzeka ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+      {stary_mlyn}
+          |
+      {wilczy_brod}-----------{wilczy_las}
+          |    \                  |
+      {wilcza_nora} \        {kamienna_przelecz}
+          |          \
+      {trakt_kupiecki} \
+
+   dalekie szlaki (dni drogi)
+      {ruiny_straznicy}   {lesniczowka}   {ostoja_zbojcow}   {twierdza_graniczna}

@@ -1,0 +1,19 @@
+# SDD ledger — plan: docs/superpowers/plans/2026-10-23-cykl-e2b1-mapa-miejsca.md
+
+Pre-flight: T1→T2 (placeIds/isKnown consumed by validation), T1→T3 (startQuest/known), T3→T6 (advanceErrands/canStartQuest), T4→T6 (walk), T5→T6 (destinationEntries): signatures match plan.
+Rulings of the plan (spec deviations) are in the plan's "Decyzje planu" section.
+Task 1: complete (c1109d3, tests: npm test → 904/904 pass)
+Task 2: complete (3fb600a, npm test → 910/910)
+Task 3: complete (eaf4e32, npm test → 919/919)
+Task 4: complete (d5e4b7c, npm test → 926/926)
+Task 5: complete (582b461, npm test → 934/934). Ruling: mapa używa location.short (name bywa za długie, np. 'Strażnica Wilczy Bród') — czytelność — koszt: jedno pole.
+Ruling (user feedback after demo playthrough): plan amended — 4 body searches (guide fled, route hint in his pack), slower suspicious commandant (+1 line per dialogue), 2-step return to commandant after wolves, fix/remove demo_przekora out-of-context scene, new Task 10 clear scrollback ([3J). Cost if wrong: content rework in Tasks 7/8.
+Task 6: complete (e16bcd4+commit below, npm test → 945/945). Rulings: boardQuests w quests.js (flaga board:true na zleceniu), spots.js zamiast places.js (cykl importów); repairDialogues szuka scen też w zdarzeniach/zleceniach/miejscach; initial kursora na 'Dalej' w hubie.
+
+User remark (to do in Task 10): prompts t/n and name entry appear below the panels; move them into the choice panel (where the menu is).
+Task 7: complete (d8e983d, npm test → 948/948). Rulings: demo_przekora/demo_posluch usunięte (wyrwane z kontekstu, uwaga użytkownika); main huba = 'Zamknij dzień' zamiast 'Czekaj na kuriera'; lokacja wilczy_las dodana już w Task 7 (hint w tobołku przewodnika wymaga istniejącego id); scena demo_kurier nie przemianowana (mniej zmian); travel.json przeformatowany przez json.dump. Backlog od użytkownika: balans trafień w głowę, combo/rzut włócznią z dystansu, rubaszne riposty, NPC-e do pogadania w lokacjach (reakcje przy ponownej wizycie, losowe spotkania), komendant ma zostać w hubie (ponowna rozmowa: namyśliłeś się? / czemu jeszcze nie wyruszyłeś? / odbiór nagrody).
+Task 8: complete (cd27a4f, npm test → 953/953). Rulings: komendant jako miejsce typu scene (4 stany: pierwsza rozmowa z 3 wymianami / namyśl / odburk / po misji, na flagach nora_zgoda i nora_wykonana); scene demo_komendant i demo_nora_zlecenie usunięte ze story; dwie rozmowy gadatliwe (wartownik, gospodyni) jako łańcuch narracji z flagami (3 stany); NIE zrobione: grafiki karczmy i portrety Wrzoska/kramarza (minor), nagroda za Norę u komendanta po powrocie (obecnie wypłata na miejscu — do E2b2), losowe spotkania NPC przy powrocie do lokacji.
+Task 9: covered by e2e (przejście od szkoły przez pobojowisko do huba i zlecenie testowe w hub_content.test.js; e2e.test.js zaktualizowane). Task 10: complete (8f36d65, npm test → 954/954); NIE zrobione: przeniesienie pytań t/n i wpisywania imienia do panelu wyboru (uwaga użytkownika) — osobny zakres.
+Final review: fresh Opus reviewer. Final: fixed C1 errand taken with objective already met stalled — test/review_fixes.test.js RED→GREEN, suite 960/960
+Final: fixed I1 walk back to hub was "repaired" away; I2 failed Wymowa dead-ended the forest (failure also reveals); I3 herbs from board quest could not be handed in; I4 commander kept sending to nora after it was lost — RED→GREEN, suite 960/960
+Final: minor (deferred): M1 resume in komendant spot after save re-evaluates scene `if` (talk can jump to next scene); M2 old v9 saves pointing at removed story scenes (demo_komendant etc.) fail to load; M3 local walk events reuse trakt events (pilgrim/Ostromir lines mention Wilczy Bród); M4 reveal/hint on a spot inside an undiscovered secret location emits a notice but shows nothing; M5 repair does not validate map.spotScene / walk.event / walk.eventScene against data; board-taken Lek still lets Wrzosek offer the job again (lek_podjety flag not set by board)

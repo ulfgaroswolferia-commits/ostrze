@@ -1,0 +1,56 @@
+{
+  "id": "delegacja",
+  "portrait": "portret_gnieworad",
+  "start": "wskazanie",
+  "nodes": {
+    "wskazanie": {
+      "speaker": "Mistrz Gnieworad",
+      "text": "Gnieworad rozkłada listę i wodzi po niej palcem. „Cesarz chce czterech. Biorę tych, których najmniej szkoda: ciebie, Skarimira, Ragnosławę i pisarczyka Wojmira.” Mówi to tak, jakby wybierał kury do rosołu.",
+      "options": [
+        {
+          "id": "dlaczego",
+          "text": "Dlaczego akurat my?",
+          "check": {
+            "skill": "wymowa",
+            "difficulty": 35
+          },
+          "requires": {
+            "notFlag": "delegacja_danina"
+          },
+          "success": "danina",
+          "failure": "ucina"
+        },
+        {
+          "id": "ruszam",
+          "text": "Pójdę się spakować.",
+          "goto": "end"
+        }
+      ]
+    },
+    "danina": {
+      "speaker": "Mistrz Gnieworad",
+      "text": "Gnieworad milknie, patrzy na swoje zrogowaciałe łapy i burczy: „Cesarz chce daniny, a daninę daje się z tego, czego najmniej szkoda. Więcej nie powiem, i tak za dużo usłyszałeś.”",
+      "actions": [
+        {
+          "setFlag": "delegacja_danina"
+        }
+      ],
+      "options": [
+        {
+          "text": "Dalej.",
+          "goto": "wskazanie"
+        }
+      ]
+    },
+    "ucina": {
+      "speaker": "Mistrz Gnieworad",
+      "text": "„Bo ja tak rzekłem!” Gnieworad zwija listę. „Pytania to sobie zadawaj w wychodku, uczniu. A kto jeszcze raz rozdziawi gębę bez pozwolenia, ten dziś wyszoruje stajnię językiem.”",
+      "options": [
+        {
+          "text": "Dalej.",
+          "goto": "wskazanie"
+        }
+      ]
+    }
+  }
+}
