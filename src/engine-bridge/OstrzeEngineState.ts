@@ -114,7 +114,7 @@ export class OstrzeEngineState extends CrpgGameState {
       torso: opts.torsoVisual ?? 'torso_przeszywanica',
       cloak: null,
       legs: 'legs_leather_boots',
-      mainHand: opts.mainHandVisual ?? (opts.classId === 'miecz' ? 'weapon_iron_longsword' : 'weapon_spear_or_staff'),
+      mainHand: opts.mainHandVisual ?? (opts.classId === 'miecz' ? 'weapon_sunblade_longsword' : 'weapon_astral_staff'),
       offHand: opts.offHandVisual ?? null
     };
     if (this.player.combat) {
@@ -149,23 +149,29 @@ export class OstrzeEngineState extends CrpgGameState {
     if (!state.character) return;
     const stats = getStats(state, data);
     const eq = state.inventory.equipped;
+    const headId = eq.glowa;
     const headVisual =
-      eq.glowa === 'kaptur_mysliwego'
+      headId === 'kaptur_mysliwego'
         ? 'helm_shadow_hood'
-        : eq.glowa
+        : headId
           ? 'helm_szyszak'
           : null;
+    const torsoId = eq.tulow ?? eq.korpus;
     const torsoVisual =
-      eq.korpus === 'kolczuga' || eq.korpus === 'zbroja_luskowa'
+      torsoId === 'kolczuga' || torsoId === 'zbroja_luskowa' || torsoId === 'kirys'
         ? 'torso_slavic_lamellar'
-        : eq.korpus === 'brygantyna'
+        : torsoId === 'brygantyna' || torsoId === 'skorzana_kurtka'
           ? 'torso_warden_brigandine'
           : 'torso_przeszywanica';
+    const weaponItem = eq.bron ? data.items.find((i) => i.id === eq.bron) : undefined;
     const mainHandVisual =
-      eq.bron === 'wlocznia' || eq.bron === 'krotka_wlocznia' || state.character.classId === 'wlocznia'
-        ? 'weapon_spear_or_staff'
-        : 'weapon_iron_longsword';
-    const offHandVisual = eq.tarcza ? 'offhand_slavic_shield' : null;
+      weaponItem?.skill === 'strzelecka'
+        ? 'weapon_hunting_bow'
+        : weaponItem?.skill === 'drzewcowa' ||
+            (!weaponItem && state.character.classId === 'wlocznia')
+          ? 'weapon_astral_staff'
+          : 'weapon_sunblade_longsword';
+    const offHandVisual = eq.bron_druga || eq.tarcza ? 'offhand_slavic_shield' : null;
 
     this.syncHeroFromOstrze({
       name: state.character.name,
@@ -212,6 +218,7 @@ export class OstrzeEngineState extends CrpgGameState {
     this.activeCustomSceneId = sceneId;
     this.map = scene.map;
     this.fov = new FovGridState(this.map.width, this.map.height);
+    this.rebuildPropGrid();
     this.npcs.length = 0;
 
     if (typeof scene.ambientLightIntensity === 'number') {
@@ -235,7 +242,24 @@ export class OstrzeEngineState extends CrpgGameState {
 
     if (scene.actors && scene.actors.length > 0) {
       for (const actor of scene.actors) {
-        this.npcs.push(actor);
+        this.npcs.push({
+          ...actor,
+          recipe: {
+            ...actor.recipe,
+            skinTone: { ...actor.recipe.skinTone },
+            hairColor: { ...actor.recipe.hairColor },
+            equipment: { ...actor.recipe.equipment },
+            attributes: { ...actor.recipe.attributes }
+          },
+          path: [...actor.path],
+          combat: actor.combat
+            ? {
+                ...actor.combat,
+                proficiencies: { ...actor.combat.proficiencies },
+                lootTable: [...actor.combat.lootTable]
+              }
+            : undefined
+        });
       }
     }
 

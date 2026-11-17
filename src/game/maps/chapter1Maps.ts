@@ -233,13 +233,27 @@ export function createWilczyBrodScene(): CustomSceneConfig {
         blocksMovement: true,
         blocksSight: false,
         interactive: true
+      },
+      {
+        id: 'wb_kuznia',
+        name: 'Kuźnia Kowala Zbycha',
+        kind: 'slavic_cottage',
+        x: 19,
+        y: 14,
+        z: 0,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true,
+        interactive: false
       }
     ],
     lights: [
       {
         id: 'light_wb_fire',
-        x: 12.5,
-        y: 12.5,
+        x: 12,
+        y: 12,
         z: 0.7,
         color: { r: 255, g: 166, b: 82 },
         intensity: 1.35,
@@ -261,7 +275,7 @@ export function createWilczyBrodScene(): CustomSceneConfig {
       z: tiles[7][13].z,
       torso: 'torso_warden_brigandine',
       cloak: 'cloak_crimson_mantle',
-      mainHand: 'weapon_iron_longsword',
+      mainHand: 'weapon_sunblade_longsword',
       offHand: 'offhand_slavic_shield'
     }),
     makeChapterNpc({
@@ -286,6 +300,18 @@ export function createWilczyBrodScene(): CustomSceneConfig {
       torso: 'torso_slavic_giezlo'
     }),
     makeChapterNpc({
+      id: 'npc_kowal_zbych',
+      seed: 406,
+      name: 'Kowal Zbych',
+      title: 'Kowal w Wilczym Brodzie',
+      x: 19,
+      y: 16,
+      z: tiles[16][19].z,
+      direction: 6,
+      torso: 'torso_warden_brigandine',
+      mainHand: 'weapon_slavic_axe'
+    }),
+    makeChapterNpc({
       id: 'npc_szkarad',
       seed: 404,
       name: 'Rusznikarz Szkarad',
@@ -298,6 +324,41 @@ export function createWilczyBrodScene(): CustomSceneConfig {
       head: 'helm_shadow_hood'
     }),
     makeChapterNpc({
+      id: 'npc_zona_borka',
+      seed: 407,
+      name: 'Żona Borka',
+      title: 'Kobieta przy Studni',
+      x: 8,
+      y: 16,
+      z: tiles[16][8].z,
+      direction: 4,
+      torso: 'torso_slavic_giezlo'
+    }),
+    makeChapterNpc({
+      id: 'npc_corka_straznika',
+      seed: 408,
+      name: 'Córka strażnika',
+      title: 'Córka Dawnego Strażnika z Ruin',
+      x: 10,
+      y: 6,
+      z: tiles[6][10].z,
+      direction: 4,
+      torso: 'torso_linen_tunic'
+    }),
+    makeChapterNpc({
+      id: 'npc_wartownik',
+      seed: 409,
+      name: 'Wartownik przy palisadzie',
+      title: 'Żołnierz Garnizonu',
+      x: 16,
+      y: 7,
+      z: tiles[7][16].z,
+      direction: 4,
+      head: 'helm_szyszak',
+      torso: 'torso_przeszywanica',
+      mainHand: 'weapon_astral_staff'
+    }),
+    makeChapterNpc({
       id: 'npc_ostromir',
       seed: 405,
       name: 'Kupiec Ostromir',
@@ -307,7 +368,7 @@ export function createWilczyBrodScene(): CustomSceneConfig {
       z: tiles[22][12].z,
       direction: 2,
       torso: 'torso_slavic_giezlo',
-      cloak: 'cloak_forest_ranger'
+      cloak: 'cloak_ranger_quiver'
     })
   ];
 
@@ -421,8 +482,8 @@ export function createWilczaNoraScene(): CustomSceneConfig {
     lights: [
       {
         id: 'light_nora_mist',
-        x: 11.5,
-        y: 8.5,
+        x: 11,
+        y: 8,
         z: 1.5,
         color: { r: 155, g: 185, b: 230 },
         intensity: 0.9,
@@ -549,8 +610,8 @@ export function createKamiennaPrzeleczScene(): CustomSceneConfig {
         interactive: false
       },
       {
-        id: 'nora_martwe_drzewo',
-        name: 'Spękany Buk nad Norą',
+        id: 'przelecz_martwe_drzewo',
+        name: 'Spękany Buk nad Przełęczą',
         kind: 'dead_tree',
         x: 15,
         y: 6,
@@ -563,8 +624,8 @@ export function createKamiennaPrzeleczScene(): CustomSceneConfig {
         interactive: false
       },
       {
-        id: 'nora_krzak',
-        name: 'Ciernie i jagody',
+        id: 'przelecz_krzak',
+        name: 'Górskie Ciernie',
         kind: 'berry_bush',
         x: 6,
         y: 12,
@@ -577,8 +638,8 @@ export function createKamiennaPrzeleczScene(): CustomSceneConfig {
         interactive: false
       },
       {
-        id: 'nora_pniak',
-        name: 'Pniak przy wąwozie',
+        id: 'przelecz_pniak',
+        name: 'Pniak przy Trakcie',
         kind: 'tree_stump',
         x: 13,
         y: 12,
@@ -593,9 +654,9 @@ export function createKamiennaPrzeleczScene(): CustomSceneConfig {
     ],
     lights: [
       {
-        id: 'light_nora_mist',
-        x: 11.5,
-        y: 8.5,
+        id: 'light_przelecz_mist',
+        x: 11,
+        y: 8,
         z: 1.5,
         color: { r: 155, g: 185, b: 230 },
         intensity: 0.9,
@@ -616,7 +677,7 @@ export function createKamiennaPrzeleczScene(): CustomSceneConfig {
       y: 8,
       z: tiles[8][11].z,
       head: 'helm_shadow_hood',
-      mainHand: 'weapon_iron_longsword',
+      mainHand: 'weapon_sunblade_longsword',
       hostile: true,
       hp: 28,
       ap: 6,
@@ -631,7 +692,7 @@ export function createKamiennaPrzeleczScene(): CustomSceneConfig {
       y: 8,
       z: tiles[8][13].z,
       head: 'helm_shadow_hood',
-      mainHand: 'weapon_spear_or_staff',
+      mainHand: 'weapon_astral_staff',
       hostile: true,
       hp: 28,
       ap: 6,
@@ -646,6 +707,977 @@ export function createKamiennaPrzeleczScene(): CustomSceneConfig {
     spawnY: 16,
     actors,
     ambientLightIntensity: 0.36,
+    fogOfWarEnabled: false
+  };
+}
+
+/**
+ * Rozdział I — Lokacja satelicka 1: Las Rubieży (wilczy_las)
+ * Polana ziół (lek_dla_wrzoska), Ślady za polaną (zaginiony_pasterz_borek), Drwal, Legowisko w gęstwinie.
+ */
+export function createWilczyLasScene(opts?: { withHunt?: boolean }): CustomSceneConfig {
+  const width = 24;
+  const height = 24;
+  const tiles = buildGrid(width, height, (x, y) => {
+    const isBorder = x === 0 || y === 0 || x === width - 1 || y === height - 1;
+    const isClearing = Math.hypot(x - 11, y - 11) <= 5.5;
+    const isPath = Math.abs(x - 11) <= 1 && y >= 11;
+    return {
+      z: isBorder && !isPath ? 1 : 0,
+      terrain: isPath ? 'dirt_path' : isClearing ? 'forest_grass' : 'forest_soil',
+      walkable: !isBorder || isPath
+    };
+  });
+
+  const map: IsometricWorldMap = {
+    id: 'forest_clearing' as MapId,
+    name: 'Las Rubieży',
+    subtitle: 'Pogórze — Polana Ziół i Ścieżki za Strażnicą',
+    width,
+    height,
+    maxElevation: 2,
+    tiles,
+    props: [
+      {
+        id: 'las_polana_ziol',
+        name: 'Polana Ziół',
+        kind: 'wildflower_patch',
+        x: 9,
+        y: 10,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: false,
+        blocksSight: false,
+        interactive: true
+      },
+      {
+        id: 'las_slady_borka',
+        name: 'Ślady za Polaną',
+        kind: 'ground_loot',
+        x: 14,
+        y: 8,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: false,
+        blocksSight: false,
+        interactive: true
+      },
+      {
+        id: 'las_stary_dab',
+        name: 'Stary Dąb z Wydrążeniem',
+        kind: 'ancient_oak',
+        x: 6,
+        y: 7,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 3,
+        blocksMovement: true,
+        blocksSight: true,
+        interactive: false
+      },
+      {
+        id: 'las_kloda',
+        name: 'Powalony Pień Drwala',
+        kind: 'fallen_log',
+        x: 15,
+        y: 13,
+        z: 0,
+        sizeX: 1,
+        sizeY: 2,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: false
+      },
+      {
+        id: 'las_drogowskaz',
+        name: 'Ścieżka powrotna do Wilczego Brodu',
+        kind: 'travel_signpost',
+        x: 11,
+        y: 20,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true
+      }
+    ],
+    lights: [
+      {
+        id: 'light_las_clearing',
+        x: 10,
+        y: 10,
+        z: 1.4,
+        color: { r: 195, g: 235, b: 175 },
+        intensity: 1.0,
+        radius: 8,
+        flickerSpeed: 1.2,
+        enabled: true
+      }
+    ]
+  };
+
+  const actors: ActorEntity[] = [
+    makeChapterNpc({
+      id: 'npc_las_polana',
+      seed: 701,
+      name: 'Polana Ziół',
+      title: 'Zioła dla karczmarza Wrzoska',
+      x: 9,
+      y: 10,
+      z: tiles[10][9].z,
+      torso: 'torso_linen_tunic',
+      head: 'helm_ranger_cowl'
+    }),
+    makeChapterNpc({
+      id: 'npc_las_slady',
+      seed: 702,
+      name: 'Ślady za Polaną',
+      title: 'Odciski owczych racic i ciężkich butów',
+      x: 14,
+      y: 8,
+      z: tiles[8][14].z,
+      torso: 'torso_przeszywanica',
+      cloak: 'cloak_ranger_quiver'
+    }),
+    makeChapterNpc({
+      id: 'npc_las_drwal',
+      seed: 703,
+      name: 'Drwal z Lasu Rubieży',
+      title: 'Rębacz z Pogórza',
+      x: 14,
+      y: 14,
+      z: tiles[14][14].z,
+      direction: 6,
+      torso: 'torso_slavic_giezlo',
+      mainHand: 'weapon_slavic_axe'
+    })
+  ];
+
+  if (opts?.withHunt) {
+    actors.push(
+      makeChapterNpc({
+        id: 'enemy_las_dzik',
+        seed: 704,
+        name: 'Dzik z Gęstwiny',
+        title: 'Bestia z Lasu Rubieży',
+        x: 10,
+        y: 6,
+        z: tiles[6][10].z,
+        head: 'helm_druid_antlers',
+        torso: 'torso_warden_brigandine',
+        mainHand: 'weapon_Executioner_axe',
+        hostile: true,
+        hp: 30,
+        ap: 6,
+        xpReward: 30
+      }),
+      makeChapterNpc({
+        id: 'enemy_las_wilk_1',
+        seed: 705,
+        name: 'Dziki Wilk',
+        title: 'Wataha z Gęstwiny',
+        x: 8,
+        y: 6,
+        z: tiles[6][8].z,
+        head: 'helm_druid_antlers',
+        torso: 'torso_przeszywanica',
+        mainHand: 'weapon_slavic_axe',
+        hostile: true,
+        hp: 20,
+        ap: 7,
+        xpReward: 20
+      }),
+      makeChapterNpc({
+        id: 'enemy_las_wilk_2',
+        seed: 706,
+        name: 'Dziki Wilk',
+        title: 'Wataha z Gęstwiny',
+        x: 12,
+        y: 6,
+        z: tiles[6][12].z,
+        head: 'helm_druid_antlers',
+        torso: 'torso_przeszywanica',
+        mainHand: 'weapon_slavic_axe',
+        hostile: true,
+        hp: 20,
+        ap: 7,
+        xpReward: 20
+      })
+    );
+  }
+
+  return {
+    id: 'wilczy_las',
+    map,
+    spawnX: 11,
+    spawnY: 18,
+    actors,
+    ambientLightIntensity: 0.36,
+    fogOfWarEnabled: false
+  };
+}
+
+/**
+ * Rozdział I — Lokacja satelicka 2: Stary młyn nad rzeką (stary_mlyn)
+ * Młynarz Ostap (zboze_dla_mlyna), Wnętrze młyna nocą (swiatlo_w_mlynie), Żona młynarza.
+ */
+export function createStaryMlynScene(opts?: { isNight?: boolean }): CustomSceneConfig {
+  const width = 22;
+  const height = 22;
+  const tiles = buildGrid(width, height, (x, y) => {
+    const isRiver = x >= width - 4;
+    const isBorder = x === 0 || y === 0 || y === height - 1;
+    const isRoad = Math.abs(x - 10) <= 1 && y >= 10;
+    if (isRiver) {
+      return { z: 0, terrain: 'abyss_water', walkable: false };
+    }
+    return {
+      z: isBorder && !isRoad ? 1 : 0,
+      terrain: isRoad ? 'dirt_path' : 'forest_grass',
+      walkable: !isBorder || isRoad
+    };
+  });
+
+  const map: IsometricWorldMap = {
+    id: 'slavic_village' as MapId,
+    name: 'Stary Młyn nad Rzeką',
+    subtitle: 'Pogórze — Młyn Ostapa i Zimny Blask po Zmroku',
+    width,
+    height,
+    maxElevation: 2,
+    tiles,
+    props: [
+      {
+        id: 'mlyn_budynek',
+        name: 'Stary Młyn Wodny',
+        kind: 'slavic_cottage',
+        x: 12,
+        y: 7,
+        z: 0,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true,
+        interactive: true
+      },
+      {
+        id: 'mlyn_wnetrze_krysztal',
+        name: 'Koło Młyńskie i Wnętrze Młyna',
+        kind: 'arcane_crystal',
+        x: 14,
+        y: 8,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true,
+        linkedLightId: 'light_mlyn_glow'
+      },
+      {
+        id: 'mlyn_beczki',
+        name: 'Worki i Beczki Ostapa',
+        kind: 'dungeon_barrel',
+        x: 9,
+        y: 8,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: false
+      },
+      {
+        id: 'mlyn_drogowskaz',
+        name: 'Droga powrotna do Wilczego Brodu',
+        kind: 'travel_signpost',
+        x: 10,
+        y: 19,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true
+      }
+    ],
+    lights: [
+      {
+        id: 'light_mlyn_glow',
+        x: 14,
+        y: 8,
+        z: 1.0,
+        color: { r: 90, g: 195, b: 255 },
+        intensity: opts?.isNight ? 1.45 : 0.4,
+        radius: 6.5,
+        flickerSpeed: 3.5,
+        enabled: true
+      }
+    ]
+  };
+
+  const actors: ActorEntity[] = [
+    makeChapterNpc({
+      id: 'npc_ostap',
+      seed: 711,
+      name: 'Młynarz Ostap',
+      title: 'Gospodarz Starego Młyna',
+      x: 10,
+      y: 9,
+      z: tiles[9][10].z,
+      torso: 'torso_slavic_giezlo'
+    }),
+    makeChapterNpc({
+      id: 'npc_mlyn_wnetrze',
+      seed: 712,
+      name: 'Wnętrze Młyna',
+      title: 'Zbadaj młyn pod kołem zębatym',
+      x: 13,
+      y: 9,
+      z: tiles[9][13].z,
+      torso: 'torso_archmage_robes',
+      head: 'helm_arcane_circlet'
+    }),
+    makeChapterNpc({
+      id: 'npc_zona_mlynarza',
+      seed: 713,
+      name: 'Żona młynarza',
+      title: 'Gospodyni znad Rzeki',
+      x: 7,
+      y: 11,
+      z: tiles[11][7].z,
+      torso: 'torso_slavic_giezlo'
+    })
+  ];
+
+  return {
+    id: 'stary_mlyn',
+    map,
+    spawnX: 10,
+    spawnY: 16,
+    actors,
+    ambientLightIntensity: opts?.isNight ? 0.18 : 0.42,
+    fogOfWarEnabled: false
+  };
+}
+
+/**
+ * Rozdział I — Lokacja satelicka 3: Trakt kupiecki (trakt_kupiecki)
+ * Kupiec Ostromir (dlug_kupca), Ognisko zwiadowców (kto_pyta_o_ocalalych), Pielgrzym, Rozbójnicy.
+ */
+export function createTraktKupieckiScene(opts?: { withHunt?: boolean }): CustomSceneConfig {
+  const width = 24;
+  const height = 24;
+  const tiles = buildGrid(width, height, (x, y) => {
+    const isRoad = Math.abs(x - 12) <= 2;
+    const isBorder = x === 0 || y === 0 || x === width - 1 || y === height - 1;
+    return {
+      z: isBorder && !isRoad ? 1 : 0,
+      terrain: isRoad ? 'dirt_path' : 'forest_grass',
+      walkable: !isBorder || isRoad
+    };
+  });
+
+  const map: IsometricWorldMap = {
+    id: 'forest_clearing' as MapId,
+    name: 'Trakt Kupiecki',
+    subtitle: 'Pogórze — Wóz Ostromira i Obozowisko Zwiadowców',
+    width,
+    height,
+    maxElevation: 2,
+    tiles,
+    props: [
+      {
+        id: 'trakt_k_woz',
+        name: 'Wóz Kupca Ostromira',
+        kind: 'market_stall',
+        x: 9,
+        y: 12,
+        z: 0,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true
+      },
+      {
+        id: 'trakt_k_ognisko',
+        name: 'Ognisko Zwiadowców',
+        kind: 'campfire',
+        x: 15,
+        y: 9,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true,
+        linkedLightId: 'light_trakt_k_fire'
+      },
+      {
+        id: 'trakt_k_kamien',
+        name: 'Przydrożny Kamień Pielgrzyma',
+        kind: 'rock_cliff',
+        x: 7,
+        y: 15,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: false
+      },
+      {
+        id: 'trakt_k_drogowskaz',
+        name: 'Drogowskaz do Wilczego Brodu',
+        kind: 'travel_signpost',
+        x: 12,
+        y: 20,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true
+      }
+    ],
+    lights: [
+      {
+        id: 'light_trakt_k_fire',
+        x: 15,
+        y: 9,
+        z: 0.7,
+        color: { r: 255, g: 164, b: 82 },
+        intensity: 1.3,
+        radius: 6.5,
+        flickerSpeed: 4.0,
+        enabled: true
+      }
+    ]
+  };
+
+  const actors: ActorEntity[] = [
+    makeChapterNpc({
+      id: 'npc_trakt_ostromir',
+      seed: 405,
+      name: 'Kupiec Ostromir',
+      title: 'Postój na Trakcie Kupieckim',
+      x: 10,
+      y: 13,
+      z: tiles[13][10].z,
+      torso: 'torso_slavic_giezlo',
+      cloak: 'cloak_ranger_quiver'
+    }),
+    makeChapterNpc({
+      id: 'npc_trakt_zwiadowcy',
+      seed: 721,
+      name: 'Ognisko Zwiadowców',
+      title: 'Dwóch jeźdźców w szarych płaszczach',
+      x: 16,
+      y: 9,
+      z: tiles[9][16].z,
+      direction: 6,
+      head: 'helm_shadow_hood',
+      torso: 'torso_warden_brigandine',
+      cloak: 'cloak_ranger_quiver',
+      mainHand: 'weapon_sunblade_longsword'
+    }),
+    makeChapterNpc({
+      id: 'npc_trakt_pielgrzym',
+      seed: 722,
+      name: 'Pielgrzym na kamieniu',
+      title: 'Wędrowny Pątnik',
+      x: 8,
+      y: 15,
+      z: tiles[15][8].z,
+      torso: 'torso_linen_tunic',
+      mainHand: 'weapon_astral_staff'
+    })
+  ];
+
+  if (opts?.withHunt) {
+    actors.push(
+      makeChapterNpc({
+        id: 'enemy_trakt_rabus_1',
+        seed: 723,
+        name: 'Rozbójnik z Krzaków',
+        title: 'Zbir przy gościńcu',
+        x: 11,
+        y: 5,
+        z: tiles[5][11].z,
+        head: 'helm_shadow_hood',
+        torso: 'torso_przeszywanica',
+        mainHand: 'weapon_slavic_axe',
+        hostile: true,
+        hp: 26,
+        ap: 6,
+        xpReward: 35
+      }),
+      makeChapterNpc({
+        id: 'enemy_trakt_rabus_2',
+        seed: 724,
+        name: 'Rozbójnik z Pałką',
+        title: 'Zbir przy gościńcu',
+        x: 13,
+        y: 5,
+        z: tiles[5][13].z,
+        head: 'helm_ranger_cowl',
+        torso: 'torso_warden_brigandine',
+        mainHand: 'weapon_Executioner_axe',
+        hostile: true,
+        hp: 26,
+        ap: 6,
+        xpReward: 35
+      })
+    );
+  }
+
+  return {
+    id: 'trakt_kupiecki',
+    map,
+    spawnX: 12,
+    spawnY: 18,
+    actors,
+    ambientLightIntensity: 0.34,
+    fogOfWarEnabled: false
+  };
+}
+
+/**
+ * Rozdział I — Lokacja satelicka 4: Leśniczówka (lesniczowka)
+ * Leśniczy (list_do_lesniczego), Pomocnik Gniewosz, Pies Burek, Skrytka pod dębem, Kłusownicy.
+ */
+export function createLesniczowkaScene(opts?: { withHunt?: boolean }): CustomSceneConfig {
+  const width = 22;
+  const height = 22;
+  const tiles = buildGrid(width, height, (x, y) => {
+    const isBorder = x === 0 || y === 0 || x === width - 1 || y === height - 1;
+    const isYard = x >= 6 && x <= 15 && y >= 6 && y <= 15;
+    const isPath = Math.abs(x - 11) <= 1 && y >= 14;
+    return {
+      z: isBorder && !isPath ? 1 : 0,
+      terrain: isYard || isPath ? 'dirt_path' : 'forest_grass',
+      walkable: !isBorder || isPath
+    };
+  });
+
+  const map: IsometricWorldMap = {
+    id: 'forest_clearing' as MapId,
+    name: 'Leśniczówka na Wschodzie',
+    subtitle: 'Pogórze — Chata Leśniczego i Skrytka pod Dębem',
+    width,
+    height,
+    maxElevation: 2,
+    tiles,
+    props: [
+      {
+        id: 'lesniczowka_chata',
+        name: 'Chata Leśniczego',
+        kind: 'slavic_cottage',
+        x: 10,
+        y: 6,
+        z: 0,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true,
+        interactive: false
+      },
+      {
+        id: 'lesniczowka_dab',
+        name: 'Ułamany Dąb na Skraju Polany',
+        kind: 'ancient_oak',
+        x: 5,
+        y: 9,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 3,
+        blocksMovement: true,
+        blocksSight: true,
+        interactive: false
+      },
+      {
+        id: 'lesniczowka_schowek',
+        name: 'Skrytka pod Dębem',
+        kind: 'chest',
+        x: 6,
+        y: 9,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true
+      },
+      {
+        id: 'lesniczowka_pniak',
+        name: 'Pień do Rąbania',
+        kind: 'tree_stump',
+        x: 14,
+        y: 10,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: false
+      },
+      {
+        id: 'lesniczowka_drogowskaz',
+        name: 'Szlak powrotny do Wilczego Brodu',
+        kind: 'travel_signpost',
+        x: 11,
+        y: 19,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true
+      }
+    ],
+    lights: [
+      {
+        id: 'light_lesniczowka_cabin',
+        x: 10,
+        y: 7,
+        z: 1.2,
+        color: { r: 255, g: 182, b: 88 },
+        intensity: 1.2,
+        radius: 6,
+        flickerSpeed: 2.5,
+        enabled: true
+      }
+    ]
+  };
+
+  const actors: ActorEntity[] = [
+    makeChapterNpc({
+      id: 'npc_lesniczy',
+      seed: 731,
+      name: 'Leśniczy',
+      title: 'Gospodarz Leśniczówki',
+      x: 10,
+      y: 9,
+      z: tiles[9][10].z,
+      torso: 'torso_warden_brigandine',
+      cloak: 'cloak_ranger_quiver',
+      mainHand: 'weapon_hunting_bow'
+    }),
+    makeChapterNpc({
+      id: 'npc_gniewosz',
+      seed: 732,
+      name: 'Pomocnik Gniewosz',
+      title: 'Drwal przy Stercie Drewna',
+      x: 14,
+      y: 11,
+      z: tiles[11][14].z,
+      direction: 6,
+      torso: 'torso_linen_tunic',
+      mainHand: 'weapon_slavic_axe'
+    }),
+    makeChapterNpc({
+      id: 'npc_pies_burek',
+      seed: 733,
+      name: 'Pies Burek (Wilk)',
+      title: 'Wielki Pies Leśniczego',
+      x: 8,
+      y: 8,
+      z: tiles[8][8].z,
+      torso: 'torso_przeszywanica'
+    })
+  ];
+
+  if (opts?.withHunt) {
+    actors.push(
+      makeChapterNpc({
+        id: 'enemy_klusownik_1',
+        seed: 734,
+        name: 'Kłusownik z Zagajnika',
+        title: 'Złodziej Zwierzyny',
+        x: 9,
+        y: 4,
+        z: tiles[4][9].z,
+        head: 'helm_ranger_cowl',
+        torso: 'torso_przeszywanica',
+        mainHand: 'weapon_hunting_bow',
+        hostile: true,
+        hp: 24,
+        ap: 6,
+        xpReward: 35
+      }),
+      makeChapterNpc({
+        id: 'enemy_klusownik_2',
+        seed: 735,
+        name: 'Kłusownik z Nożem',
+        title: 'Złodziej Zwierzyny',
+        x: 12,
+        y: 4,
+        z: tiles[4][12].z,
+        head: 'helm_shadow_hood',
+        torso: 'torso_linen_tunic',
+        mainHand: 'weapon_slavic_axe',
+        hostile: true,
+        hp: 24,
+        ap: 6,
+        xpReward: 35
+      })
+    );
+  }
+
+  return {
+    id: 'lesniczowka',
+    map,
+    spawnX: 11,
+    spawnY: 16,
+    actors,
+    ambientLightIntensity: 0.38,
+    fogOfWarEnabled: false
+  };
+}
+
+/**
+ * Rozdział I — Lokacja satelicka 5: Ruiny strażnicy (ruiny_straznicy)
+ * Pasterz Borek (zaginiony_pasterz_borek), Mur ze znakiem (amulet_z_ruin), Wartownik Czcibor, Obóz zbójców.
+ */
+export function createRuinyStraznicyScene(opts?: { withHunt?: boolean }): CustomSceneConfig {
+  const width = 24;
+  const height = 24;
+  const tiles = buildGrid(width, height, (x, y) => {
+    const isBorder = x === 0 || y === 0 || x === width - 1 || y === height - 1;
+    const isCourtyard = x >= 6 && x <= 17 && y >= 5 && y <= 16;
+    const isRoad = Math.abs(x - 12) <= 1 && y >= 15;
+    return {
+      z: isBorder && !isRoad ? 1 : 0,
+      terrain: isCourtyard ? 'mossy_cobble' : isRoad ? 'dirt_path' : 'forest_soil',
+      walkable: !isBorder || isRoad
+    };
+  });
+
+  const map: IsometricWorldMap = {
+    id: 'sanctum_dungeon' as MapId,
+    name: 'Ruiny Strażnicy na Wzgórzu',
+    subtitle: 'Pogórze — Czarne Mury, Pasterz Borek i Dawny Znak',
+    width,
+    height,
+    maxElevation: 3,
+    tiles,
+    props: [
+      {
+        id: 'ruiny_wieza',
+        name: 'Zawalona Baszta Strażnicy',
+        kind: 'watchtower',
+        x: 11,
+        y: 4,
+        z: 0,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 3,
+        blocksMovement: true,
+        blocksSight: true,
+        interactive: false
+      },
+      {
+        id: 'ruiny_mur_znak',
+        name: 'Mur z Wyżłobionym Znakiem Strażnicy',
+        kind: 'runic_altar',
+        x: 13,
+        y: 6,
+        z: 0,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true,
+        linkedLightId: 'light_ruiny_mark'
+      },
+      {
+        id: 'ruiny_rumowisko',
+        name: 'Rumowisko Rozwalonej Izby',
+        kind: 'sarcophagus',
+        x: 8,
+        y: 8,
+        z: 0,
+        sizeX: 1,
+        sizeY: 2,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true
+      },
+      {
+        id: 'ruiny_kolumna_1',
+        name: 'Pęknięty Filar',
+        kind: 'pillar',
+        x: 7,
+        y: 13,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true,
+        interactive: false
+      },
+      {
+        id: 'ruiny_drogowskaz',
+        name: 'Szlak powrotny do Wilczego Brodu',
+        kind: 'travel_signpost',
+        x: 12,
+        y: 20,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true
+      }
+    ],
+    lights: [
+      {
+        id: 'light_ruiny_mark',
+        x: 13,
+        y: 6,
+        z: 1.2,
+        color: { r: 120, g: 195, b: 255 },
+        intensity: 1.15,
+        radius: 6.5,
+        flickerSpeed: 2.0,
+        enabled: true
+      }
+    ]
+  };
+
+  const actors: ActorEntity[] = [
+    makeChapterNpc({
+      id: 'npc_borek_ruiny',
+      seed: 741,
+      name: 'Pasterz Borek',
+      title: 'Ranny Pasterz w Rumowisku',
+      x: 9,
+      y: 9,
+      z: tiles[9][9].z,
+      torso: 'torso_slavic_giezlo'
+    }),
+    makeChapterNpc({
+      id: 'npc_ruiny_mur',
+      seed: 742,
+      name: 'Mur ze Znakiem Strażnicy',
+      title: 'Starożytne Drzwi w Ruinach',
+      x: 14,
+      y: 8,
+      z: tiles[8][14].z,
+      torso: 'torso_aethel_plate',
+      head: 'helm_arcane_circlet'
+    }),
+    makeChapterNpc({
+      id: 'npc_czcibor',
+      seed: 743,
+      name: 'Wartownik Czcibor',
+      title: 'Stary Strażnik w Zawalonej Bramie',
+      x: 10,
+      y: 15,
+      z: tiles[15][10].z,
+      head: 'helm_szyszak',
+      torso: 'torso_warden_brigandine',
+      mainHand: 'weapon_astral_staff'
+    }),
+    makeChapterNpc({
+      id: 'npc_ruiny_kruk',
+      seed: 744,
+      name: 'Kruk między kamieniami',
+      title: 'Czarny Ptak na Murze',
+      x: 16,
+      y: 13,
+      z: tiles[13][16].z,
+      head: 'helm_shadow_hood',
+      torso: 'torso_archmage_robes'
+    })
+  ];
+
+  if (opts?.withHunt) {
+    actors.push(
+      makeChapterNpc({
+        id: 'enemy_ruiny_rabus_1',
+        seed: 745,
+        name: 'Zbójca z Ruin',
+        title: 'Szajka spod Muru',
+        x: 10,
+        y: 6,
+        z: tiles[6][10].z,
+        head: 'helm_shadow_hood',
+        torso: 'torso_warden_brigandine',
+        mainHand: 'weapon_slavic_axe',
+        hostile: true,
+        hp: 28,
+        ap: 6,
+        xpReward: 35
+      }),
+      makeChapterNpc({
+        id: 'enemy_ruiny_rabus_2',
+        seed: 746,
+        name: 'Zbójca z Toporem',
+        title: 'Szajka spod Muru',
+        x: 12,
+        y: 6,
+        z: tiles[6][12].z,
+        head: 'helm_ranger_cowl',
+        torso: 'torso_przeszywanica',
+        mainHand: 'weapon_Executioner_axe',
+        hostile: true,
+        hp: 28,
+        ap: 6,
+        xpReward: 35
+      }),
+      makeChapterNpc({
+        id: 'enemy_ruiny_lucznik',
+        seed: 747,
+        name: 'Zbójca Łucznik',
+        title: 'Szajka spod Muru',
+        x: 11,
+        y: 5,
+        z: tiles[5][11].z,
+        head: 'helm_ranger_cowl',
+        torso: 'torso_linen_tunic',
+        mainHand: 'weapon_hunting_bow',
+        hostile: true,
+        hp: 22,
+        ap: 6,
+        xpReward: 35
+      })
+    );
+  }
+
+  return {
+    id: 'ruiny_straznicy',
+    map,
+    spawnX: 12,
+    spawnY: 18,
+    actors,
+    ambientLightIntensity: 0.32,
     fogOfWarEnabled: false
   };
 }

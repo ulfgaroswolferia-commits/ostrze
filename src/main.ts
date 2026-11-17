@@ -99,8 +99,9 @@ async function bootstrapOstrze(): Promise<void> {
   };
 
   const applyLoadedPayload = (loaded: OstrzeSavePayload): void => {
-    Object.assign(prologue.state, loaded.state);
-    prologue.rng.setState(loaded.state.rngState);
+    const clonedState = JSON.parse(JSON.stringify(loaded.state)) as typeof prologue.state;
+    Object.assign(prologue.state, clonedState);
+    prologue.rng.setState(clonedState.rngState);
     activeChapter = loaded.chapter;
     if (loaded.chapter === 'chapter1') {
       chapter1.restoreFromSave(loaded.sceneId);
@@ -203,13 +204,13 @@ async function bootstrapOstrze(): Promise<void> {
     prologue.state.flags.ukryte_insygnia = true;
     chapter1.enterWilczyBrod();
   } else {
-    const existingSave = loadOstrzeGame();
-    const savedChar = existingSave?.state.character;
-    const savedSummary = savedChar
-      ? `${savedChar.name} · Poz. ${savedChar.level}`
-      : undefined;
-
     const showWelcome = (): void => {
+      const existingSave = loadOstrzeGame();
+      const savedChar = existingSave?.state.character;
+      const savedSummary = savedChar
+        ? `${savedChar.name} · Poz. ${savedChar.level}`
+        : undefined;
+
       modalUi.showWelcome({
         initialName: savedChar?.name ?? 'Mściwój',
         hasSave: Boolean(existingSave),

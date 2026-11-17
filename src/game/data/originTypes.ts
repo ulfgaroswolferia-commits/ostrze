@@ -81,10 +81,22 @@ export interface ItemDef {
   slot?: string;
   value?: number;
   weight?: number;
+  armor?: number;
+  reduction?: Record<string, number>;
   damage?: [number, number];
   damageType?: string;
   skill?: SkillId;
   mastery?: string;
+  masteryType?: string;
+  heal?: [number, number];
+  healSkill?: SkillId;
+  healHp?: number;
+  removes?: string[];
+  applies?: string[];
+  food?: {
+    order: number;
+    risk?: { effect: string; chance: number; safeTagged?: SkillId };
+  };
   modifiers?: Record<string, number>;
   description?: string;
 }
@@ -136,6 +148,8 @@ export interface DialogueActionSpec {
   startQuest?: string;
   completeQuest?: string;
   failQuest?: string;
+  reveal?: string;
+  time?: number;
 }
 
 export type QuestStatus = 'none' | 'active' | 'completed' | 'failed';
@@ -235,6 +249,14 @@ export interface RulesDef {
     attributeMult: number;
     chanceMin: number;
     chanceMax: number;
+  };
+  inventory?: {
+    maxReductionPercent?: number;
+    softCap?: {
+      armorFrom: number;
+      reductionFrom: number;
+      rate: number;
+    };
   };
   vars: string[];
 }

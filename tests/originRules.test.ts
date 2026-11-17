@@ -4,7 +4,9 @@ import {
   createCharacter,
   createEmptyOstrzeState,
   grantXp,
-  rollDialogueCheck
+  rollDialogueCheck,
+  spendAttributePoint,
+  spendSkillPoint
 } from '../src/game/rules/character';
 import { evaluateCondition } from '../src/game/rules/conditions';
 import { createRng } from '../src/game/rules/dice';
@@ -147,5 +149,41 @@ describe('originData & originRules (Etap 2)', () => {
     const second = rollDialogueCheck(state, 'kurier_wymowa', 'wymowa', 999, false, ORIGIN_DATA, rng);
     expect(second.success).toBe(false);
     expect(second.alreadyFailed).toBe(true);
+  });
+
+  it('spends skill points (+2% tagged, +1% untagged), attribute points, and computes worn armor', () => {
+    const state = createEmptyOstrzeState(ORIGIN_DATA, 123);
+    createCharacter(
+      state,
+      {
+        name: 'Mściwój',
+        classId: 'miecz',
+        attributes: makeDefaultAttributes(),
+        tagged: ['sieczna', 'wymowa', 'skradanie']
+      },
+      ORIGIN_DATA
+    );
+    grantXp(state, 160, ORIGIN_DATA);
+
+    const beforeStats = getStats(state, ORIGIN_DATA);
+    // Starting armor (koszula_lniana / przeszywanica etc.)
+    expect(beforeStats.derived.armor).toBeGreaterThanOrEqual(1);
+
+    // Spend 1 point on tagged skill (sieczna) -> +2%
+    expect(spendSkillPoint(state, 'sieczna', ORIGIN_DATA)).toBe(true);
+    expect(getStats(state, ORIGIN_DATA).skills.sieczna).toBe(beforeStats.skills.sieczna + 2);
+
+    // Spend 1 point on untagged skill (handel) -> +1%
+    expect(spendSkillPoint(state, 'handel', ORIGIN_DATA)).toBe(true);
+    expect(getStats(state, ORIGIN_DATA).skills.handel).toBe(beforeStats.skills.handel + 1);
+
+    // Spending attribute point on sila should not heal injured HP, while krzepa increases HP
+    state.character!.freeAttributePoints = 2;
+    state.character!.hp = 10;
+    expect(spendAttributePoint(state, 'sila', ORIGIN_DATA)).toBe(true);
+    expect(state.character!.hp).toBe(10);
+    expect(spendAttributePoint(state, 'krzepa', ORIGIN_DATA)).toBe(true);
+    // At level 2, krzepa 5 -> 6 increases hpMax by 3 (hpPerKrzepa) + 1 (per-level krzepa bonus) = +4
+    expect(state.character!.hp).toBe(14);
   });
 });

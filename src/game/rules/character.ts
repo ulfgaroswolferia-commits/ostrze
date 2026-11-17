@@ -170,7 +170,7 @@ export function grantXp(
     if (ch.level % lv.perkEveryLevels === 0 && ch.perks.length + ch.freePerkPicks < lv.maxPerks) {
       ch.freePerkPicks += 1;
     }
-    if (ch.level % lv.attributeEveryLevels === 1) {
+    if ((ch.level - 1) % lv.attributeEveryLevels === 0) {
       ch.freeAttributePoints += 1;
     }
   }
@@ -253,15 +253,17 @@ export function spendAttributePoint(
   const current = ch.attributes[attrId] ?? 0;
   const max = data.rules.creator.attributeMax + (data.rules.creator.gifts[attrId] ?? 0);
   if (current >= max) return false;
+  const oldMax = getStats(state, data).derived.hpMax;
   ch.attributes[attrId] = current + 1;
   ch.freeAttributePoints -= 1;
   const newMax = getStats(state, data).derived.hpMax;
-  ch.hp = Math.min(newMax, ch.hp + data.rules.derived.hpPerKrzepa);
+  const hpDelta = Math.max(0, newMax - oldMax);
+  ch.hp = Math.min(newMax, ch.hp + hpDelta);
   return true;
 }
 
 /**
- * Spends 1 free skill point (+2 for tagged skills, +1 otherwise) on the given skill.
+ * Spends 1 free skill point (+2% for tagged skills via getStats multiplier, +1% otherwise) on the given skill.
  */
 export function spendSkillPoint(
   state: OstrzeGameState,
@@ -270,12 +272,13 @@ export function spendSkillPoint(
 ): boolean {
   const ch = state.character;
   if (!ch || ch.freeSkillPoints <= 0) return false;
-  const stats = getStats(state, data);
-  const currentTotal = stats.skills[skillId] ?? 0;
-  if (currentTotal >= 100) return false;
+  const permStats = getStats(state, data, { permanentOnly: true });
+  const currentPerm = permStats.skills[skillId] ?? 0;
+  const skRules = data.rules.skills;
+  const step = ch.tagged.includes(skillId) ? skRules.taggedPointValue : 1;
+  if (currentPerm + step > skRules.max) return false;
 
-  const gain = ch.tagged.includes(skillId) ? 2 : 1;
-  ch.skillPoints[skillId] = (ch.skillPoints[skillId] ?? 0) + gain;
+  ch.skillPoints[skillId] = (ch.skillPoints[skillId] ?? 0) + 1;
   ch.freeSkillPoints -= 1;
   return true;
 }
@@ -289,7 +292,9 @@ export function canPickPerk(
   data: OriginGameData
 ): boolean {
   const ch = state.character;
-  if (!ch || ch.perks.includes(perk.id)) return false;
+  if (!ch || ch.perks.includes(perk.id) || ch.perks.length >= data.rules.leveling.maxPerks) {
+    return false;
+  }
 
   const req = perk.requires as
     | { level?: number; attributes?: Partial<Record<AttributeId, number>>; skills?: Partial<Record<SkillId, number>> }
@@ -300,7 +305,7 @@ export function canPickPerk(
     return false;
   }
 
-  const stats = getStats(state, data);
+  const stats = getStats(state, data, { permanentOnly: true });
   if (req.attributes) {
     for (const [attr, minVal] of Object.entries(req.attributes)) {
       if ((stats.permanentAttributes[attr as AttributeId] ?? 0) < (minVal ?? 0)) {

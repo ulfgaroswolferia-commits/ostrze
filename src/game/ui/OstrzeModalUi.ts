@@ -794,10 +794,26 @@ export class OstrzeModalUi {
         ? this.state.inventory.items
             .map((entry) => {
               const item = this.data.items.find((i) => i.id === entry.id);
-              const isEquipped = item?.slot && this.state.inventory.equipped[item.slot] === entry.id;
-              const canEquip = Boolean(item?.slot) && !isEquipped;
-              const healAmt = (item as { healHp?: number } | undefined)?.healHp;
-              const canUse = typeof healAmt === 'number' && healAmt > 0 && ch.hp < stats.derived.hpMax;
+              const equipSlot = item?.slot ?? (item?.type === 'weapon' ? 'bron' : undefined);
+              const isEquipped = Boolean(equipSlot && this.state.inventory.equipped[equipSlot] === entry.id);
+              const canEquip = Boolean(equipSlot) && !isEquipped;
+              const healRange = item?.heal;
+              const healFlat = item?.healHp;
+              const canRemoveEffect = Boolean(
+                item?.removes?.some((effId) => ch.effects.some((e) => e.id === effId))
+              );
+              const hasHeal =
+                (Array.isArray(healRange) && healRange[1] > 0) ||
+                (typeof healFlat === 'number' && healFlat > 0);
+              const canUse =
+                (hasHeal && ch.hp < stats.derived.hpMax) || canRemoveEffect;
+              const useLabel = Array.isArray(healRange)
+                ? healRange[0] === healRange[1]
+                  ? `Użyj (+${healRange[0]} HP)`
+                  : `Użyj (+${healRange[0]}–${healRange[1]} HP)`
+                : typeof healFlat === 'number' && healFlat > 0
+                  ? `Użyj (+${healFlat} HP)`
+                  : 'Użyj';
               return `
                 <div class="ostrze-row">
                   <span>
@@ -806,7 +822,7 @@ export class OstrzeModalUi {
                   </span>
                   <span class="ostrze-stepper">
                     ${canEquip ? `<button class="ostrze-hub-btn" data-cs-equip="${this.escape(entry.id)}">Załóż</button>` : ''}
-                    ${canUse ? `<button class="ostrze-hub-btn" data-cs-use="${this.escape(entry.id)}">Użyj (+${healAmt} HP)</button>` : ''}
+                    ${canUse ? `<button class="ostrze-hub-btn" data-cs-use="${this.escape(entry.id)}">${useLabel}</button>` : ''}
                   </span>
                 </div>
               `;
@@ -898,8 +914,13 @@ export class OstrzeModalUi {
       btn.addEventListener('click', () => {
         const itemId = btn.dataset.csEquip ?? '';
         const item = this.data.items.find((i) => i.id === itemId);
-        if (item?.slot) {
-          this.state.inventory.equipped[item.slot] = itemId;
+        const equipSlot = item?.slot ?? (item?.type === 'weapon' ? 'bron' : undefined);
+        if (item && equipSlot) {
+          this.state.inventory.equipped[equipSlot] = itemId;
+          if (this.state.character) {
+            const maxHp = getStats(this.state, this.data).derived.hpMax;
+            this.state.character.hp = Math.max(1, Math.min(maxHp, this.state.character.hp));
+          }
           this.showToast(`Założono: ${item.name}`, 'info');
           this.activeCharacterSheet?.onUpdated?.();
           this.render();
@@ -910,16 +931,36 @@ export class OstrzeModalUi {
     this.root.querySelectorAll<HTMLElement>('[data-cs-use]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const itemId = btn.dataset.csUse ?? '';
-        const item = this.data.items.find((i) => i.id === itemId) as ({ name: string; healHp?: number } | undefined);
+        const item = this.data.items.find((i) => i.id === itemId);
         const invEntry = this.state.inventory.items.find((i) => i.id === itemId);
-        if (item?.healHp && invEntry && invEntry.qty > 0 && this.state.character) {
-          const maxHp = getStats(this.state, this.data).derived.hpMax;
-          this.state.character.hp = Math.min(maxHp, this.state.character.hp + item.healHp);
+        if (item && invEntry && invEntry.qty > 0 && this.state.character) {
+          const curStats = getStats(this.state, this.data);
+          const maxHp = curStats.derived.hpMax;
+          let healed = 0;
+          if (Array.isArray(item.heal)) {
+            const [lo, hi] = item.heal;
+            const skillBonus = item.healSkill ? (curStats.skills[item.healSkill] ?? 0) : 0;
+            const rawHeal = Math.floor(this.rng.int(lo, hi) * (1 + skillBonus / 100));
+            healed = Math.max(0, Math.min(maxHp - this.state.character.hp, rawHeal));
+            this.state.character.hp += healed;
+          } else if (typeof item.healHp === 'number' && item.healHp > 0) {
+            healed = Math.max(0, Math.min(maxHp - this.state.character.hp, item.healHp));
+            this.state.character.hp += healed;
+          }
+          if (Array.isArray(item.removes) && item.removes.length > 0) {
+            const removeSet = new Set(item.removes);
+            this.state.character.effects = this.state.character.effects.filter(
+              (eff) => !removeSet.has(eff.id)
+            );
+          }
           invEntry.qty -= 1;
           if (invEntry.qty <= 0) {
             this.state.inventory.items = this.state.inventory.items.filter((i) => i.id !== itemId);
           }
-          this.showToast(`Użyto ${item.name} (+${item.healHp} HP)`, 'success');
+          this.showToast(
+            healed > 0 ? `Użyto ${item.name} (+${healed} HP)` : `Użyto ${item.name}`,
+            'success'
+          );
           this.activeCharacterSheet?.onUpdated?.();
           this.render();
         }

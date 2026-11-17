@@ -71,6 +71,9 @@ describe('Playable 2.5D PrologueDirector (NPC markers & non-skippable flow)', ()
     expect(director.phase).toBe('noc_upiory');
     director.handleCombatEnded('defeat');
     expect(director.phase).toBe('noc_istota');
+    expect(engine.npcs.some((n) => n.id.startsWith('enemy_upior_'))).toBe(false);
+    engine.update(0.1);
+    expect(engine.combatState.active).toBe(false);
     expect(engine.npcs.find((n) => n.id === 'npc_istota')?.speechBubbleText).toBe('❗ Istota — Podejdź');
 
     director.handleNpcInteract('npc_istota');

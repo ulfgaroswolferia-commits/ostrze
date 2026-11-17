@@ -14,8 +14,10 @@ function countItem(state: OstrzeGameState, itemId: string): number {
   for (const entry of state.inventory.items) {
     if (entry.id === itemId) total += entry.qty;
   }
-  for (const equippedId of Object.values(state.inventory.equipped)) {
-    if (equippedId === itemId) total += 1;
+  if (total === 0) {
+    for (const equippedId of Object.values(state.inventory.equipped)) {
+      if (equippedId === itemId) total += 1;
+    }
   }
   return total;
 }

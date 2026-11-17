@@ -124,8 +124,8 @@ export function createTestBrzezinaYardScene(): {
     lights: [
       {
         id: 'light_brzezina_fire',
-        x: 10.5,
-        y: 9.5,
+        x: 10,
+        y: 9,
         z: 0.7,
         color: { r: 255, g: 168, b: 84 },
         intensity: 1.35,
@@ -141,10 +141,10 @@ export function createTestBrzezinaYardScene(): {
   gnieworadRecipe.title = 'Mistrz Szkoły Ostrzy w Brzezinie';
   gnieworadRecipe.equipment = {
     head: null,
-    torso: 'torso_brigandine',
-    cloak: 'cloak_forest_ranger',
+    torso: 'torso_warden_brigandine',
+    cloak: 'cloak_ranger_quiver',
     legs: 'legs_leather_boots',
-    mainHand: 'weapon_iron_longsword',
+    mainHand: 'weapon_sunblade_longsword',
     offHand: null
   };
 

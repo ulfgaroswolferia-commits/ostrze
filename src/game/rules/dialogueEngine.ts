@@ -14,6 +14,7 @@ import {
 import { evaluateCondition } from './conditions';
 import type { SeededRng } from './dice';
 import { getStats } from './stats';
+import { advanceMinutes } from './time';
 
 export interface ActiveOstrzeDialogue {
   dialogueId: string;
@@ -113,6 +114,11 @@ export function executeDialogueActions(
         existing.qty -= spec.qty;
         if (existing.qty <= 0) {
           state.inventory.items = state.inventory.items.filter((i) => i.id !== spec.id);
+          for (const [slot, eqId] of Object.entries(state.inventory.equipped)) {
+            if (eqId === spec.id) {
+              delete state.inventory.equipped[slot];
+            }
+          }
         }
       }
     }
@@ -155,6 +161,18 @@ export function executeDialogueActions(
     if (act.failQuest) {
       state.quests[act.failQuest] = 'failed';
     }
+    if (act.reveal) {
+      if (!state.world.knownPlaces.includes(act.reveal)) {
+        state.world.knownPlaces.push(act.reveal);
+      }
+      const basePlace = act.reveal.split('.')[0];
+      if (basePlace && !state.world.knownPlaces.includes(basePlace)) {
+        state.world.knownPlaces.push(basePlace);
+      }
+    }
+    if (typeof act.time === 'number' && act.time > 0) {
+      advanceMinutes(state, act.time, data);
+    }
   }
 
   return { pendingShopId };
@@ -170,6 +188,7 @@ export function startOstrzeDialogue(
   if (!startNode) {
     throw new Error(`Brak węzła startowego "${def.start}" w dialogu "${dialogueId}"`);
   }
+  state.flags[`dialog_met_${dialogueId}`] = true;
   const { pendingShopId } = executeDialogueActions(startNode.actions, state, data);
   return {
     dialogueId,
@@ -178,7 +197,7 @@ export function startOstrzeDialogue(
   };
 }
 
-const UNIMPLEMENTED_DEMO_QUESTS = new Set(['lek_dla_wrzoska', 'list_do_lesniczego']);
+const UNIMPLEMENTED_DEMO_QUESTS = new Set<string>();
 
 export function getOstrzeDialogueView(
   session: ActiveOstrzeDialogue,

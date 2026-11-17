@@ -33,6 +33,14 @@ import dlgOstromirBrama from '../../../origin/data/dialogues/ostromir_brama.json
 import dlgOstromirPowrot from '../../../origin/data/dialogues/ostromir_powrot.json';
 import dlgOstromirPozegnanie from '../../../origin/data/dialogues/ostromir_pozegnanie.json';
 import dlgOstromirTrakt from '../../../origin/data/dialogues/ostromir_trakt.json';
+import dlgKowal from '../../../origin/data/dialogues/kowal.json';
+import dlgZonaBorka from '../../../origin/data/dialogues/zona_borka.json';
+import dlgCorka from '../../../origin/data/dialogues/corka.json';
+import dlgOstap from '../../../origin/data/dialogues/ostap.json';
+import dlgLesniczy from '../../../origin/data/dialogues/lesniczy.json';
+import dlgZwiadowcy from '../../../origin/data/dialogues/zwiadowcy.json';
+import dlgPoZwiadowcach from '../../../origin/data/dialogues/po_zwiadowcach.json';
+import dlgBorekRuiny from '../../../origin/data/dialogues/borek_ruiny.json';
 
 import type {
   AttributeDef,
@@ -99,7 +107,15 @@ export const ORIGIN_DATA: OriginGameData = {
     ostromir_brama: dlgOstromirBrama as unknown as DialogueFileDef,
     ostromir_powrot: dlgOstromirPowrot as unknown as DialogueFileDef,
     ostromir_pozegnanie: dlgOstromirPozegnanie as unknown as DialogueFileDef,
-    ostromir_trakt: dlgOstromirTrakt as unknown as DialogueFileDef
+    ostromir_trakt: dlgOstromirTrakt as unknown as DialogueFileDef,
+    kowal: dlgKowal as unknown as DialogueFileDef,
+    zona_borka: dlgZonaBorka as unknown as DialogueFileDef,
+    corka: dlgCorka as unknown as DialogueFileDef,
+    ostap: dlgOstap as unknown as DialogueFileDef,
+    lesniczy: dlgLesniczy as unknown as DialogueFileDef,
+    zwiadowcy: dlgZwiadowcy as unknown as DialogueFileDef,
+    po_zwiadowcach: dlgPoZwiadowcach as unknown as DialogueFileDef,
+    borek_ruiny: dlgBorekRuiny as unknown as DialogueFileDef
   }
 };
 

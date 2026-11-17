@@ -273,8 +273,8 @@ export function createBrzezinaYardScene(opts?: {
     lights: [
       {
         id: 'light_brzezina_fire',
-        x: 11.5,
-        y: 10.5,
+        x: 11,
+        y: 10,
         z: 0.7,
         color: { r: 255, g: 168, b: 84 },
         intensity: 1.35,
@@ -295,8 +295,8 @@ export function createBrzezinaYardScene(opts?: {
       y: 6,
       z: tiles[6][10].z,
       torso: 'torso_warden_brigandine',
-      cloak: 'cloak_forest_ranger',
-      mainHand: 'weapon_iron_longsword'
+      cloak: 'cloak_ranger_quiver',
+      mainHand: 'weapon_sunblade_longsword'
     }),
     makeNpc({
       id: 'npc_radogost',
@@ -308,7 +308,7 @@ export function createBrzezinaYardScene(opts?: {
       z: tiles[11][10].z,
       direction: 0,
       torso: 'torso_przeszywanica',
-      mainHand: 'weapon_wooden_club',
+      mainHand: 'weapon_slavic_axe',
       hostile: Boolean(opts?.sparingHostile),
       hp: 30,
       ap: 6,
@@ -335,7 +335,7 @@ export function createBrzezinaYardScene(opts?: {
       x: 8,
       y: 16,
       z: tiles[16][8].z,
-      mainHand: 'weapon_iron_longsword'
+      mainHand: 'weapon_sunblade_longsword'
     }),
     makeNpc({
       id: 'npc_ragnoslawa',
@@ -345,7 +345,7 @@ export function createBrzezinaYardScene(opts?: {
       x: 13,
       y: 16,
       z: tiles[16][13].z,
-      mainHand: 'weapon_spear_or_staff'
+      mainHand: 'weapon_astral_staff'
     }),
     makeNpc({
       id: 'npc_wojmir',
@@ -471,8 +471,8 @@ export function createTraktZasadzkaScene(): CustomSceneConfig {
     lights: [
       {
         id: 'light_trakt_fire',
-        x: 10.5,
-        y: 15.5,
+        x: 10,
+        y: 15,
         z: 0.7,
         color: { r: 255, g: 162, b: 78 },
         intensity: 1.25,
@@ -606,8 +606,8 @@ export function createUroczyskoNocScene(): CustomSceneConfig {
     lights: [
       {
         id: 'light_noc_fire',
-        x: 10.5,
-        y: 11.5,
+        x: 10,
+        y: 11,
         z: 0.6,
         color: { r: 225, g: 120, b: 60 },
         intensity: 0.75,
@@ -617,8 +617,8 @@ export function createUroczyskoNocScene(): CustomSceneConfig {
       },
       {
         id: 'light_noc_spark',
-        x: 10.5,
-        y: 5.5,
+        x: 10,
+        y: 5,
         z: 1.2,
         color: { r: 120, g: 185, b: 255 },
         intensity: 1.4,
@@ -633,7 +633,7 @@ export function createUroczyskoNocScene(): CustomSceneConfig {
     makeNpc({
       id: 'enemy_upior_1',
       seed: 301,
-      name: 'Upiór Nocy',
+      name: 'Upiór Nocy (Zmora)',
       title: 'Cień zza Burzy Iskier',
       x: 9,
       y: 8,
@@ -652,7 +652,7 @@ export function createUroczyskoNocScene(): CustomSceneConfig {
     makeNpc({
       id: 'enemy_upior_2',
       seed: 302,
-      name: 'Upiór Nocy',
+      name: 'Upiór Nocy (Zmora)',
       title: 'Cień zza Burzy Iskier',
       x: 12,
       y: 8,
@@ -753,7 +753,7 @@ export function createPobojowiskoSwitScene(): CustomSceneConfig {
         y: 12,
         z: tiles[12][9].z,
         torso: 'torso_slavic_giezlo',
-        cloak: 'cloak_forest_ranger'
+        cloak: 'cloak_ranger_quiver'
       }),
       makeNpc({
         id: 'npc_rozdroze_szlak',
@@ -806,6 +806,6 @@ export function createTraktCampfireActor(z: number): ActorEntity {
     z,
     direction: 4,
     torso: 'torso_przeszywanica',
-    mainHand: 'weapon_iron_longsword'
+    mainHand: 'weapon_sunblade_longsword'
   });
 }

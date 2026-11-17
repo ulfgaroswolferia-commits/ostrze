@@ -176,6 +176,22 @@ export function getStats(
   const carry = d.carryBase + d.carryPerSila * attributes.sila + sumKey(allSources, 'carry');
   const defense = d.defensePerZrecznosc * attributes.zrecznosc + sumKey(allSources, 'defense');
 
+  const equipped = opts.permanentOnly ? {} : (state.inventory?.equipped ?? {});
+  let wornArmor = 0;
+  for (const [slot, itemId] of Object.entries(equipped)) {
+    if (!itemId || slot === 'bron_zapas' || slot === 'bron_druga') continue;
+    const item = data.items.find((it) => it.id === itemId);
+    if (typeof item?.armor === 'number') {
+      wornArmor += item.armor;
+    }
+  }
+  const softCap = data.rules.inventory?.softCap;
+  const cappedWornArmor =
+    !softCap || wornArmor <= softCap.armorFrom
+      ? wornArmor
+      : Math.floor(softCap.armorFrom + (wornArmor - softCap.armorFrom) * softCap.rate);
+  const armor = cappedWornArmor + sumKey(allSources, 'armor');
+
   return {
     attributes,
     permanentAttributes,
@@ -190,7 +206,7 @@ export function getStats(
       critChance: attributes.fart + sumKey(allSources, 'critChance'),
       fleeChance: sumKey(allSources, 'fleeChance'),
       initiative: attributes.bystrosc + attributes.zrecznosc + sumKey(allSources, 'initiative'),
-      armor: sumKey(allSources, 'armor')
+      armor
     }
   };
 }

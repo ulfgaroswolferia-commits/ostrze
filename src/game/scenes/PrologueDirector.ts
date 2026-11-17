@@ -581,8 +581,16 @@ export class PrologueDirector {
   }
 
   public handleCombatEnded(outcome: 'victory' | 'defeat' | 'fled'): void {
+    this.engine.combatState.active = false;
+    this.engine.combatState.participantIds = [];
+    this.engine.combatState.activeTurnActorId = null;
     if (this.phase === 'brzezina_sparing_fight') {
       this.phase = 'brzezina_kurier';
+      for (const npc of this.engine.npcs) {
+        if (npc.id === 'npc_radogost' && npc.combat) {
+          npc.combat.isHostile = false;
+        }
+      }
       if (outcome === 'victory') {
         this.state.flags.combat_demo_sparing_walka_wygrana = true;
       } else {
@@ -615,11 +623,16 @@ export class PrologueDirector {
       }
 
       this.phase = 'trakt_ognisko';
+      for (let i = this.engine.npcs.length - 1; i >= 0; i--) {
+        if (this.engine.npcs[i].id.startsWith('enemy_bandyta_')) {
+          this.engine.npcs.splice(i, 1);
+        }
+      }
       if (this.state.character && this.engine.player.combat) {
         this.state.character.hp = Math.max(1, this.engine.player.combat.hp);
       }
       if (outcome === 'victory') {
-        this.state.inventory.items.push({ id: 'kamien_zmierzchu', qty: 1 });
+        this.addItemStack('kamien_zmierzchu', 1);
         this.engine.addLog('✨ Zdobyto artefakt: Kamień Zmierzchu!', 'important');
         this.onAutoSave?.();
       }
@@ -640,6 +653,11 @@ export class PrologueDirector {
 
     if (this.phase === 'noc_upiory') {
       this.phase = 'noc_istota';
+      for (let i = this.engine.npcs.length - 1; i >= 0; i--) {
+        if (this.engine.npcs[i].id.startsWith('enemy_upior_')) {
+          this.engine.npcs.splice(i, 1);
+        }
+      }
       if (this.state.character && this.engine.player.combat) {
         this.state.character.hp = Math.max(1, this.engine.player.combat.hp);
       }
@@ -676,6 +694,15 @@ export class PrologueDirector {
     }
   }
 
+  private addItemStack(itemId: string, qty: number): void {
+    const existing = this.state.inventory.items.find((i) => i.id === itemId);
+    if (existing) {
+      existing.qty += qty;
+    } else {
+      this.state.inventory.items.push({ id: itemId, qty });
+    }
+  }
+
   private applySparingReward(): void {
     if (this.state.flags.klasa_miecz) {
       this.state.vars.dlug = (this.state.vars.dlug ?? 0) + 1;
@@ -686,7 +713,7 @@ export class PrologueDirector {
     if (this.state.character) {
       const xpRes = grantXp(this.state, 160, this.data);
       this.state.character.money += 15;
-      this.state.inventory.items.push({ id: 'kaptur_mysliwego', qty: 1 });
+      this.addItemStack('kaptur_mysliwego', 1);
       this.state.inventory.equipped.glowa = 'kaptur_mysliwego';
       this.engine.addLog(
         `🏆 Nagroda po sparingu: +160 XP (Poziom ${xpRes.newLevel}), +15 gr, Kaptur Myśliwego!`,
@@ -851,8 +878,18 @@ export class PrologueDirector {
     }
     this.engine.loadCustomScene(sceneId);
     if (phase === 'trakt_ognisko') {
+      for (let i = this.engine.npcs.length - 1; i >= 0; i--) {
+        if (this.engine.npcs[i].id.startsWith('enemy_bandyta_')) {
+          this.engine.npcs.splice(i, 1);
+        }
+      }
       this.engine.npcs.push(createTraktCampfireActor(this.engine.map.tiles[15]?.[11]?.z ?? 0));
     } else if (phase === 'noc_istota') {
+      for (let i = this.engine.npcs.length - 1; i >= 0; i--) {
+        if (this.engine.npcs[i].id.startsWith('enemy_upior_')) {
+          this.engine.npcs.splice(i, 1);
+        }
+      }
       this.engine.npcs.push(createIstotaActor(this.engine.map.tiles[9]?.[10]?.z ?? 0));
     }
     this.syncHeroTo25D();
