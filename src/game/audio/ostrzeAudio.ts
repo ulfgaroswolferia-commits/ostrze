@@ -1,12 +1,9 @@
 /**
  * Audio facade for Ostrze 2.5D.
- * Delegates looping ambient soundscapes (/audio/ambience/*) and creature/combat SFX (/audio/sfx/*)
- * to ulfRPG's `CombatAudioEngine`, while providing crisp procedural Web Audio UI/dialogue/quest chimes.
+ * Provides procedural Web Audio UI/dialogue/quest chimes, creature SFX, and looping ambient soundscapes.
  * Respects `ulf_crpg_audio_muted`.
  */
-import { CombatAudioEngine, type AmbienceMood } from '@ulf/audio/combatAudio';
-
-export type OstrzeAmbienceMood = AmbienceMood;
+export type OstrzeAmbienceMood = 'none' | 'town' | 'dawn' | 'forest' | 'creepy_forest' | 'night_storm';
 
 class OstrzeAudioManager {
   private ctx: AudioContext | null = null;
@@ -138,7 +135,19 @@ class OstrzeAudioManager {
 
   public playCreatureSound(kind: 'witch_cackle' | 'wraith_moan' | 'ghost_breath', pitchMod = 1.0): void {
     if (this.isMuted()) return;
-    CombatAudioEngine.getInstance().playSound(kind, pitchMod);
+    if (kind === 'witch_cackle') {
+      this.playTone(520 * pitchMod, 0.12, 'sawtooth', 0.045, 0, 680 * pitchMod);
+      this.playTone(620 * pitchMod, 0.12, 'sawtooth', 0.045, 0.11, 460 * pitchMod);
+      this.playTone(580 * pitchMod, 0.16, 'sawtooth', 0.04, 0.22, 390 * pitchMod);
+      return;
+    }
+    if (kind === 'wraith_moan') {
+      this.playTone(165 * pitchMod, 0.55, 'sine', 0.06, 0, 110 * pitchMod);
+      this.playTone(247 * pitchMod, 0.48, 'triangle', 0.035, 0.05, 145 * pitchMod);
+      return;
+    }
+    // ghost_breath
+    this.playTone(210 * pitchMod, 0.36, 'sine', 0.04, 0, 130 * pitchMod);
   }
 
   public setAmbience(mood: OstrzeAmbienceMood): void {
@@ -149,13 +158,54 @@ class OstrzeAudioManager {
       return;
     }
     if (this.isMuted()) return;
-    const volume = mood === 'night_storm' ? 0.28 : mood === 'town' ? 0.2 : 0.24;
-    CombatAudioEngine.getInstance().playAmbience(mood, volume);
+
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    try {
+      this.ambienceSource?.stop();
+    } catch {
+      // ignore if already stopped
+    }
+    this.ambienceSource = null;
+    this.ambienceGain?.disconnect();
+    this.ambienceGain = null;
+
+    // Subtle procedural filtered noise bed for atmosphere
+    const sampleRate = ctx.sampleRate;
+    const length = sampleRate * 2;
+    const buffer = ctx.createBuffer(1, length, sampleRate);
+    const data = buffer.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < length; i++) {
+      const white = Math.random() * 2 - 1;
+      last = (last + 0.04 * white) / 1.04;
+      data[i] = last * 1.8;
+    }
+
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.loop = true;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = mood === 'night_storm' ? 420 : mood === 'creepy_forest' ? 280 : 340;
+
+    const gain = ctx.createGain();
+    const volume = mood === 'night_storm' ? 0.08 : mood === 'town' ? 0.04 : 0.055;
+    gain.gain.value = volume;
+
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    src.start();
+
+    this.ambienceSource = src;
+    this.ambienceGain = gain;
   }
 
   public stopAmbience(): void {
     this.currentMood = 'none';
-    CombatAudioEngine.getInstance().stopAmbience();
     try {
       this.ambienceSource?.stop();
     } catch {

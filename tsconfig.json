@@ -17,7 +17,8 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@ulf/*": ["../ulfRPG/src/*"]
+      "@ulf/*": ["../ulfRPG/src/*"],
+      "pixi.js": ["./node_modules/pixi.js"]
     }
   },
   "include": ["src", "tests"]

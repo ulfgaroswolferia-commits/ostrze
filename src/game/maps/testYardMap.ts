@@ -44,7 +44,6 @@ export function createTestBrzezinaYardScene(): {
     id: 'forest_clearing' as MapId,
     name: 'Brzezina — Dziedziniec Szkoły Ostrzy',
     subtitle: 'Prolog: Cień Szkoły i Cesarski Wyrok',
-    locationType: 'town',
     width,
     height,
     maxElevation: 2,

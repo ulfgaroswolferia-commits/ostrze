@@ -6,7 +6,8 @@ export default defineConfig({
   publicDir: path.resolve(__dirname, '../ulfRPG/public'),
   resolve: {
     alias: {
-      '@ulf': path.resolve(__dirname, '../ulfRPG/src')
+      '@ulf': path.resolve(__dirname, '../ulfRPG/src'),
+      'pixi.js': path.resolve(__dirname, 'node_modules/pixi.js')
     }
   },
   server: {
