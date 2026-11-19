@@ -15,6 +15,7 @@ import { createRng, SeededRng } from '../rules/dice';
 import { startOstrzeDialogue } from '../rules/dialogueEngine';
 import { getStats } from '../rules/stats';
 import { advanceMinutes, clockOf, waitUntilHour } from '../rules/time';
+import { markOstrzeLocationVisited } from '../rules/travel';
 import type { OstrzeModalUi } from '../ui/OstrzeModalUi';
 
 export type ProloguePhase =
@@ -161,6 +162,7 @@ export class PrologueDirector {
     this.ui?.setHubPanel(null);
     this.engine.registerCustomScene(createBrzezinaYardScene({ withCourier: false, sparingHostile: false }));
     this.engine.loadCustomScene('brzezina_dziedziniec');
+    markOstrzeLocationVisited(this.state, 'brzezina_dziedziniec');
     ostrzeAudio.setAmbience('dawn');
     this.showNarrativeScene(
       'prolog_wstep',
@@ -196,6 +198,7 @@ export class PrologueDirector {
     this.phase = 'brzezina_gnieworad';
     this.engine.registerCustomScene(createBrzezinaYardScene({ sparingHostile: false }));
     this.engine.loadCustomScene('brzezina_dziedziniec');
+    markOstrzeLocationVisited(this.state, 'brzezina_dziedziniec');
     this.syncHeroTo25D();
 
     this.engine.clearAllNpcMarkers();
@@ -274,47 +277,106 @@ export class PrologueDirector {
     switch (this.phase) {
       case 'brzezina_gnieworad':
         questsLine = 'Cel: Podejdź na dziedzińcu do Mistrza Gnieworada (❗) i kliknij na niego.';
+        actions.push({
+          id: 'walk_gnieworad',
+          label: '🚶 Mistrz Gnieworad',
+          onClick: () => this.engine.commandTalkToNpc('npc_gnieworad')
+        });
         break;
       case 'brzezina_sparing_talk':
         questsLine = 'Cel: Podejdź do Instruktora Radogosta (⚔️) na środku placu, aby stoczyć sparing.';
+        actions.push({
+          id: 'walk_radogost',
+          label: '🚶 Instruktor Radogost',
+          onClick: () => this.engine.commandTalkToNpc('npc_radogost')
+        });
         break;
       case 'brzezina_sparing_fight':
         questsLine = 'Walka ćwiczebna z Instruktorem Radogostem w toku!';
         break;
       case 'brzezina_kurier':
         questsLine = 'Cel: Podejdź do Cesarskiego Kuriera w czerwonym płaszczu (❗) i porozmawiaj.';
+        actions.push({
+          id: 'walk_kurier',
+          label: '🚶 Cesarski Kurier',
+          onClick: () => this.engine.commandTalkToNpc('npc_kurier')
+        });
         break;
       case 'brzezina_delegacja':
         questsLine = 'Cel: Wróć do Mistrza Gnieworada (❗) po decyzję w sprawie delegacji.';
+        actions.push({
+          id: 'walk_gnieworad_del',
+          label: '🚶 Mistrz Gnieworad',
+          onClick: () => this.engine.commandTalkToNpc('npc_gnieworad')
+        });
         break;
       case 'brzezina_towarzysze':
         questsLine = 'Cel: Podejdź do towarzyszy przy południowej bramie (❗ Skarimir / Ragnosława / Wojmir). Możesz też zajrzeć do Kwatermistrza Dobrogosta.';
+        actions.push(
+          {
+            id: 'walk_skarimir',
+            label: '🚶 Towarzysze przy bramie',
+            onClick: () => this.engine.commandTalkToNpc('npc_skarimir')
+          },
+          {
+            id: 'walk_dobrogost',
+            label: '🛒 Kwatermistrz Dobrogost',
+            onClick: () => this.engine.commandTalkToNpc('npc_dobrogost')
+          }
+        );
         break;
       case 'brzezina_gotowy_do_wymarszu':
         questsLine = 'Cel: Podejdź do drogowskazu przy bramie lub ruszaj na trakt ku Wilczemu Brodowi.';
-        actions.push({
-          id: 'march_out',
-          label: '🚶 Wymarsz na trakt (Dzień 1)',
-          onClick: () => this.beginMarchDay1()
-        });
+        actions.push(
+          {
+            id: 'march_out',
+            label: '🚶 Wymarsz na trakt (Dzień 1)',
+            onClick: () => this.beginMarchDay1()
+          },
+          {
+            id: 'walk_dobrogost_ready',
+            label: '🛒 Kwatermistrz Dobrogost',
+            onClick: () => this.engine.commandTalkToNpc('npc_dobrogost')
+          }
+        );
         break;
       case 'trakt_bandyci':
         questsLine = 'Cel: Zasadzka na gościńcu! Podejdź do bandytów (⚔️) i odeprzyj atak.';
         break;
       case 'trakt_ognisko':
         questsLine = 'Cel: Podejdź do Skarimira przy Ognisku (❗), zanim zapadnie zmrok.';
+        actions.push({
+          id: 'walk_ognisko',
+          label: '🚶 Skarimir przy ognisku',
+          onClick: () => this.engine.commandTalkToNpc('npc_trakt_ognisko')
+        });
         break;
       case 'noc_upiory':
         questsLine = 'Noc Upiorów! Broń obozu przed Upiorami Nocy.';
         break;
       case 'noc_istota':
         questsLine = 'Cel: Podejdź do tajemniczej Istoty przy wygasłym ognisku (❗).';
+        actions.push({
+          id: 'walk_istota',
+          label: '🚶 Istota przy ognisku',
+          onClick: () => this.engine.commandTalkToNpc('npc_istota')
+        });
         break;
       case 'pobojowisko':
         questsLine = 'Cel: Podejdź do śladów poległych towarzyszy i tobołu przewodnika (❗).';
+        actions.push({
+          id: 'walk_pobojowisko',
+          label: '🚶 Ślady na pobojowisku',
+          onClick: () => this.engine.commandTalkToNpc('npc_pobojowisko_slad')
+        });
         break;
       case 'rozdroze':
         questsLine = 'Cel: Podejdź do Rozdroża (❗) i zdecyduj o dalszej drodze.';
+        actions.push({
+          id: 'walk_rozdroze',
+          label: '🚶 Rozdroże',
+          onClick: () => this.engine.commandTalkToNpc('npc_rozdroze_szlak')
+        });
         break;
       default:
         break;
@@ -453,6 +515,7 @@ export class PrologueDirector {
         this.phase = 'brzezina_sparing_fight';
         this.engine.registerCustomScene(createBrzezinaYardScene({ sparingHostile: true }));
         this.engine.loadCustomScene('brzezina_dziedziniec');
+    markOstrzeLocationVisited(this.state, 'brzezina_dziedziniec');
         this.syncHeroTo25D();
         this.refreshMarkersAndTracker();
         this.engine.addLog(
@@ -727,6 +790,7 @@ export class PrologueDirector {
     waitUntilHour(this.state, 12, this.data);
     this.engine.registerCustomScene(createBrzezinaYardScene({ withCourier: true }));
     this.engine.loadCustomScene('brzezina_dziedziniec');
+    markOstrzeLocationVisited(this.state, 'brzezina_dziedziniec');
     this.syncHeroTo25D();
 
     this.showNarrativeScene(
@@ -746,6 +810,7 @@ export class PrologueDirector {
     waitUntilHour(this.state, 6, this.data);
     this.phase = 'trakt_bandyci';
     this.engine.loadCustomScene('trakt_zasadzka');
+    markOstrzeLocationVisited(this.state, 'trakt_zasadzka');
     ostrzeAudio.setAmbience('forest');
     this.syncHeroTo25D();
 
@@ -777,6 +842,7 @@ export class PrologueDirector {
     this.phase = 'noc_upiory';
     this.state.world.activePhenomenon = 'burza_iskier';
     this.engine.loadCustomScene('uroczysko_noc');
+    markOstrzeLocationVisited(this.state, 'uroczysko_noc');
     ostrzeAudio.setAmbience('night_storm');
     ostrzeAudio.playCreatureSound('wraith_moan');
     this.syncHeroTo25D();
@@ -811,6 +877,7 @@ export class PrologueDirector {
     this.state.flags.ukryte_insygnia = true;
     this.phase = 'pobojowisko';
     this.engine.loadCustomScene('pobojowisko_swit');
+    markOstrzeLocationVisited(this.state, 'pobojowisko_swit');
     ostrzeAudio.setAmbience('dawn');
     this.syncHeroTo25D();
 

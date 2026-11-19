@@ -476,3 +476,26 @@
   resize: vertical;
   margin-bottom: 12px;
 }
+
+/* Hide upstream ulfRPG engine map transport (Ostrze uses its own visited-location travel) */
+.transport-picker {
+  display: none !important;
+}
+
+.ostrze-dialogue-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.ostrze-dialogue-avatar {
+  width: 64px;
+  height: 80px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid #8a6d3b;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.65);
+  background: #0d1016;
+}

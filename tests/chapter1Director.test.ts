@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { OstrzeEngineState } from '../src/engine-bridge/OstrzeEngineState';
+import { bakeWolfCharacterBuffers, isWolfRecipe } from '../src/game/assets/beastSprites';
 import { ORIGIN_DATA } from '../src/game/data/originData';
 import { createCharacter, createEmptyOstrzeState, grantXp } from '../src/game/rules/character';
 import { createRng } from '../src/game/rules/dice';
+import { getVisitedOstrzeLocations, rollOriginTravelEncounter } from '../src/game/rules/travel';
 import { Chapter1Director } from '../src/game/scenes/Chapter1Director';
 
 describe('Chapter1Director — Wilczy Bród & Pogórze (Rozdział I)', () => {
@@ -159,5 +161,34 @@ describe('Chapter1Director — Wilczy Bród & Pogórze (Rozdział I)', () => {
     // Total XP from 8 side quests: 30 + 30 + 40 + 30 + 50 + 40 + 60 + 50 = 330 XP
     expect(state.character!.money).toBe(startMoney + 142);
     expect(state.character!.xp).toBe(startXp + 330);
+  });
+
+  it('tracks visited locations, rolls origin travel encounters, and bakes quadruped wolf sprites', () => {
+    const { engine, state, chapter1 } = setupChapter1();
+    const visitedInitial = getVisitedOstrzeLocations(state).map((l) => l.id);
+    expect(visitedInitial).toEqual(['brzezina_dziedziniec', 'wilczy_brod']);
+
+    chapter1.startWilczaNoraQuest();
+    const visitedAfterNora = getVisitedOstrzeLocations(state).map((l) => l.id);
+    expect(visitedAfterNora).toContain('wilcza_nora');
+
+    const wolfNpc = engine.npcs.find((n) => n.id === 'enemy_wilk_1');
+    expect(wolfNpc).toBeDefined();
+    expect(isWolfRecipe(wolfNpc!.recipe)).toBe(true);
+    const baked = bakeWolfCharacterBuffers(wolfNpc!.recipe);
+    expect(baked.sheetWidth).toBe(256);
+    expect(baked.sheetHeight).toBe(768);
+    expect(baked.recipeHash).toContain('wolf_');
+
+    // Roll multiple times to verify origin encounter pool works deterministically
+    let rolledAny = false;
+    for (let i = 0; i < 15; i++) {
+      const ev = rollOriginTravelEncounter(state, ORIGIN_DATA, chapter1.rng, 'wilczy_brod', 'wilcza_nora');
+      if (ev) {
+        rolledAny = true;
+        expect(['encounter', 'attack', 'weather']).toContain(ev.kind);
+      }
+    }
+    expect(rolledAny).toBe(true);
   });
 });

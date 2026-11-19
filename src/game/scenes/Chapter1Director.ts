@@ -1,7 +1,10 @@
+import { generateRandomCharacterRecipe } from '@ulf/assets/characterBakery';
+import { createDefaultProficiencies } from '@ulf/rpg/combatSystem';
+import type { ActorEntity } from '@ulf/rpg/gameLoop';
 import type { OstrzeEngineState } from '../../engine-bridge/OstrzeEngineState';
 import { ostrzeAudio } from '../audio/ostrzeAudio';
-import { ORIGIN_DATA } from '../data/originData';
-import type { OriginGameData, OstrzeGameState } from '../data/originTypes';
+import { findOriginEnemy, ORIGIN_DATA } from '../data/originData';
+import type { OriginGameData, OriginTravelEventDef, OriginTravelSceneDef, OstrzeGameState } from '../data/originTypes';
 import {
   createKamiennaPrzeleczScene,
   createLesniczowkaScene,
@@ -12,11 +15,19 @@ import {
   createWilczyBrodScene,
   createWilczyLasScene
 } from '../maps/chapter1Maps';
+import { createTraktZasadzkaScene } from '../maps/prologueMaps';
 import { grantXp } from '../rules/character';
+import { evaluateCondition } from '../rules/conditions';
 import type { SeededRng } from '../rules/dice';
 import { startOstrzeDialogue } from '../rules/dialogueEngine';
 import { getStats } from '../rules/stats';
 import { advanceMinutes, clockOf, timeOfDay, waitUntilHour } from '../rules/time';
+import {
+  getOstrzeLocationMeta,
+  getVisitedOstrzeLocations,
+  markOstrzeLocationVisited,
+  rollOriginTravelEncounter
+} from '../rules/travel';
 import type { OstrzeModalUi } from '../ui/OstrzeModalUi';
 
 export type Chapter1CombatStage =
@@ -26,7 +37,8 @@ export type Chapter1CombatStage =
   | 'wilczy_las_hunt'
   | 'trakt_kupiecki_hunt'
   | 'lesniczowka_hunt'
-  | 'ruiny_straznicy_hunt';
+  | 'ruiny_straznicy_hunt'
+  | 'travel_encounter';
 
 const CHAPTER1_QUEST_IDS = new Set([
   'wilcza_nora',
@@ -59,6 +71,11 @@ export class Chapter1Director {
 
   public activeCombatStage: Chapter1CombatStage = 'none';
   public chapter1Completed = false;
+  private pendingTravel: {
+    destId: string;
+    afterVictoryText?: string;
+    afterFleeText?: string;
+  } | null = null;
   public onSaveRequested?: () => void;
   public onLoadRequested?: () => void;
   public onAutoSave?: () => void;
@@ -144,6 +161,10 @@ export class Chapter1Director {
       this.openShop('kramarz_brod');
       return true;
     }
+    if (propId === 'wb_karczma') {
+      this.restAtInn();
+      return true;
+    }
     if (propId === 'wb_ognisko') {
       this.engine.addLog('🔥 Przy ognisku strażniczym grzeją się wartownicy. Jeśli potrzebujesz odpoczynku, zajrzyj do Izby.', 'info');
       return true;
@@ -152,9 +173,11 @@ export class Chapter1Director {
       this.engine.addLog('💧 Zimna woda ze studni w Wilczym Brodzie orzeźwia po marszu.', 'info');
       return true;
     }
-    if (propId === 'wb_drogowskaz') {
-      if (this.state.flags.akt2_koniec && !this.chapter1Completed) {
+    if (propId === 'wb_drogowskaz' || propId === 'brzezina_drogowskaz') {
+      if (propId === 'wb_drogowskaz' && this.state.flags.akt2_koniec && !this.chapter1Completed) {
         this.finishChapter1();
+      } else if (getVisitedOstrzeLocations(this.state).length >= 2) {
+        this.openTravelModal();
       } else {
         this.engine.addLog('🪧 Drogowskaz wskazuje okoliczne szlaki i Kamienną Przełęcz. Wybierz cel z panelu u góry lub porozmawiaj z Ostromirem.', 'important');
       }
@@ -381,6 +404,7 @@ export class Chapter1Director {
     this.engine.clearAllNpcMarkers();
     this.state.world.location = 'wilczy_brod';
     this.revealPlace('wilczy_brod');
+    markOstrzeLocationVisited(this.state, 'wilczy_brod');
 
     this.engine.loadCustomScene('wilczy_brod');
     ostrzeAudio.setAmbience('town');
@@ -692,6 +716,15 @@ export class Chapter1Director {
           label: '⛰️ Przejdź przez Kamienną Przełęcz (Koniec Rozdziału I)',
           alert: true,
           onClick: () => this.finishChapter1()
+        });
+      }
+
+      if (getVisitedOstrzeLocations(this.state).length >= 2) {
+        actions.push({
+          id: 'open_travel',
+          label: '🧭 Podróż (Szlak)',
+          alert: false,
+          onClick: () => this.openTravelModal()
         });
       }
     } else if (loc === 'wilczy_las') {
@@ -1504,7 +1537,16 @@ export class Chapter1Director {
   public startWilczaNoraQuest(): void {
     this.state.quests.wilcza_nora = 'active';
     this.state.world.location = 'wilcza_nora';
+    markOstrzeLocationVisited(this.state, 'wilcza_nora');
     this.engine.loadCustomScene('wilcza_nora');
+    this.engine.npcs.forEach((n) => {
+      if (n.id.startsWith('enemy_wilk_')) {
+        n.recipe.id = n.id;
+        n.recipe.equipment.head = null;
+        n.recipe.equipment.mainHand = null;
+        n.recipe.equipment.offHand = null;
+      }
+    });
     ostrzeAudio.setAmbience('creepy_forest');
     this.syncHeroTo25D();
     this.refreshHubPanel();
@@ -1705,6 +1747,56 @@ export class Chapter1Director {
         this.syncHeroTo25D();
         this.refreshHubPanel();
       }
+      return;
+    }
+
+    if (this.activeCombatStage === 'travel_encounter') {
+      this.activeCombatStage = 'none';
+      if (outcome === 'victory') {
+        const xp = grantXp(this.state, 35, this.data);
+        this.engine.addLog(`🏆 Zwycięstwo w starciu na trakcie! +35 XP (Poz. ${xp.newLevel}).`, 'important');
+        if (this.pendingTravel?.afterVictoryText && this.ui) {
+          const dest = this.pendingTravel.destId;
+          this.ui.showNarrative({
+            title: 'Starcie na Trakcie',
+            subtitle: 'Zwycięstwo',
+            text: this.pendingTravel.afterVictoryText,
+            buttonLabel: 'Kontynuuj podróż',
+            onContinue: () => {
+              this.arriveAtLocation(dest);
+            }
+          });
+          this.pendingTravel = null;
+          return;
+        }
+      } else if (outcome === 'fled') {
+        this.engine.addLog('🏃 Udało ci się uciec przed napastnikami.', 'info');
+        if (this.pendingTravel?.afterFleeText && this.ui) {
+          const dest = this.pendingTravel.destId;
+          this.ui.showNarrative({
+            title: 'Ucieczka',
+            subtitle: 'Ocalenie',
+            text: this.pendingTravel.afterFleeText,
+            buttonLabel: 'Dalej w drogę',
+            onContinue: () => {
+              this.arriveAtLocation(dest);
+            }
+          });
+          this.pendingTravel = null;
+          return;
+        }
+      } else {
+        this.engine.addLog('💀 Klęska na leśnym trakcie.', 'critical');
+      }
+      const targetDest = this.pendingTravel?.destId;
+      this.pendingTravel = null;
+      if (targetDest && outcome !== 'defeat') {
+        this.arriveAtLocation(targetDest);
+      } else {
+        this.syncHeroTo25D();
+        this.refreshHubPanel();
+      }
+      return;
     }
   }
 
@@ -1763,5 +1855,228 @@ export class Chapter1Director {
     );
     this.syncHeroTo25D();
     this.refreshHubPanel();
+  }
+
+  public openTravelModal(): void {
+    if (!this.ui) return;
+    const currentLoc = this.engine.activeCustomSceneId ?? this.state.world.location;
+    const destinations = getVisitedOstrzeLocations(this.state).map((loc) => ({
+      id: loc.id,
+      name: loc.name,
+      subtitle: loc.subtitle,
+      travelMinutes: loc.travelMinutes,
+      isCurrent: loc.id === currentLoc
+    }));
+
+    this.ui.showTravelModal(destinations, (destId) => {
+      this.startTravelTo(destId);
+    });
+  }
+
+  public startTravelTo(destId: string): void {
+    const currentLoc = this.engine.activeCustomSceneId ?? this.state.world.location;
+    if (destId === currentLoc) return;
+    const dest = getOstrzeLocationMeta(destId);
+    if (!dest) return;
+
+    advanceMinutes(this.state, dest.travelMinutes, this.data);
+    const encounter = rollOriginTravelEncounter(
+      this.state,
+      this.data,
+      this.rng,
+      currentLoc,
+      destId
+    );
+
+    if (!encounter) {
+      this.arriveAtLocation(destId);
+      return;
+    }
+
+    this.handleTravelEvent(encounter, destId);
+  }
+
+  private handleTravelEvent(ev: OriginTravelEventDef, destId: string): void {
+    const scenes = ev.scenes ?? [];
+    if (scenes.length === 0) {
+      this.arriveAtLocation(destId);
+      return;
+    }
+
+    const runStep = (idx: number): void => {
+      if (idx >= scenes.length) {
+        this.arriveAtLocation(destId);
+        return;
+      }
+      const sc = scenes[idx];
+      if (sc.if && !evaluateCondition(sc.if, this.state, this.data)) {
+        runStep(idx + 1);
+        return;
+      }
+
+      if (sc.type === 'narration') {
+        if (!this.ui || !sc.text) {
+          runStep(idx + 1);
+          return;
+        }
+        const c = clockOf(this.state.time.minutes);
+        const clockText = `Dzień ${c.day}, ${String(c.hour).padStart(2, '0')}:${String(c.minute).padStart(2, '0')}`;
+        this.ui.showNarrative({
+          title: sc.title ?? 'Wydarzenie na Trakcie',
+          subtitle: `${getOstrzeLocationMeta(destId)?.name ?? 'Podróż'} · ${clockText}`,
+          text: sc.text,
+          buttonLabel: 'Dalej',
+          onContinue: () => runStep(idx + 1)
+        });
+        return;
+      }
+
+      if (sc.type === 'item') {
+        for (const itemId of sc.items ?? []) {
+          const existing = this.state.inventory.items.find((i) => i.id === itemId);
+          if (existing) existing.qty += 1;
+          else this.state.inventory.items.push({ id: itemId, qty: 1 });
+        }
+        if ((sc.items?.length ?? 0) > 0) {
+          this.ui?.showToast(`Otrzymano: ${sc.items!.join(', ')}`, 'success');
+        }
+        runStep(idx + 1);
+        return;
+      }
+
+      if (sc.type === 'shop' && sc.shop) {
+        if (!this.ui) {
+          runStep(idx + 1);
+          return;
+        }
+        this.ui.showShop(sc.shop, () => runStep(idx + 1));
+        return;
+      }
+
+      if (sc.type === 'dialogue' && sc.dialogue) {
+        const dlgFile = this.data.prologueDialogues[sc.dialogue];
+        if (!dlgFile || !this.ui) {
+          runStep(idx + 1);
+          return;
+        }
+        const session = startOstrzeDialogue(sc.dialogue, this.state, this.data);
+        this.ui.showDialogue(session, {
+          onClosed: () => {
+            this.syncHeroTo25D();
+            runStep(idx + 1);
+          }
+        });
+        return;
+      }
+
+      if (sc.type === 'combat') {
+        const afterVictory = scenes.find((s, i) => i > idx && s.type === 'narration' && s.id !== sc.onFlee);
+        const afterFlee = sc.onFlee ? scenes.find((s) => s.id === sc.onFlee) : undefined;
+        this.startTravelCombatEncounter(sc, destId, afterVictory?.text, afterFlee?.text);
+        return;
+      }
+
+      runStep(idx + 1);
+    };
+
+    runStep(0);
+  }
+
+  private startTravelCombatEncounter(
+    sc: OriginTravelSceneDef,
+    destId: string,
+    afterVictoryText?: string,
+    afterFleeText?: string
+  ): void {
+    const roadScene = createTraktZasadzkaScene();
+    this.engine.registerCustomScene(roadScene);
+    this.engine.loadCustomScene('trakt_zasadzka');
+    this.engine.npcs.length = 0;
+
+    const specs = sc.enemies ?? [{ id: 'wilk', count: 2 }];
+    const spawned: ActorEntity[] = [];
+    let idx = 0;
+    for (const spec of specs) {
+      const enemyDef = findOriginEnemy(spec.id, this.data);
+      const count = Math.max(1, spec.count ?? 1);
+      for (let c = 0; c < count; c++) {
+        const x = 10 + (idx % 3) * 2;
+        const y = 8 + Math.floor(idx / 3) * 2;
+        const z = this.engine.map.tiles[y]?.[x]?.z ?? 0;
+        const actorId = `travel_enemy_${idx}`;
+        const recipe = generateRandomCharacterRecipe(900 + idx * 17, actorId);
+        recipe.name = enemyDef?.name ?? spec.id;
+        recipe.title = 'Zasadzka na trakcie';
+        recipe.equipment = {
+          head: spec.id === 'wilk' || spec.id === 'dzik' || spec.id === 'zmija_lesna' ? 'helm_druid_antlers' : 'helm_shadow_hood',
+          torso: 'torso_przeszywanica',
+          cloak: null,
+          legs: 'legs_leather_boots',
+          mainHand: spec.id === 'wilk' || spec.id === 'dzik' ? 'weapon_slavic_axe' : 'weapon_iron_longsword',
+          offHand: null
+        };
+        const hp = enemyDef?.hp ?? 18;
+        spawned.push({
+          id: actorId,
+          recipe,
+          tileX: x,
+          tileY: y,
+          x: x + 0.5,
+          y: y + 0.5,
+          z,
+          direction: 4,
+          path: [],
+          isMoving: false,
+          animFrame: 0,
+          animTimer: 0,
+          dialogueId: undefined,
+          combat: {
+            hp,
+            maxHp: hp,
+            ap: 7,
+            maxAp: 7,
+            proficiencies: createDefaultProficiencies(),
+            isHostile: true,
+            isAlive: true,
+            xpReward: enemyDef?.xp ?? 20,
+            lootTable: [],
+            difficulty: 'normal',
+            aggroRadius: 14,
+            dazedHeadTurns: 0,
+            crippledLegsTurns: 0,
+            defending: false
+          }
+        });
+        idx++;
+      }
+    }
+
+    this.engine.npcs.push(...spawned);
+    ostrzeAudio.setAmbience('forest');
+    this.syncHeroTo25D();
+    this.activeCombatStage = 'travel_encounter';
+    this.pendingTravel = { destId, afterVictoryText, afterFleeText };
+    this.ui?.setHubPanel(null);
+    this.engine.addLog(`⚔️ ${sc.title ?? 'Zasadzka na trakcie'}!`, 'combat');
+    this.engine.startCombatWithEnemy(spawned[0].id);
+    this.onUiRefresh?.();
+  }
+
+  private arriveAtLocation(destId: string): void {
+    const dest = getOstrzeLocationMeta(destId);
+    if (!dest) return;
+    this.state.world.location = destId;
+    markOstrzeLocationVisited(this.state, destId);
+    this.engine.loadCustomScene(destId);
+    if (destId !== 'wilczy_brod') {
+      const peaceful = this.engine.npcs.filter((n) => !n.combat?.isHostile);
+      this.engine.npcs.length = 0;
+      this.engine.npcs.push(...peaceful);
+    }
+    ostrzeAudio.setAmbience(dest.ambience);
+    this.syncHeroTo25D();
+    this.refreshHubPanel();
+    this.engine.addLog(`🧭 Dotarłeś do: ${dest.name}.`, 'important');
+    this.onAutoSave?.();
   }
 }

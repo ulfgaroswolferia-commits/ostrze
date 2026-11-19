@@ -41,6 +41,11 @@ import dlgLesniczy from '../../../origin/data/dialogues/lesniczy.json';
 import dlgZwiadowcy from '../../../origin/data/dialogues/zwiadowcy.json';
 import dlgPoZwiadowcach from '../../../origin/data/dialogues/po_zwiadowcach.json';
 import dlgBorekRuiny from '../../../origin/data/dialogues/borek_ruiny.json';
+import dlgGlodnyWedrowiec from '../../../origin/data/dialogues/glodny_wedrowiec.json';
+import dlgZnalZwlokiKupca from '../../../origin/data/dialogues/znal_zwloki_kupca.json';
+import dlgZnalPorzuconyWozek from '../../../origin/data/dialogues/znal_porzucony_wozek.json';
+import dlgZnalKapliczkaOfiary from '../../../origin/data/dialogues/znal_kapliczka_ofiary.json';
+import dlgMoralGlodnaWdowa from '../../../origin/data/dialogues/moral_glodna_wdowa.json';
 
 import type {
   AttributeDef,
@@ -50,6 +55,7 @@ import type {
   EnemyDef,
   ItemDef,
   OriginGameData,
+  OriginTravelEventDef,
   PerkDef,
   PhenomenonDef,
   QuestDef,
@@ -86,6 +92,7 @@ export const ORIGIN_DATA: OriginGameData = {
   quests: questsJson as unknown as QuestDef[],
   story: storyJson as unknown as StoryDataDef,
   travelScenes,
+  travelEvents: ((travelJson as { events?: OriginTravelEventDef[] }).events ?? []) as OriginTravelEventDef[],
   rules: rulesJson as unknown as RulesDef,
   prologueDialogues: {
     kurier: dlgKurier as unknown as DialogueFileDef,
@@ -108,6 +115,11 @@ export const ORIGIN_DATA: OriginGameData = {
     ostromir_powrot: dlgOstromirPowrot as unknown as DialogueFileDef,
     ostromir_pozegnanie: dlgOstromirPozegnanie as unknown as DialogueFileDef,
     ostromir_trakt: dlgOstromirTrakt as unknown as DialogueFileDef,
+    glodny_wedrowiec: dlgGlodnyWedrowiec as unknown as DialogueFileDef,
+    znal_zwloki_kupca: dlgZnalZwlokiKupca as unknown as DialogueFileDef,
+    znal_porzucony_wozek: dlgZnalPorzuconyWozek as unknown as DialogueFileDef,
+    znal_kapliczka_ofiary: dlgZnalKapliczkaOfiary as unknown as DialogueFileDef,
+    moral_glodna_wdowa: dlgMoralGlodnaWdowa as unknown as DialogueFileDef,
     kowal: dlgKowal as unknown as DialogueFileDef,
     zona_borka: dlgZonaBorka as unknown as DialogueFileDef,
     corka: dlgCorka as unknown as DialogueFileDef,

@@ -1,3 +1,4 @@
+import { getSlavicPortrait } from '@ulf/assets/slavicPortraits';
 import { ostrzeAudio } from '../audio/ostrzeAudio';
 import type {
   AttributeId,
@@ -28,6 +29,14 @@ export interface NarrativeCardData {
   text: string;
   buttonLabel?: string;
   onContinue: () => void;
+}
+
+export interface TravelDestinationEntry {
+  id: string;
+  name: string;
+  subtitle: string;
+  travelMinutes: number;
+  isCurrent: boolean;
 }
 
 export interface HubPanelData {
@@ -76,6 +85,11 @@ export class OstrzeModalUi {
   private activeShop: { shopId: string; onClosed?: () => void } | null = null;
   private activeCharacterSheet: { onUpdated?: () => void } | null = null;
   private activeNoticeBoard: { entries: NoticeBoardEntry[]; onClosed?: () => void } | null = null;
+  private activeTravel: {
+    destinations: TravelDestinationEntry[];
+    onSelect: (id: string) => void;
+    onClosed?: () => void;
+  } | null = null;
   private hubPanel: HubPanelData | null = null;
   private hubCollapsed = false;
   private isCombatActiveFn: (() => boolean) | null = null;
@@ -127,6 +141,12 @@ export class OstrzeModalUi {
       } else if (this.activeNoticeBoard) {
         const cb = this.activeNoticeBoard.onClosed;
         this.activeNoticeBoard = null;
+      this.activeTravel = null;
+        this.render();
+        cb?.();
+      } else if (this.activeTravel) {
+        const cb = this.activeTravel.onClosed;
+        this.activeTravel = null;
         this.render();
         cb?.();
       } else if (this.activeShop) {
@@ -223,6 +243,15 @@ export class OstrzeModalUi {
     this.render();
   }
 
+  public showTravelModal(
+    destinations: TravelDestinationEntry[],
+    onSelect: (id: string) => void,
+    onClosed?: () => void
+  ): void {
+    this.activeTravel = { destinations, onSelect, onClosed };
+    this.render();
+  }
+
   public showToast(text: string, tone: 'info' | 'gold' | 'success' = 'info'): void {
     const el = document.createElement('div');
     el.className = `ostrze-toast ${tone === 'gold' ? 'is-gold' : tone === 'success' ? 'is-success' : ''}`;
@@ -246,6 +275,7 @@ export class OstrzeModalUi {
     this.activeShop = null;
     this.activeCharacterSheet = null;
     this.activeNoticeBoard = null;
+    this.activeTravel = null;
     this.creatorOpen = false;
     this.render();
   }
@@ -286,6 +316,10 @@ export class OstrzeModalUi {
       this.renderNoticeBoard();
       return;
     }
+    if (this.activeTravel) {
+      this.renderTravelModal();
+      return;
+    }
     if (this.activeShop) {
       this.renderShop(this.activeShop.shopId);
       return;
@@ -308,7 +342,8 @@ export class OstrzeModalUi {
       this.activeDialogue ||
       this.activeShop ||
       this.activeCharacterSheet ||
-      this.activeNoticeBoard
+      this.activeNoticeBoard ||
+      this.activeTravel
     ) {
       this.hubRoot.innerHTML = '';
       return;
@@ -650,8 +685,23 @@ export class OstrzeModalUi {
     });
   }
 
+  private resolvePortraitId(speaker: string): string {
+    const s = speaker.toLowerCase();
+    if (s.includes('gnieworad')) return 'npc_gniewosz';
+    if (s.includes('wszebor') || s.includes('komendant')) return 'npc_bogusz';
+    if (s.includes('dobrogost') || s.includes('szkarad')) return 'npc_bozydar';
+    if (s.includes('wrzosek') || s.includes('karczmarz')) return 'npc_dobromir';
+    if (s.includes('ostromir') || s.includes('kupiec')) return 'npc_sambor';
+    if (s.includes('kurier') || s.includes('goniec')) return 'npc_milosz_patrol';
+    if (s.includes('ragnosława') || s.includes('wdowa') || s.includes('kobieta')) return 'npc_wislawa';
+    if (s.includes('istota') || s.includes('upiór') || s.includes('szkło')) return 'npc_vaelen';
+    if (s.includes('pielgrzym') || s.includes('wędrowiec') || s.includes('pustelnik')) return 'npc_radogost';
+    return 'npc_gniewko';
+  }
+
   private renderDialogue(session: ActiveOstrzeDialogue): void {
     const view = getOstrzeDialogueView(session, this.state, this.data);
+    const portraitUrl = getSlavicPortrait(this.resolvePortraitId(view.speaker));
 
     const optionsHtml = view.options
       .map((item) => {
@@ -670,7 +720,12 @@ export class OstrzeModalUi {
     this.root.innerHTML = `
       <div class="ostrze-overlay">
         <div class="ostrze-card">
-          <h2 class="ostrze-title">${this.escape(view.speaker)}</h2>
+          <div class="ostrze-dialogue-header">
+            <img class="ostrze-dialogue-avatar" src="${this.escape(portraitUrl)}" alt="${this.escape(view.speaker)}" />
+            <div>
+              <h2 class="ostrze-title" style="margin:0;">${this.escape(view.speaker)}</h2>
+            </div>
+          </div>
           ${view.lastCheckFeedback ? `<div class="ostrze-feedback">${this.escape(view.lastCheckFeedback)}</div>` : ''}
           <div class="ostrze-prose">${this.escape(view.text)}</div>
           <div class="ostrze-dialogue-options">${optionsHtml}</div>
@@ -1023,6 +1078,7 @@ export class OstrzeModalUi {
     this.root.querySelector('#ostrze-nb-close')?.addEventListener('click', () => {
       const cb = board.onClosed;
       this.activeNoticeBoard = null;
+      this.activeTravel = null;
       this.render();
       cb?.();
     });
@@ -1064,6 +1120,8 @@ export class OstrzeModalUi {
           </div>
 
           <div class="ostrze-welcome-credits">
+            <div>Pomysł świata i gry: Twiist</div>
+            <div>Jest to port gry terminalowej typu HUD na silnik 2,5D.</div>
             <div>Fabuła, dialogi etc.: Twiist</div>
             <div>Silnik gry, port i wykonanie: Ulfgaros</div>
           </div>
@@ -1158,6 +1216,69 @@ export class OstrzeModalUi {
     this.root.querySelector('#ostrze-key-close')?.addEventListener('click', () => {
       const cb = modal.onClosed;
       this.activeSaveKey = null;
+      this.render();
+      cb?.();
+    });
+  }
+
+  private renderTravelModal(): void {
+    const modal = this.activeTravel;
+    if (!modal) return;
+
+    const listHtml = modal.destinations
+      .map(
+        (d) => `
+          <div class="ostrze-shop-item">
+            <div>
+              <strong>${this.escape(d.name)}</strong>
+              <div style="font-size:0.78rem;color:#9f9585;margin-top:2px;">
+                ${this.escape(d.subtitle)} · ok. ${d.travelMinutes} min drogi
+              </div>
+            </div>
+            <div>
+              ${
+                d.isCurrent
+                  ? '<span class="ostrze-badge">Tu jesteś</span>'
+                  : `<button type="button" class="ostrze-hub-btn" data-travel-dest="${this.escape(d.id)}">Wyrusz</button>`
+              }
+            </div>
+          </div>
+        `
+      )
+      .join('');
+
+    this.root.innerHTML = `
+      <div class="ostrze-overlay">
+        <div class="ostrze-card" style="max-width:620px;">
+          <h2 class="ostrze-title">Podróż — Odwiedzone lokacje</h2>
+          <p class="ostrze-subtitle">
+            Wybierz cel podróży spośród znanych miejsc tej krainy. Na trakcie między lokacjami możesz natrafić na przypadkowe spotkania lub zasadzkę.
+          </p>
+          <div style="display:flex;flex-direction:column;gap:8px;max-height:55vh;overflow:auto;margin-bottom:14px;">
+            ${listHtml}
+          </div>
+          <div style="display:flex;justify-content:flex-end;">
+            <button type="button" class="ostrze-hub-btn" id="ostrze-travel-close">Zamknij [ESC]</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    this.root.querySelectorAll<HTMLButtonElement>('[data-travel-dest]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const destId = btn.dataset.travelDest;
+        if (!destId) return;
+        ostrzeAudio.playUiClick();
+        this.activeTravel = null;
+        this.render();
+        modal.onSelect(destId);
+      });
+    });
+
+    this.root.querySelector('#ostrze-travel-close')?.addEventListener('click', () => {
+      ostrzeAudio.playUiClick();
+      const cb = modal.onClosed;
+      this.activeTravel = null;
       this.render();
       cb?.();
     });

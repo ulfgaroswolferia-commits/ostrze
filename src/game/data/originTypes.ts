@@ -259,6 +259,40 @@ export interface RulesDef {
     };
   };
   vars: string[];
+  travel?: {
+    localEventChance: number;
+    localDangerBonus: number;
+    repeat?: { decay: number; floorWalk: number };
+    night?: { periods: string[]; eventBonus: number; attackWeight: number };
+  };
+}
+
+export interface OriginTravelSceneDef {
+  id: string;
+  type: string;
+  title?: string;
+  text?: string;
+  time?: number;
+  goto?: string;
+  items?: string[];
+  shop?: string;
+  dialogue?: string;
+  start?: string;
+  canFlee?: boolean;
+  onFlee?: string;
+  enemies?: Array<{ id: string; count: number }>;
+  if?: ConditionSpec;
+}
+
+export interface OriginTravelEventDef {
+  id: string;
+  kind: 'encounter' | 'attack' | 'weather' | 'story';
+  weight: number;
+  once?: boolean;
+  endsTrip?: boolean;
+  phenomenon?: string;
+  if?: ConditionSpec;
+  scenes?: OriginTravelSceneDef[];
 }
 
 export interface OriginGameData {
@@ -274,6 +308,7 @@ export interface OriginGameData {
   quests: QuestDef[];
   story: StoryDataDef;
   travelScenes: Record<string, { id: string; title?: string; text?: string; type?: string }>;
+  travelEvents: OriginTravelEventDef[];
   rules: RulesDef;
   prologueDialogues: Record<string, DialogueFileDef>;
 }
@@ -313,6 +348,8 @@ export interface OstrzeGameState {
     activePhenomenon: string | null;
     failedChecks: string[];
     knownPlaces: string[];
+    passes?: Record<string, number>;
+    eventsSeen?: string[];
   };
   rngState: number;
 }

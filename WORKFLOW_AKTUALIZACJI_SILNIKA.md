@@ -61,6 +61,28 @@ git submodule update --init --recursive
 
 ## 4. Przydatne komendy diagnostyczne (w `ostrze`)
 
+- **Automatyczny jednoczesny commit i push (silnik + gra):**
+  Możesz uruchomić plik `uruchom.bat` lub skrypt commitujący:
+  ```powershell
+  # Poprzez npm:
+  npm run commit:all -- "feat: opis zmian w grze i/lub silniku"
+
+  # Lub plikiem wsadowym:
+  .\commit-sync.bat "feat: opis zmian"
+  ```
+  Skrypt automatycznie:
+  1. Sprawdza czy w `engine/` są zmiany robocze — jeśli tak, commituje je i wypycha na GitHub (`origin main`).
+  2. Sprawdza repozytorium `ostrze` (w tym nowy wskaźnik submodule `engine/`), commituje je i wypycha na GitHub (`origin main`).
+
+- **Zalecana konfiguracja submodułów w Git (zastosowana lokalnie):**
+  ```powershell
+  # Automatyczne rekursywne operacje pull/checkout na submodułach:
+  git config submodule.recurse true
+
+  # Bezpieczny push - upewnia się, że submodule zostały wypchnięte przed projektem:
+  git config push.recurseSubmodules on-demand
+  ```
+
 - **Sprawdzenie aktualnie przypiętego commita silnika:**
   ```powershell
   git submodule status

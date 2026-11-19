@@ -61,6 +61,8 @@ export function evaluateCondition(
       }
       case 'location':
         return state.world.location === (value as string);
+      case 'region':
+        return (value as string) === 'pogorze';
       case 'known':
         return state.world.knownPlaces.includes(value as string);
       case 'questStatus': {

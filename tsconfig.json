@@ -18,6 +18,7 @@
     "baseUrl": ".",
     "paths": {
       "@ulf/*": ["./engine/src/*"],
+      "@ostrze/*": ["./src/*"],
       "pixi.js": ["./node_modules/pixi.js"]
     }
   },
