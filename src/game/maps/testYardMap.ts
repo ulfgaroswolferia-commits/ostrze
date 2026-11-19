@@ -3,6 +3,7 @@ import { IsometricWorldMap, MapId, TileCell, TileTerrainType } from '@ulf/core/w
 import { DialogueNode } from '@ulf/rpg/dialogueSystem';
 import { ActorEntity } from '@ulf/rpg/gameLoop';
 import { CustomSceneConfig } from '../../engine-bridge/OstrzeEngineState';
+import { organicEdgeWobble, organicPatchNoise } from './terrainNoise';
 
 /**
  * Etap 1 test 2.5D scene: "Dziedziniec Szkoły Ostrzy — Brzezina"
@@ -20,8 +21,10 @@ export function createTestBrzezinaYardScene(): {
     const row: TileCell[] = [];
     for (let x = 0; x < width; x++) {
       const isBorder = x === 0 || y === 0 || x === width - 1 || y === height - 1;
-      const isYardCenter = x >= 5 && x <= 14 && y >= 5 && y <= 14;
+      const yardWobble = organicEdgeWobble(x, y, 0.12, 0.65);
+      const isYardCenter = Math.hypot((x - 9.5) / 5.2, (y - 9.5) / 5.2) + yardWobble <= 1.02;
       const isPath = x >= 9 && x <= 10 && y >= 14;
+      const isInnerEdge = x === 1 || y === 1 || x === width - 2 || y === height - 2;
 
       let terrain: TileTerrainType = 'forest_grass';
       let z = 0;
@@ -33,6 +36,8 @@ export function createTestBrzezinaYardScene(): {
         walkable = x >= 9 && x <= 10 && y === height - 1;
       } else if (isYardCenter || isPath) {
         terrain = 'dirt_path';
+      } else if (isInnerEdge && organicPatchNoise(x, y, 7) > -0.05) {
+        terrain = 'forest_soil';
       }
 
       row.push({ x, y, z, terrain, walkable });

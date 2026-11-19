@@ -30,8 +30,10 @@ describe('OstrzeEngineState bridge', () => {
     game.registerDialogues(dialogues);
     game.registerCustomScene(scene);
 
+    const revBefore = game.mapRevision;
     const loaded = game.loadCustomScene('brzezina_test_yard');
     expect(loaded).toBe(true);
+    expect(game.mapRevision).toBeGreaterThan(revBefore);
     expect(game.activeCustomSceneId).toBe('brzezina_test_yard');
     expect(game.map.name).toContain('Brzezina');
     expect(game.player.tileX).toBe(9);
@@ -62,6 +64,7 @@ describe('OstrzeEngineState bridge', () => {
 
   it('validates all Prologue & Chapter 1 maps for organic terrain blending, walkability, and combat BFS', () => {
     const scenes = [
+      createTestBrzezinaYardScene().scene,
       createBrzezinaYardScene({ withCourier: true }),
       createTraktZasadzkaScene(),
       createUroczyskoNocScene(),

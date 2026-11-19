@@ -219,6 +219,7 @@ export class OstrzeEngineState extends CrpgGameState {
     this.map = scene.map;
     this.fov = new FovGridState(this.map.width, this.map.height);
     this.rebuildPropGrid();
+    this.bumpMapRevision();
     this.npcs.length = 0;
 
     if (typeof scene.ambientLightIntensity === 'number') {
