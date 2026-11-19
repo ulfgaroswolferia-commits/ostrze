@@ -4,6 +4,7 @@ import { DialogueNode } from '@ulf/rpg/dialogueSystem';
 import { ActorEntity } from '@ulf/rpg/gameLoop';
 import { CustomSceneConfig } from '../../engine-bridge/OstrzeEngineState';
 import { organicEdgeWobble, organicPatchNoise } from './terrainNoise';
+import { applyWorldDressing } from './worldDressing';
 
 /**
  * Etap 1 test 2.5D scene: "Dziedziniec Szkoły Ostrzy — Brzezina"
@@ -191,6 +192,115 @@ export function createTestBrzezinaYardScene(): {
       ]
     }
   };
+
+  applyWorldDressing(map, {
+    seed: 1000,
+    spawnX: 9,
+    spawnY: 11,
+    actors: [gnieworad],
+    cliffSides: ['E'],
+    forestSides: ['W', 'N', 'S'],
+    beltDepth: 3,
+    bespokeProps: [
+      {
+        id: 'test_dwor_szkoly',
+        name: 'Główny Budynek Szkoły Ostrzy',
+        kind: 'slavic_cottage',
+        variant: 2,
+        x: 10,
+        y: 3,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'test_baszta_szkoly',
+        name: 'Kamienna Baszta Szkoły Ostrzy',
+        kind: 'watchtower',
+        variant: 0,
+        x: 6,
+        y: 3,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 3,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'test_dormitorium_1',
+        name: 'Dormitorium Adeptów',
+        kind: 'slavic_cottage',
+        variant: 8,
+        x: 4,
+        y: 6,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'test_dormitorium_2',
+        name: 'Dormitorium Młodszych Uczniów',
+        kind: 'slavic_cottage',
+        variant: 11,
+        x: 4,
+        y: 11,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'test_kukla_1',
+        name: 'Kukła Ćwiczebna',
+        kind: 'slavic_shrine',
+        variant: 1,
+        x: 7,
+        y: 10,
+        heightZ: 2
+      },
+      {
+        id: 'test_kukla_2',
+        name: 'Słup Treningowy',
+        kind: 'pillar',
+        variant: 3,
+        x: 7,
+        y: 12,
+        heightZ: 2
+      },
+      {
+        id: 'test_stojak_1',
+        name: 'Stojak z Bronią Ćwiczebną',
+        kind: 'dungeon_support',
+        variant: 0,
+        x: 11,
+        y: 10,
+        heightZ: 2
+      },
+      {
+        id: 'test_stojak_2',
+        name: 'Stojak z Włóczniami',
+        kind: 'dungeon_support',
+        variant: 1,
+        x: 12,
+        y: 10,
+        heightZ: 2
+      },
+      {
+        id: 'test_stol_broni',
+        name: 'Stół Zbrojmistrza',
+        kind: 'dungeon_table',
+        variant: 1,
+        x: 12,
+        y: 12,
+        heightZ: 1
+      }
+    ]
+  });
 
   return {
     scene: {

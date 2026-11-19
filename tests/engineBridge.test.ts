@@ -88,16 +88,21 @@ describe('OstrzeEngineState bridge', () => {
 
     for (const scene of scenes) {
       const { map, spawnX, spawnY, actors } = scene;
+      expect(map.props.length, `${scene.id} has rich environmental background dressing`).toBeGreaterThanOrEqual(25);
       const blockedPropTiles = new Set<number>();
+      const occupiedPropTiles = new Set<number>();
       for (const prop of map.props) {
         expect(prop.x, `${scene.id} prop ${prop.id} x in bounds`).toBeGreaterThanOrEqual(0);
         expect(prop.y, `${scene.id} prop ${prop.id} y in bounds`).toBeGreaterThanOrEqual(0);
         expect(prop.x + prop.sizeX, `${scene.id} prop ${prop.id} maxX in bounds`).toBeLessThanOrEqual(map.width);
         expect(prop.y + prop.sizeY, `${scene.id} prop ${prop.id} maxY in bounds`).toBeLessThanOrEqual(map.height);
-        if (prop.blocksMovement) {
-          for (let py = prop.y; py < prop.y + prop.sizeY; py++) {
-            for (let px = prop.x; px < prop.x + prop.sizeX; px++) {
-              blockedPropTiles.add(py * map.width + px);
+        for (let py = prop.y; py < prop.y + prop.sizeY; py++) {
+          for (let px = prop.x; px < prop.x + prop.sizeX; px++) {
+            const tileIdx = py * map.width + px;
+            expect(occupiedPropTiles.has(tileIdx), `${scene.id} prop ${prop.id} does not overlap at (${px},${py})`).toBe(false);
+            occupiedPropTiles.add(tileIdx);
+            if (prop.blocksMovement) {
+              blockedPropTiles.add(tileIdx);
             }
           }
         }
@@ -141,5 +146,20 @@ describe('OstrzeEngineState bridge', () => {
       );
       expect(reachable.size, `${scene.id} has reachable combat tiles from spawn`).toBeGreaterThan(0);
     }
+
+    const brzezina = scenes.find((s) => s.id === 'brzezina_dziedziniec')!;
+    const brzezinaPropIds = new Set(brzezina.map.props.map((p) => p.id));
+    expect(brzezinaPropIds.has('brzezina_dwor_szkoly')).toBe(true);
+    expect(brzezinaPropIds.has('brzezina_baszta_szkoly')).toBe(true);
+    expect(brzezinaPropIds.has('brzezina_dormitorium_1')).toBe(true);
+    expect(brzezinaPropIds.has('brzezina_dormitorium_2')).toBe(true);
+    expect(brzezinaPropIds.has('brzezina_kukla_1')).toBe(true);
+    expect(brzezinaPropIds.has('brzezina_kukla_2')).toBe(true);
+    expect(brzezinaPropIds.has('brzezina_stojak_miecze')).toBe(true);
+    expect(brzezinaPropIds.has('brzezina_stojak_wlocznie')).toBe(true);
+    expect(brzezina.map.props.some((p) => p.kind === 'rock_cliff' && p.blocksSight)).toBe(true);
+    expect(
+      brzezina.map.props.some((p) => (p.kind === 'pine_tree' || p.kind === 'ancient_oak') && p.blocksSight)
+    ).toBe(true);
   });
 });

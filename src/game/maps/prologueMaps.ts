@@ -4,6 +4,7 @@ import { createDefaultProficiencies } from '@ulf/rpg/combatSystem';
 import { ActorEntity } from '@ulf/rpg/gameLoop';
 import type { CustomSceneConfig } from '../../engine-bridge/OstrzeEngineState';
 import { organicEdgeWobble, organicPatchNoise } from './terrainNoise';
+import { applyWorldDressing } from './worldDressing';
 
 function buildGrid(
   width: number,
@@ -108,17 +109,30 @@ export function createBrzezinaYardScene(opts?: {
   const height = 22;
   const tiles = buildGrid(width, height, (x, y) => {
     const isBorder = x === 0 || y === 0 || x === width - 1 || y === height - 1;
+    const isEastCliff = x >= width - 3 && y <= 17;
     const isSouthGate = x >= 10 && x <= 11 && y >= 15;
     const yardWobble = organicEdgeWobble(x, y, 0.12, 0.65);
-    const yardDist = Math.hypot((x - 10.5) / 6.1, (y - 10.5) / 6.1) + yardWobble;
-    const isYard = yardDist <= 1.02;
-    const isCottageApproach = x >= 9 && x <= 11 && y >= 4 && y <= 6;
+    const yardDist = Math.hypot((x - 10.5) / 6.3, (y - 10.5) / 6.2) + yardWobble;
+    const isYard = yardDist <= 1.04;
+    const isTrainingArena =
+      x >= 8 &&
+      x <= 13 &&
+      y >= 10 &&
+      y <= 14 &&
+      Math.hypot(x - 10.5, y - 12.0) <= 2.45 + yardWobble * 0.4;
+    const isCottageApproach = x >= 7 && x <= 14 && y >= 4 && y <= 6;
+    const isDormApproach = x >= 5 && x <= 7 && y >= 7 && y <= 14;
     const isInnerEdge = x === 1 || y === 1 || x === width - 2 || y === height - 2;
-    if (isBorder) {
-      return { z: 1, terrain: 'forest_soil', walkable: isSouthGate };
+    if (isBorder || isEastCliff) {
+      return {
+        z: isEastCliff && x === width - 1 ? 2 : 1,
+        terrain: isEastCliff ? 'dungeon_stone' : 'forest_soil',
+        walkable: isSouthGate
+      };
     }
-    const terrain: TileTerrainType =
-      isYard || isSouthGate || isCottageApproach
+    const terrain: TileTerrainType = isTrainingArena
+      ? 'mossy_cobble'
+      : isYard || isSouthGate || isCottageApproach || isDormApproach
         ? 'dirt_path'
         : isInnerEdge && organicPatchNoise(x, y, 1) > -0.1
           ? 'forest_soil'
@@ -385,6 +399,378 @@ export function createBrzezinaYardScene(opts?: {
     );
   }
 
+  applyWorldDressing(map, {
+    seed: 1001,
+    spawnX: 10,
+    spawnY: 13,
+    actors,
+    reservedPoints: [
+      { x: 11, y: 8, radius: 1 }, // Cesarski Kurier spawn
+      { x: 10, y: 12, radius: 1 }, // Sparing center corridor
+      { x: 10, y: 18, radius: 1 }, // South gate exit corridor
+      { x: 11, y: 18, radius: 1 }
+    ],
+    cliffSides: ['E'],
+    forestSides: ['W', 'N', 'S'],
+    beltDepth: 3,
+    bespokeProps: [
+      // 1. Główny Kompleks Szkoły Ostrzy (Północ)
+      {
+        id: 'brzezina_dwor_szkoly',
+        name: 'Główny Budynek Szkoły Ostrzy (Wielka Sala)',
+        kind: 'slavic_cottage',
+        variant: 2,
+        x: 11,
+        y: 3,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'brzezina_baszta_szkoly',
+        name: 'Kamienna Baszta Szkoły Ostrzy',
+        kind: 'watchtower',
+        variant: 0,
+        x: 7,
+        y: 3,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 3,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'brzezina_zbrojownia_szkoly',
+        name: 'Zbrojownia i Kuźnia Szkolna',
+        kind: 'slavic_cottage',
+        variant: 5,
+        x: 13,
+        y: 3,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'brzezina_latarnia_szkoly_l',
+        name: 'Latarnia Przed Szkołą',
+        kind: 'torch_sconce',
+        x: 8,
+        y: 5,
+        heightZ: 2,
+        isOpen: true,
+        linkedLightId: 'light_brzezina_school_l'
+      },
+      {
+        id: 'brzezina_latarnia_szkoly_p',
+        name: 'Latarnia Zbrojowni',
+        kind: 'torch_sconce',
+        x: 13,
+        y: 5,
+        heightZ: 2,
+        isOpen: true,
+        linkedLightId: 'light_brzezina_school_r'
+      },
+      // 2. Dormitorium dla Uczniów (Zachodnie Skrzydło)
+      {
+        id: 'brzezina_dormitorium_1',
+        name: 'Dormitorium Adeptów (Skrzydło Północne)',
+        kind: 'slavic_cottage',
+        variant: 8,
+        x: 4,
+        y: 6,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'brzezina_dormitorium_2',
+        name: 'Dormitorium Adeptów (Skrzydło Południowe)',
+        kind: 'slavic_cottage',
+        variant: 11,
+        x: 4,
+        y: 12,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'brzezina_namiot_adeptow',
+        name: 'Namiot Młodszych Adeptów',
+        kind: 'ranger_tent',
+        variant: 0,
+        x: 4,
+        y: 15,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false
+      },
+      {
+        id: 'brzezina_stol_dormitorium',
+        name: 'Ława i Stół Uczniowski',
+        kind: 'dungeon_table',
+        variant: 0,
+        x: 6,
+        y: 13,
+        heightZ: 1
+      },
+      {
+        id: 'brzezina_kufer_adeptow',
+        name: 'Kufer z Opończami Adeptów',
+        kind: 'chest',
+        variant: 0,
+        x: 6,
+        y: 7,
+        heightZ: 1
+      },
+      // 3. Plac Ćwiczeń Walki — Kukły (Dummies) i Stojaki z Bronią (Weapon Racks)
+      {
+        id: 'brzezina_kukla_1',
+        name: 'Kukła Treningowa (Manekin Szermierczy)',
+        kind: 'slavic_shrine',
+        variant: 1,
+        x: 8,
+        y: 11,
+        heightZ: 2
+      },
+      {
+        id: 'brzezina_kukla_2',
+        name: 'Kukła Treningowa (Słup do Pchnięć Włócznią)',
+        kind: 'pillar',
+        variant: 3,
+        x: 8,
+        y: 13,
+        heightZ: 2
+      },
+      {
+        id: 'brzezina_kukla_3',
+        name: 'Kukła Tarczowa do Cięć Ciężkich',
+        kind: 'pillar',
+        variant: 5,
+        x: 13,
+        y: 12,
+        heightZ: 2
+      },
+      {
+        id: 'brzezina_stojak_miecze',
+        name: 'Stojak z Mieczami Ćwiczebnymi',
+        kind: 'dungeon_support',
+        variant: 0,
+        x: 13,
+        y: 10,
+        heightZ: 2
+      },
+      {
+        id: 'brzezina_stojak_wlocznie',
+        name: 'Stojak z Włóczniami i Tarczami',
+        kind: 'dungeon_support',
+        variant: 1,
+        x: 13,
+        y: 11,
+        heightZ: 2
+      },
+      {
+        id: 'brzezina_stol_zbrojmistrza',
+        name: 'Stół z Ostrzałkami i Bronią Treningową',
+        kind: 'dungeon_table',
+        variant: 1,
+        x: 13,
+        y: 14,
+        heightZ: 1
+      },
+      {
+        id: 'brzezina_pniak_cwiczen',
+        name: 'Pień do Ćwiczenia Rąbania',
+        kind: 'tree_stump',
+        variant: 2,
+        x: 8,
+        y: 14,
+        heightZ: 1
+      },
+      {
+        id: 'brzezina_skrzynia_broni',
+        name: 'Skrzynia z Drewnianymi Ostrzami',
+        kind: 'dungeon_crate',
+        variant: 1,
+        x: 12,
+        y: 14,
+        heightZ: 1
+      },
+      // 4. Zaplecze Kramu Kwatermistrza
+      {
+        id: 'brzezina_skrzynie_kramu_1',
+        name: 'Skrzynie Zaopatrzeniowe Szkoły',
+        kind: 'dungeon_crate',
+        variant: 0,
+        x: 16,
+        y: 7,
+        heightZ: 1
+      },
+      {
+        id: 'brzezina_skrzynie_kramu_2',
+        name: 'Worki iZapasy Kwatermistrza',
+        kind: 'chest',
+        variant: 1,
+        x: 16,
+        y: 9,
+        heightZ: 1
+      },
+      // 5. Skalna Skarpa od Wschodu (Urwisko)
+      {
+        id: 'brzezina_skala_urwisko_1',
+        name: 'Skalna Ściana nad Dziedzińcem',
+        kind: 'rock_cliff',
+        variant: 0,
+        x: 17,
+        y: 4,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'brzezina_skala_urwisko_2',
+        name: 'Omszałe Urwisko',
+        kind: 'rock_cliff',
+        variant: 2,
+        x: 17,
+        y: 6,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'brzezina_skala_urwisko_3',
+        name: 'Głaz Oporowy Skarpy',
+        kind: 'rock_cliff',
+        variant: 4,
+        x: 17,
+        y: 10,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'brzezina_skala_urwisko_4',
+        name: 'Urwisko Skalnego Grzbietu',
+        kind: 'rock_cliff',
+        variant: 6,
+        x: 17,
+        y: 13,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'brzezina_skala_urwisko_5',
+        name: 'Skały Zamykające Wschodnią Ścieżkę',
+        kind: 'rock_cliff',
+        variant: 1,
+        x: 16,
+        y: 15,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      // 6. Południowa Palisada i Brama Szkoły Ostrzy
+      {
+        id: 'brzezina_plot_brama_l1',
+        name: 'Ogrodzenie Dziedzińca',
+        kind: 'wattle_fence',
+        variant: 0,
+        x: 7,
+        y: 19,
+        heightZ: 1
+      },
+      {
+        id: 'brzezina_plot_brama_l2',
+        name: 'Ogrodzenie Dziedzińca',
+        kind: 'wattle_fence',
+        variant: 1,
+        x: 8,
+        y: 19,
+        heightZ: 1
+      },
+      {
+        id: 'brzezina_filar_bramy_l',
+        name: 'Słup Bramy Szkoły Ostrzy',
+        kind: 'pillar',
+        variant: 0,
+        x: 9,
+        y: 18,
+        heightZ: 2
+      },
+      {
+        id: 'brzezina_filar_bramy_p',
+        name: 'Słup Bramy Szkoły Ostrzy',
+        kind: 'pillar',
+        variant: 0,
+        x: 12,
+        y: 18,
+        heightZ: 2
+      },
+      {
+        id: 'brzezina_plot_brama_p1',
+        name: 'Ogrodzenie Dziedzińca',
+        kind: 'wattle_fence',
+        variant: 0,
+        x: 13,
+        y: 19,
+        heightZ: 1
+      },
+      {
+        id: 'brzezina_plot_brama_p2',
+        name: 'Ogrodzenie Dziedzińca',
+        kind: 'wattle_fence',
+        variant: 1,
+        x: 14,
+        y: 19,
+        heightZ: 1
+      },
+      {
+        id: 'brzezina_plot_brama_p3',
+        name: 'Ogrodzenie Dziedzińca',
+        kind: 'wattle_fence',
+        variant: 2,
+        x: 15,
+        y: 19,
+        heightZ: 1
+      }
+    ],
+    bespokeLights: [
+      {
+        id: 'light_brzezina_school_l',
+        x: 8,
+        y: 5,
+        z: 1.1,
+        color: { r: 255, g: 185, b: 95 },
+        intensity: 0.95,
+        radius: 5.0,
+        flickerSpeed: 3.2,
+        enabled: true
+      },
+      {
+        id: 'light_brzezina_school_r',
+        x: 13,
+        y: 5,
+        z: 1.1,
+        color: { r: 255, g: 185, b: 95 },
+        intensity: 0.95,
+        radius: 5.0,
+        flickerSpeed: 3.4,
+        enabled: true
+      }
+    ]
+  });
+
   return {
     id: 'brzezina_dziedziniec',
     map,
@@ -535,6 +921,115 @@ export function createTraktZasadzkaScene(): CustomSceneConfig {
       xpReward: 40
     })
   ];
+
+  applyWorldDressing(map, {
+    seed: 1002,
+    spawnX: 12,
+    spawnY: 16,
+    actors,
+    reservedPoints: [
+      { x: 11, y: 15, radius: 1 }, // Skarimir campfire spawn after ambush
+      { x: 12, y: 12, radius: 1 }
+    ],
+    cliffSides: ['E'],
+    forestSides: ['W', 'N', 'S'],
+    beltDepth: 4,
+    bespokeProps: [
+      {
+        id: 'trakt_namiot_bandytow',
+        name: 'Ukryty Obóz Bandytów w Gąszczu',
+        kind: 'ranger_tent',
+        variant: 1,
+        x: 7,
+        y: 6,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 1
+      },
+      {
+        id: 'trakt_barykada_skrzynie',
+        name: 'Zrabowane Skrzynie Kupieckie',
+        kind: 'dungeon_crate',
+        variant: 0,
+        x: 9,
+        y: 8,
+        heightZ: 1
+      },
+      {
+        id: 'trakt_barykada_beczki',
+        name: 'Rozbite Beczki przy Gościńcu',
+        kind: 'dungeon_barrel',
+        variant: 1,
+        x: 15,
+        y: 8,
+        heightZ: 1
+      },
+      {
+        id: 'trakt_skala_zasadzki_2',
+        name: 'Skalny Nawis nad Gościńcem',
+        kind: 'rock_cliff',
+        variant: 3,
+        x: 16,
+        y: 10,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'trakt_skala_zasadzki_3',
+        name: 'Urwisko Wschodniego Zbocza',
+        kind: 'rock_cliff',
+        variant: 5,
+        x: 17,
+        y: 13,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'trakt_kapliczka_lesna',
+        name: 'Stary Słup Drogowy',
+        kind: 'slavic_shrine',
+        variant: 0,
+        x: 8,
+        y: 17,
+        heightZ: 2
+      },
+      {
+        id: 'trakt_namiot_druzyny',
+        name: 'Posłania Drużyny przy Ognisku',
+        kind: 'ranger_tent',
+        variant: 0,
+        x: 7,
+        y: 14,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 1
+      },
+      {
+        id: 'trakt_dab_1',
+        name: 'Rozłożysty Dąb nad Traktem',
+        kind: 'ancient_oak',
+        variant: 4,
+        x: 6,
+        y: 11,
+        heightZ: 3,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'trakt_sosna_2',
+        name: 'Sosna Pogórza',
+        kind: 'pine_tree',
+        variant: 7,
+        x: 16,
+        y: 16,
+        heightZ: 3,
+        blocksMovement: true,
+        blocksSight: true
+      }
+    ]
+  });
 
   return {
     id: 'trakt_zasadzka',
@@ -691,6 +1186,161 @@ export function createUroczyskoNocScene(): CustomSceneConfig {
     })
   ];
 
+  applyWorldDressing(map, {
+    seed: 1003,
+    spawnX: 10,
+    spawnY: 13,
+    actors,
+    reservedPoints: [
+      { x: 10, y: 9, radius: 1 }, // Istota zza Gwiazd spawn
+      { x: 10, y: 12, radius: 1 }
+    ],
+    cliffSides: ['N', 'E'],
+    forestSides: ['W', 'S'],
+    beltDepth: 4,
+    deadForest: true,
+    ruinsScatter: true,
+    bespokeProps: [
+      {
+        id: 'noc_oltarz_uroczyska',
+        name: 'Spękany Krąg Uroczyska',
+        kind: 'runic_altar',
+        variant: 0,
+        x: 10,
+        y: 4,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2
+      },
+      {
+        id: 'noc_menhir_1',
+        name: 'Czarny Menhir Uroczyska',
+        kind: 'pillar',
+        variant: 1,
+        x: 7,
+        y: 6,
+        heightZ: 2,
+        blocksSight: true
+      },
+      {
+        id: 'noc_menhir_2',
+        name: 'Czarny Menhir Uroczyska',
+        kind: 'pillar',
+        variant: 2,
+        x: 14,
+        y: 6,
+        heightZ: 2,
+        blocksSight: true
+      },
+      {
+        id: 'noc_menhir_3',
+        name: 'Pęknięty Obelisk',
+        kind: 'pillar',
+        variant: 4,
+        x: 6,
+        y: 11,
+        heightZ: 2
+      },
+      {
+        id: 'noc_menhir_4',
+        name: 'Pęknięty Obelisk',
+        kind: 'pillar',
+        variant: 6,
+        x: 15,
+        y: 11,
+        heightZ: 2
+      },
+      {
+        id: 'noc_krysztal_iskier_2',
+        name: 'Odłamek Spadającej Gwiazdy',
+        kind: 'arcane_crystal',
+        variant: 1,
+        x: 6,
+        y: 9,
+        heightZ: 2,
+        linkedLightId: 'light_noc_spark_w'
+      },
+      {
+        id: 'noc_krysztal_iskier_3',
+        name: 'Odłamek Spadającej Gwiazdy',
+        kind: 'arcane_crystal',
+        variant: 2,
+        x: 15,
+        y: 9,
+        heightZ: 2,
+        linkedLightId: 'light_noc_spark_e'
+      },
+      {
+        id: 'noc_namiot_obozu_1',
+        name: 'Namiot Obozowy Adeptów',
+        kind: 'ranger_tent',
+        variant: 0,
+        x: 7,
+        y: 14,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 1
+      },
+      {
+        id: 'noc_namiot_obozu_2',
+        name: 'Namiot Przewodnika',
+        kind: 'ranger_tent',
+        variant: 1,
+        x: 12,
+        y: 14,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 1
+      },
+      {
+        id: 'noc_skala_1',
+        name: 'Skalny Ostaniec',
+        kind: 'rock_cliff',
+        variant: 2,
+        x: 15,
+        y: 7,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'noc_martwe_drzewo_2',
+        name: 'Uschnięty Dąb',
+        kind: 'dead_tree',
+        variant: 3,
+        x: 14,
+        y: 13,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      }
+    ],
+    bespokeLights: [
+      {
+        id: 'light_noc_spark_w',
+        x: 6,
+        y: 9,
+        z: 1.0,
+        color: { r: 110, g: 175, b: 255 },
+        intensity: 0.95,
+        radius: 5.0,
+        flickerSpeed: 7.0,
+        enabled: true
+      },
+      {
+        id: 'light_noc_spark_e',
+        x: 15,
+        y: 9,
+        z: 1.0,
+        color: { r: 140, g: 165, b: 255 },
+        intensity: 0.95,
+        radius: 5.0,
+        flickerSpeed: 6.5,
+        enabled: true
+      }
+    ]
+  });
+
   return {
     id: 'uroczysko_noc',
     map,
@@ -768,35 +1418,146 @@ export function createPobojowiskoSwitScene(): CustomSceneConfig {
     lights: []
   };
 
+  const pobojowiskoActors: ActorEntity[] = [
+    makeNpc({
+      id: 'npc_pobojowisko_slad',
+      seed: 350,
+      name: 'Polegli Towarzysze i Tobół',
+      title: 'Zbadaj pobojowisko o świcie',
+      x: 9,
+      y: 12,
+      z: tiles[12][9].z,
+      torso: 'torso_slavic_giezlo',
+      cloak: 'cloak_ranger_quiver'
+    }),
+    makeNpc({
+      id: 'npc_rozdroze_szlak',
+      seed: 351,
+      name: 'Rozdroże ku Wilczemu Brodowi',
+      title: 'Wybierz dalszą drogę',
+      x: 13,
+      y: 10,
+      z: tiles[10][13].z,
+      torso: 'torso_przeszywanica',
+      head: 'helm_shadow_hood'
+    })
+  ];
+
+  applyWorldDressing(map, {
+    seed: 1004,
+    spawnX: 11,
+    spawnY: 13,
+    actors: pobojowiskoActors,
+    cliffSides: ['E'],
+    forestSides: ['W', 'N', 'S'],
+    beltDepth: 4,
+    ruinsScatter: true,
+    bespokeProps: [
+      {
+        id: 'pobojowisko_namiot_1',
+        name: 'Rozdarty Namiot Adeptów',
+        kind: 'ranger_tent',
+        variant: 0,
+        x: 6,
+        y: 12,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 1
+      },
+      {
+        id: 'pobojowisko_namiot_2',
+        name: 'Zniszczony Namiot Przewodnika',
+        kind: 'ranger_tent',
+        variant: 1,
+        x: 7,
+        y: 8,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 1
+      },
+      {
+        id: 'pobojowisko_kopiec_1',
+        name: 'Kamienny Kopiec Poległych',
+        kind: 'pillar',
+        variant: 5,
+        x: 8,
+        y: 14,
+        heightZ: 2
+      },
+      {
+        id: 'pobojowisko_kopiec_2',
+        name: 'Strzaskany Obelisk przy Trakcie',
+        kind: 'pillar',
+        variant: 7,
+        x: 14,
+        y: 8,
+        heightZ: 2
+      },
+      {
+        id: 'pobojowisko_skrzynie',
+        name: 'Porzucone Skrzynie Wyprawy',
+        kind: 'dungeon_crate',
+        variant: 1,
+        x: 7,
+        y: 10,
+        heightZ: 1
+      },
+      {
+        id: 'pobojowisko_beczka',
+        name: 'Rozbita Beczka z Wodą',
+        kind: 'dungeon_barrel',
+        variant: 0,
+        x: 13,
+        y: 14,
+        heightZ: 1
+      },
+      {
+        id: 'pobojowisko_kapliczka',
+        name: 'Przydrożny Światowid na Rozstajach',
+        kind: 'slavic_shrine',
+        variant: 0,
+        x: 14,
+        y: 12,
+        heightZ: 2
+      },
+      {
+        id: 'pobojowisko_plot_1',
+        name: 'Stary Płot przy Rozdrożu',
+        kind: 'wattle_fence',
+        variant: 0,
+        x: 15,
+        y: 10,
+        heightZ: 1
+      },
+      {
+        id: 'pobojowisko_plot_2',
+        name: 'Stary Płot przy Rozdrożu',
+        kind: 'wattle_fence',
+        variant: 1,
+        x: 16,
+        y: 10,
+        heightZ: 1
+      },
+      {
+        id: 'pobojowisko_skala_1',
+        name: 'Głaz przy Rozdrożu',
+        kind: 'rock_cliff',
+        variant: 4,
+        x: 16,
+        y: 7,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      }
+    ]
+  });
+
   return {
     id: 'pobojowisko_swit',
     map,
     spawnX: 11,
     spawnY: 13,
-    actors: [
-      makeNpc({
-        id: 'npc_pobojowisko_slad',
-        seed: 350,
-        name: 'Polegli Towarzysze i Tobół',
-        title: 'Zbadaj pobojowisko o świcie',
-        x: 9,
-        y: 12,
-        z: tiles[12][9].z,
-        torso: 'torso_slavic_giezlo',
-        cloak: 'cloak_ranger_quiver'
-      }),
-      makeNpc({
-        id: 'npc_rozdroze_szlak',
-        seed: 351,
-        name: 'Rozdroże ku Wilczemu Brodowi',
-        title: 'Wybierz dalszą drogę',
-        x: 13,
-        y: 10,
-        z: tiles[10][13].z,
-        torso: 'torso_przeszywanica',
-        head: 'helm_shadow_hood'
-      })
-    ],
+    actors: pobojowiskoActors,
     ambientLightIntensity: 0.34,
     fogOfWarEnabled: false
   };

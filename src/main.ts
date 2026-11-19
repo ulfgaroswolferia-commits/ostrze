@@ -47,6 +47,8 @@ async function bootstrapOstrze(): Promise<void> {
   const sceneView = new IsoSceneView(engine, refreshUi);
   sceneView.organicTerrainBlending = true;
   sceneView.showGridInExploration = isDevMode;
+  sceneView.zoom = 0.78;
+  sceneView.targetZoom = 0.78;
   if (isDevMode) {
     engine.fogOfWarEnabled = false;
     engine.ambientLightIntensity = 0.85;

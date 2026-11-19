@@ -4,6 +4,7 @@ import { createDefaultProficiencies } from '@ulf/rpg/combatSystem';
 import { ActorEntity } from '@ulf/rpg/gameLoop';
 import type { CustomSceneConfig } from '../../engine-bridge/OstrzeEngineState';
 import { organicEdgeWobble, organicPatchNoise } from './terrainNoise';
+import { applyWorldDressing } from './worldDressing';
 
 function buildGrid(
   width: number,
@@ -390,6 +391,298 @@ export function createWilczyBrodScene(): CustomSceneConfig {
     })
   ];
 
+  applyWorldDressing(map, {
+    seed: 2001,
+    spawnX: 13,
+    spawnY: 19,
+    actors,
+    reservedPoints: [
+      { x: 13, y: 24, radius: 1 },
+      { x: 14, y: 24, radius: 1 }
+    ],
+    cliffSides: ['E'],
+    forestSides: ['W', 'N', 'S'],
+    beltDepth: 3,
+    bespokeProps: [
+      // Garnizon i Plac Ćwiczeń Strażnicy (Północ)
+      {
+        id: 'wb_baszta_wschodnia',
+        name: 'Wschodnia Baszta Garnizonu',
+        kind: 'watchtower',
+        variant: 1,
+        x: 15,
+        y: 4,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 3,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'wb_koszary_straznicy',
+        name: 'Koszary Straży Pogranicza',
+        kind: 'slavic_cottage',
+        variant: 3,
+        x: 8,
+        y: 4,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'wb_namiot_zwiadowcow',
+        name: 'Namiot Zwiadowców Garnizonu',
+        kind: 'ranger_tent',
+        variant: 0,
+        x: 18,
+        y: 5,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 1
+      },
+      {
+        id: 'wb_kukla_garnizonu',
+        name: 'Kukła Ćwiczebna Garnizonu',
+        kind: 'slavic_shrine',
+        variant: 1,
+        x: 18,
+        y: 7,
+        heightZ: 2
+      },
+      {
+        id: 'wb_stojak_garnizonu',
+        name: 'Stojak z Włóczniami Straży',
+        kind: 'dungeon_support',
+        variant: 0,
+        x: 17,
+        y: 6,
+        heightZ: 2
+      },
+      // Ogródek Karczmy „Pod Wilczym Kłem”
+      {
+        id: 'wb_karczma_stol_1',
+        name: 'Ława Karczemna',
+        kind: 'dungeon_table',
+        variant: 0,
+        x: 5,
+        y: 10,
+        heightZ: 1
+      },
+      {
+        id: 'wb_karczma_stol_2',
+        name: 'Ława pod Okapem',
+        kind: 'dungeon_table',
+        variant: 1,
+        x: 5,
+        y: 12,
+        heightZ: 1
+      },
+      {
+        id: 'wb_karczma_beczki',
+        name: 'Beczki z Piwem Wrzoska',
+        kind: 'dungeon_barrel',
+        variant: 1,
+        x: 8,
+        y: 9,
+        heightZ: 1
+      },
+      {
+        id: 'wb_latarnia_karczma',
+        name: 'Latarnia przed Karczmą',
+        kind: 'torch_sconce',
+        x: 9,
+        y: 10,
+        heightZ: 2,
+        isOpen: true,
+        linkedLightId: 'light_wb_inn'
+      },
+      // Domostwa Osadników (Zachód)
+      {
+        id: 'wb_chata_osadnikow_1',
+        name: 'Chata Osadników znad Brodu',
+        kind: 'slavic_cottage',
+        variant: 7,
+        x: 5,
+        y: 15,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'wb_chata_osadnikow_2',
+        name: 'Chata Pasterza Borka',
+        kind: 'slavic_cottage',
+        variant: 10,
+        x: 5,
+        y: 19,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      // Zaplecze Kuźni Zbycha i Warsztatu Szkarada (Wschód)
+      {
+        id: 'wb_kuznia_stojak',
+        name: 'Stojak na Stal i Narzędzia',
+        kind: 'dungeon_support',
+        variant: 1,
+        x: 21,
+        y: 14,
+        heightZ: 2
+      },
+      {
+        id: 'wb_kuznia_stol',
+        name: 'Warsztat Kowalski',
+        kind: 'dungeon_table',
+        variant: 0,
+        x: 21,
+        y: 16,
+        heightZ: 1
+      },
+      {
+        id: 'wb_kram_skrzynie',
+        name: 'Skrzynie Kupieckie',
+        kind: 'dungeon_crate',
+        variant: 0,
+        x: 21,
+        y: 10,
+        heightZ: 1
+      },
+      {
+        id: 'wb_szkarad_beczki',
+        name: 'Beczki z Saletrą i Węglem',
+        kind: 'dungeon_barrel',
+        variant: 0,
+        x: 22,
+        y: 19,
+        heightZ: 1
+      },
+      {
+        id: 'wb_latarnia_rynek',
+        name: 'Latarnia przy Kuźni',
+        kind: 'torch_sconce',
+        x: 17,
+        y: 14,
+        heightZ: 2,
+        isOpen: true,
+        linkedLightId: 'light_wb_smithy'
+      },
+      // Palisada Południowa i Brama Wilczego Brodu
+      {
+        id: 'wb_woz_ostromira',
+        name: 'Wóz Kupca Ostromira',
+        kind: 'market_stall',
+        variant: 1,
+        x: 9,
+        y: 22,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 1
+      },
+      {
+        id: 'wb_palisada_s_l1',
+        name: 'Palisada Strażnicy',
+        kind: 'wattle_fence',
+        variant: 0,
+        x: 8,
+        y: 24,
+        heightZ: 1
+      },
+      {
+        id: 'wb_palisada_s_l2',
+        name: 'Palisada Strażnicy',
+        kind: 'wattle_fence',
+        variant: 1,
+        x: 9,
+        y: 24,
+        heightZ: 1
+      },
+      {
+        id: 'wb_palisada_s_l3',
+        name: 'Palisada Strażnicy',
+        kind: 'wattle_fence',
+        variant: 2,
+        x: 10,
+        y: 24,
+        heightZ: 1
+      },
+      {
+        id: 'wb_filar_bramy_l',
+        name: 'Słup Bramy Strażnicy',
+        kind: 'pillar',
+        variant: 0,
+        x: 11,
+        y: 24,
+        heightZ: 2
+      },
+      {
+        id: 'wb_filar_bramy_p',
+        name: 'Słup Bramy Strażnicy',
+        kind: 'pillar',
+        variant: 0,
+        x: 16,
+        y: 24,
+        heightZ: 2
+      },
+      {
+        id: 'wb_palisada_s_p1',
+        name: 'Palisada Strażnicy',
+        kind: 'wattle_fence',
+        variant: 0,
+        x: 17,
+        y: 24,
+        heightZ: 1
+      },
+      {
+        id: 'wb_palisada_s_p2',
+        name: 'Palisada Strażnicy',
+        kind: 'wattle_fence',
+        variant: 1,
+        x: 18,
+        y: 24,
+        heightZ: 1
+      },
+      {
+        id: 'wb_palisada_s_p3',
+        name: 'Palisada Strażnicy',
+        kind: 'wattle_fence',
+        variant: 2,
+        x: 19,
+        y: 24,
+        heightZ: 1
+      }
+    ],
+    bespokeLights: [
+      {
+        id: 'light_wb_inn',
+        x: 9,
+        y: 10,
+        z: 1.1,
+        color: { r: 255, g: 182, b: 92 },
+        intensity: 0.95,
+        radius: 5.5,
+        flickerSpeed: 3.0,
+        enabled: true
+      },
+      {
+        id: 'light_wb_smithy',
+        x: 17,
+        y: 14,
+        z: 1.1,
+        color: { r: 255, g: 172, b: 84 },
+        intensity: 0.95,
+        radius: 5.5,
+        flickerSpeed: 3.6,
+        enabled: true
+      }
+    ]
+  });
+
   return {
     id: 'wilczy_brod',
     map,
@@ -566,6 +859,83 @@ export function createWilczaNoraScene(): CustomSceneConfig {
     })
   ];
 
+  applyWorldDressing(map, {
+    seed: 2002,
+    spawnX: 11,
+    spawnY: 17,
+    actors,
+    cliffSides: ['E', 'W', 'N'],
+    forestSides: ['S'],
+    beltDepth: 4,
+    deadForest: true,
+    bespokeProps: [
+      {
+        id: 'nora_skala_2',
+        name: 'Urwisko Wilczego Wąwozu',
+        kind: 'rock_cliff',
+        variant: 1,
+        x: 7,
+        y: 11,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'nora_skala_3',
+        name: 'Urwisko Wilczego Wąwozu',
+        kind: 'rock_cliff',
+        variant: 4,
+        x: 15,
+        y: 10,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'nora_skala_4',
+        name: 'Nawis Skalny nad Legowiskiem',
+        kind: 'rock_cliff',
+        variant: 6,
+        x: 11,
+        y: 4,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'nora_szczatki_skrzynie',
+        name: 'Rozwleczone Szczątki Karawany',
+        kind: 'dungeon_crate',
+        variant: 1,
+        x: 8,
+        y: 7,
+        heightZ: 1
+      },
+      {
+        id: 'nora_martwe_drzewo_2',
+        name: 'Uschnięty Świerk',
+        kind: 'dead_tree',
+        variant: 4,
+        x: 7,
+        y: 15,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'nora_martwe_drzewo_3',
+        name: 'Złamany Buk',
+        kind: 'dead_tree',
+        variant: 7,
+        x: 15,
+        y: 14,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      }
+    ]
+  });
+
   return {
     id: 'wilcza_nora',
     map,
@@ -732,6 +1102,78 @@ export function createKamiennaPrzeleczScene(): CustomSceneConfig {
       xpReward: 40
     })
   ];
+
+  applyWorldDressing(map, {
+    seed: 2003,
+    spawnX: 12,
+    spawnY: 16,
+    actors,
+    cliffSides: ['E', 'W'],
+    forestSides: ['N', 'S'],
+    beltDepth: 4,
+    bespokeProps: [
+      {
+        id: 'przelecz_woz_ostromira',
+        name: 'Zatrzymany Wóz Kupca Ostromira',
+        kind: 'market_stall',
+        variant: 1,
+        x: 9,
+        y: 14,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 1
+      },
+      {
+        id: 'przelecz_skrzynie_wozu',
+        name: 'Zrzucone Skrzynie z Towarem',
+        kind: 'dungeon_crate',
+        variant: 0,
+        x: 14,
+        y: 14,
+        heightZ: 1
+      },
+      {
+        id: 'przelecz_filar_mostku_l',
+        name: 'Kamienny Przyczółek Mostku',
+        kind: 'pillar',
+        variant: 2,
+        x: 9,
+        y: 7,
+        heightZ: 2
+      },
+      {
+        id: 'przelecz_filar_mostku_p',
+        name: 'Kamienny Przyczółek Mostku',
+        kind: 'pillar',
+        variant: 2,
+        x: 15,
+        y: 7,
+        heightZ: 2
+      },
+      {
+        id: 'przelecz_skala_l2',
+        name: 'Ściana Skalna Przełęczy',
+        kind: 'rock_cliff',
+        variant: 3,
+        x: 7,
+        y: 13,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'przelecz_skala_p2',
+        name: 'Ściana Skalna Przełęczy',
+        kind: 'rock_cliff',
+        variant: 5,
+        x: 16,
+        y: 13,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      }
+    ]
+  });
 
   return {
     id: 'kamienna_przelecz',
@@ -949,6 +1391,74 @@ export function createWilczyLasScene(opts?: { withHunt?: boolean }): CustomScene
     );
   }
 
+  applyWorldDressing(map, {
+    seed: 2004,
+    spawnX: 11,
+    spawnY: 18,
+    actors,
+    reservedPoints: [
+      { x: 10, y: 6, radius: 1 },
+      { x: 8, y: 6, radius: 1 },
+      { x: 12, y: 6, radius: 1 }
+    ],
+    cliffSides: ['E'],
+    forestSides: ['W', 'N', 'S'],
+    beltDepth: 4,
+    bespokeProps: [
+      {
+        id: 'las_namiot_drwala',
+        name: 'Szałas Drwala',
+        kind: 'ranger_tent',
+        variant: 0,
+        x: 16,
+        y: 14,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 1
+      },
+      {
+        id: 'las_stojak_drewna',
+        name: 'Sąg Porąbanego Drewna',
+        kind: 'dungeon_support',
+        variant: 1,
+        x: 16,
+        y: 12,
+        heightZ: 1
+      },
+      {
+        id: 'las_pniak_drwala_2',
+        name: 'Pniak z Toporem',
+        kind: 'tree_stump',
+        variant: 4,
+        x: 13,
+        y: 15,
+        heightZ: 1
+      },
+      {
+        id: 'las_dab_2',
+        name: 'Prastary Dąb Rubieży',
+        kind: 'ancient_oak',
+        variant: 9,
+        x: 7,
+        y: 13,
+        heightZ: 3,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'las_skala_1',
+        name: 'Omszały Głaz za Polaną',
+        kind: 'rock_cliff',
+        variant: 2,
+        x: 16,
+        y: 7,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      }
+    ]
+  });
+
   return {
     id: 'wilczy_las',
     map,
@@ -1099,6 +1609,121 @@ export function createStaryMlynScene(opts?: { isNight?: boolean }): CustomSceneC
       torso: 'torso_slavic_giezlo'
     })
   ];
+
+  applyWorldDressing(map, {
+    seed: 2005,
+    spawnX: 10,
+    spawnY: 16,
+    actors,
+    cliffSides: ['N'],
+    forestSides: ['W', 'S'],
+    beltDepth: 3,
+    bespokeProps: [
+      {
+        id: 'mlyn_spichlerz',
+        name: 'Spichlerz Zbożowy Ostapa',
+        kind: 'slavic_cottage',
+        variant: 6,
+        x: 7,
+        y: 7,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'mlyn_skrzynie_zboza',
+        name: 'Skrzynie na Mąkę',
+        kind: 'dungeon_crate',
+        variant: 0,
+        x: 9,
+        y: 6,
+        heightZ: 1
+      },
+      {
+        id: 'mlyn_stol_podworze',
+        name: 'Ława Młynarza',
+        kind: 'dungeon_table',
+        variant: 0,
+        x: 6,
+        y: 10,
+        heightZ: 1
+      },
+      {
+        id: 'mlyn_plot_1',
+        name: 'Płot Młyńskiego Obejścia',
+        kind: 'wattle_fence',
+        variant: 0,
+        x: 6,
+        y: 13,
+        heightZ: 1
+      },
+      {
+        id: 'mlyn_plot_2',
+        name: 'Płot Młyńskiego Obejścia',
+        kind: 'wattle_fence',
+        variant: 1,
+        x: 7,
+        y: 13,
+        heightZ: 1
+      },
+      {
+        id: 'mlyn_plot_3',
+        name: 'Płot Młyńskiego Obejścia',
+        kind: 'wattle_fence',
+        variant: 2,
+        x: 8,
+        y: 13,
+        heightZ: 1
+      },
+      {
+        id: 'mlyn_latarnia',
+        name: 'Latarnia przed Młynem',
+        kind: 'torch_sconce',
+        x: 11,
+        y: 7,
+        heightZ: 2,
+        isOpen: true,
+        linkedLightId: 'light_mlyn_yard'
+      },
+      {
+        id: 'mlyn_skala_rzeka_1',
+        name: 'Głaz Nadrzeczny',
+        kind: 'rock_cliff',
+        variant: 3,
+        x: 15,
+        y: 5,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'mlyn_skala_rzeka_2',
+        name: 'Skała przy Brzegu',
+        kind: 'rock_cliff',
+        variant: 7,
+        x: 15,
+        y: 13,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      }
+    ],
+    bespokeLights: [
+      {
+        id: 'light_mlyn_yard',
+        x: 11,
+        y: 7,
+        z: 1.1,
+        color: { r: 255, g: 180, b: 90 },
+        intensity: 0.9,
+        radius: 5.5,
+        flickerSpeed: 3.0,
+        enabled: true
+      }
+    ]
+  });
 
   return {
     id: 'stary_mlyn',
@@ -1290,6 +1915,69 @@ export function createTraktKupieckiScene(opts?: { withHunt?: boolean }): CustomS
       })
     );
   }
+
+  applyWorldDressing(map, {
+    seed: 2006,
+    spawnX: 12,
+    spawnY: 18,
+    actors,
+    reservedPoints: [
+      { x: 11, y: 5, radius: 1 },
+      { x: 13, y: 5, radius: 1 }
+    ],
+    cliffSides: ['E'],
+    forestSides: ['W', 'N', 'S'],
+    beltDepth: 4,
+    bespokeProps: [
+      {
+        id: 'trakt_k_namiot_1',
+        name: 'Namiot Zwiadowców',
+        kind: 'ranger_tent',
+        variant: 0,
+        x: 15,
+        y: 7,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 1
+      },
+      {
+        id: 'trakt_k_stojak_broni',
+        name: 'Stojak na Włócznie Zwiadowców',
+        kind: 'dungeon_support',
+        variant: 0,
+        x: 17,
+        y: 9,
+        heightZ: 2
+      },
+      {
+        id: 'trakt_k_skrzynie_kupca',
+        name: 'Skrzynie i Pakunki Ostromira',
+        kind: 'dungeon_crate',
+        variant: 1,
+        x: 8,
+        y: 12,
+        heightZ: 1
+      },
+      {
+        id: 'trakt_k_beczki_kupca',
+        name: 'Beczki z Towarem',
+        kind: 'dungeon_barrel',
+        variant: 0,
+        x: 8,
+        y: 13,
+        heightZ: 1
+      },
+      {
+        id: 'trakt_k_kapliczka',
+        name: 'Kapliczka Podróżnych',
+        kind: 'slavic_shrine',
+        variant: 0,
+        x: 7,
+        y: 17,
+        heightZ: 2
+      }
+    ]
+  });
 
   return {
     id: 'trakt_kupiecki',
@@ -1491,6 +2179,98 @@ export function createLesniczowkaScene(opts?: { withHunt?: boolean }): CustomSce
       })
     );
   }
+
+  applyWorldDressing(map, {
+    seed: 2007,
+    spawnX: 11,
+    spawnY: 16,
+    actors,
+    reservedPoints: [
+      { x: 9, y: 4, radius: 1 },
+      { x: 12, y: 4, radius: 1 }
+    ],
+    cliffSides: ['E'],
+    forestSides: ['W', 'N', 'S'],
+    beltDepth: 3,
+    bespokeProps: [
+      {
+        id: 'lesniczowka_szopa',
+        name: 'Szopa na Drewno i Skóry',
+        kind: 'slavic_cottage',
+        variant: 9,
+        x: 13,
+        y: 6,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'lesniczowka_stojak_skor',
+        name: 'Rama do Suszenia Skór',
+        kind: 'dungeon_support',
+        variant: 0,
+        x: 15,
+        y: 9,
+        heightZ: 2
+      },
+      {
+        id: 'lesniczowka_stol_mysliwski',
+        name: 'Stół Myśliwski',
+        kind: 'dungeon_table',
+        variant: 1,
+        x: 8,
+        y: 6,
+        heightZ: 1
+      },
+      {
+        id: 'lesniczowka_studnia',
+        name: 'Studnia przy Leśniczówce',
+        kind: 'slavic_well',
+        variant: 0,
+        x: 7,
+        y: 11,
+        heightZ: 1
+      },
+      {
+        id: 'lesniczowka_plot_1',
+        name: 'Płot Obejścia Leśniczego',
+        kind: 'wattle_fence',
+        variant: 0,
+        x: 7,
+        y: 14,
+        heightZ: 1
+      },
+      {
+        id: 'lesniczowka_plot_2',
+        name: 'Płot Obejścia Leśniczego',
+        kind: 'wattle_fence',
+        variant: 1,
+        x: 8,
+        y: 14,
+        heightZ: 1
+      },
+      {
+        id: 'lesniczowka_plot_3',
+        name: 'Płot Obejścia Leśniczego',
+        kind: 'wattle_fence',
+        variant: 2,
+        x: 13,
+        y: 14,
+        heightZ: 1
+      },
+      {
+        id: 'lesniczowka_plot_4',
+        name: 'Płot Obejścia Leśniczego',
+        kind: 'wattle_fence',
+        variant: 0,
+        x: 14,
+        y: 14,
+        heightZ: 1
+      }
+    ]
+  });
 
   return {
     id: 'lesniczowka',
@@ -1729,6 +2509,127 @@ export function createRuinyStraznicyScene(opts?: { withHunt?: boolean }): Custom
       })
     );
   }
+
+  applyWorldDressing(map, {
+    seed: 2008,
+    spawnX: 12,
+    spawnY: 18,
+    actors,
+    reservedPoints: [
+      { x: 10, y: 6, radius: 1 },
+      { x: 12, y: 6, radius: 1 },
+      { x: 11, y: 5, radius: 1 }
+    ],
+    cliffSides: ['N', 'E'],
+    forestSides: ['W', 'S'],
+    beltDepth: 4,
+    deadForest: true,
+    ruinsScatter: true,
+    bespokeProps: [
+      {
+        id: 'ruiny_baszta_zachodnia',
+        name: 'Rozbita Baszta Zachodnia',
+        kind: 'watchtower',
+        variant: 2,
+        x: 7,
+        y: 5,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 3,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'ruiny_mur_1',
+        name: 'Czarny Mur Dawnej Strażnicy',
+        kind: 'wall_block',
+        variant: 1,
+        x: 6,
+        y: 8,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'ruiny_mur_2',
+        name: 'Czarny Mur Dawnej Strażnicy',
+        kind: 'wall_block',
+        variant: 1,
+        x: 6,
+        y: 9,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'ruiny_mur_3',
+        name: 'Zawalony Mur Wschodni',
+        kind: 'wall_block',
+        variant: 1,
+        x: 17,
+        y: 8,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true
+      },
+      {
+        id: 'ruiny_kolumna_2',
+        name: 'Strzaskany Filar Bramy',
+        kind: 'pillar',
+        variant: 3,
+        x: 9,
+        y: 15,
+        heightZ: 2
+      },
+      {
+        id: 'ruiny_kolumna_3',
+        name: 'Strzaskany Filar Bramy',
+        kind: 'pillar',
+        variant: 4,
+        x: 14,
+        y: 15,
+        heightZ: 2
+      },
+      {
+        id: 'ruiny_namiot_zbojcow',
+        name: 'Obóz Zbójców pod Murem',
+        kind: 'ranger_tent',
+        variant: 1,
+        x: 15,
+        y: 9,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 1
+      },
+      {
+        id: 'ruiny_skrzynie_zbojcow',
+        name: 'Łupy Szajki z Ruin',
+        kind: 'dungeon_crate',
+        variant: 0,
+        x: 15,
+        y: 11,
+        heightZ: 1
+      },
+      {
+        id: 'ruiny_ogrodzenie_1',
+        name: 'Zardzewiała Krata Strażnicy',
+        kind: 'graveyard_fence',
+        variant: 2,
+        x: 7,
+        y: 15,
+        heightZ: 1
+      },
+      {
+        id: 'ruiny_ogrodzenie_2',
+        name: 'Zardzewiała Krata Strażnicy',
+        kind: 'graveyard_fence',
+        variant: 3,
+        x: 8,
+        y: 15,
+        heightZ: 1
+      }
+    ]
+  });
 
   return {
     id: 'ruiny_straznicy',
