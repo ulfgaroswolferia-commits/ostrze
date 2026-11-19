@@ -29,10 +29,13 @@ export class OstrzeEngineState extends CrpgGameState {
   public onCombatEnded?: (outcome: 'victory' | 'defeat' | 'fled') => void;
   public onNpcInteract?: (npcId: string) => boolean;
   public onPropInteract?: (propId: string) => boolean;
+  public onSceneLoaded?: (sceneId: string) => void;
   private readonly persistentMarkers = new Map<string, string>();
 
   constructor() {
     super('forest_clearing');
+    this.chronicleEntries.length = 0;
+    this.logs.length = 0;
   }
 
   public setNpcMarker(npcId: string, markerText: string | null): void {
@@ -210,8 +213,20 @@ export class OstrzeEngineState extends CrpgGameState {
       return false;
     }
 
-    // Let base engine reset all internal combat/dialogue/log state cleanly first
+    // Let base engine reset all internal combat/dialogue state cleanly first,
+    // without polluting Ostrze's Chronicle with the default engine map welcome entry.
+    const prevChronicleHeadId = this.chronicleEntries[0]?.id ?? null;
+    const prevLogsLength = this.logs.length;
     super.loadMap('forest_clearing');
+    while (
+      this.chronicleEntries.length > 0 &&
+      this.chronicleEntries[0].id !== prevChronicleHeadId
+    ) {
+      this.chronicleEntries.shift();
+    }
+    while (this.logs.length > prevLogsLength) {
+      this.logs.shift();
+    }
 
     this.persistentMarkers.clear();
     this.wasCombatActive = false;
@@ -269,6 +284,7 @@ export class OstrzeEngineState extends CrpgGameState {
     }
 
     this.recomputeFov();
+    this.onSceneLoaded?.(sceneId);
     return true;
   }
 

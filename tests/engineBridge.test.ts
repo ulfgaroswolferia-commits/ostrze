@@ -31,14 +31,21 @@ describe('OstrzeEngineState bridge', () => {
     game.registerCustomScene(scene);
 
     const revBefore = game.mapRevision;
+    const loadedSceneIds: string[] = [];
+    game.onSceneLoaded = (id) => loadedSceneIds.push(id);
     const loaded = game.loadCustomScene('brzezina_test_yard');
     expect(loaded).toBe(true);
+    expect(loadedSceneIds).toEqual(['brzezina_test_yard']);
     expect(game.mapRevision).toBeGreaterThan(revBefore);
     expect(game.activeCustomSceneId).toBe('brzezina_test_yard');
     expect(game.map.name).toContain('Brzezina');
     expect(game.player.tileX).toBe(9);
     expect(game.player.tileY).toBe(11);
     expect(game.npcs.some((npc) => npc.id === 'npc_gnieworad')).toBe(true);
+    expect(
+      game.chronicleEntries.some((entry) => entry.text.includes('Polanie Wilczego Ognia'))
+    ).toBe(false);
+    expect(game.logs.some((line) => line.includes('Polanie Wilczego Ognia'))).toBe(false);
   });
 
   it('returns false for unknown custom scene IDs', () => {

@@ -55,6 +55,9 @@ async function bootstrapOstrze(): Promise<void> {
   }
 
   await sceneView.mount(viewportContainer);
+  engine.onSceneLoaded = () => {
+    sceneView.centerCameraOnPlayer();
+  };
 
   hud = new HudOverlay(hudRoot, engine, sceneView, { devMode: isDevMode });
   if (isDevMode) {
