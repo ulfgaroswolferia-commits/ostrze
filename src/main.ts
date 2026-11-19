@@ -45,6 +45,8 @@ async function bootstrapOstrze(): Promise<void> {
   };
 
   const sceneView = new IsoSceneView(engine, refreshUi);
+  sceneView.organicTerrainBlending = true;
+  sceneView.showGridInExploration = isDevMode;
   if (isDevMode) {
     engine.fogOfWarEnabled = false;
     engine.ambientLightIntensity = 0.85;

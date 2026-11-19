@@ -100,14 +100,27 @@ export function createWilczyBrodScene(): CustomSceneConfig {
   const height = 28;
   const tiles = buildGrid(width, height, (x, y) => {
     const isPalisade = x === 0 || y === 0 || x === width - 1 || y === height - 1;
-    const isMainRoad = (x >= 13 && x <= 14) || (y >= 13 && y <= 14 && x >= 4 && x <= 23);
     const isSouthGate = x >= 13 && x <= 14 && y === height - 1;
+    const isMainRoad = (x >= 13 && x <= 14) || (y >= 13 && y <= 14 && x >= 4 && x <= 23);
+    const isSquare = Math.hypot(x - 13.5, y - 13) <= 3.1;
+    const isTavernYard = x >= 6 && x <= 9 && y >= 9 && y <= 12;
+    const isMarketYard = x >= 18 && x <= 21 && y >= 11 && y <= 13;
+    const isSmithyApproach = x >= 18 && x <= 20 && y >= 15 && y <= 16;
+    const isWatchtowerApproach = x >= 12 && x <= 15 && y >= 5 && y <= 8;
+    const isInnerEdge = x === 1 || y === 1 || x === width - 2 || y === height - 2;
     if (isPalisade) {
       return { z: 1, terrain: 'forest_soil', walkable: isSouthGate };
     }
+    const isDirt =
+      isMainRoad ||
+      isSquare ||
+      isTavernYard ||
+      isMarketYard ||
+      isSmithyApproach ||
+      isWatchtowerApproach;
     return {
       z: 0,
-      terrain: isMainRoad ? 'dirt_path' : 'forest_grass',
+      terrain: isDirt ? 'dirt_path' : isInnerEdge && (x + y) % 2 === 0 ? 'forest_soil' : 'forest_grass',
       walkable: true
     };
   });
@@ -391,10 +404,13 @@ export function createWilczaNoraScene(): CustomSceneConfig {
   const height = 22;
   const tiles = buildGrid(width, height, (x, y) => {
     const isWall = x <= 2 || x >= width - 3 || y <= 2 || y >= height - 2;
-    const isRavine = Math.abs(x - 11) <= 3;
+    const ravineCenter = 11 + Math.sin(y * 0.3) * 1.1;
+    const ravineDist = Math.abs(x - ravineCenter);
+    const isRavine = ravineDist <= 3.15;
+    const isAnimalTrail = ravineDist <= 1.15 && y >= 6;
     return {
       z: isWall && !isRavine ? 2 : 0,
-      terrain: isRavine ? 'forest_soil' : 'forest_grass',
+      terrain: isAnimalTrail ? 'dirt_path' : isRavine ? 'forest_soil' : 'forest_grass',
       walkable: !isWall || (x >= 10 && x <= 12 && y >= height - 2)
     };
   });
@@ -563,11 +579,23 @@ export function createKamiennaPrzeleczScene(): CustomSceneConfig {
   const width = 24;
   const height = 24;
   const tiles = buildGrid(width, height, (x, y) => {
-    const isRoad = Math.abs(x - 12) <= 2;
+    const roadCenter = 12 + Math.sin(y * 0.25) * 1.3;
+    const roadDist = Math.abs(x - roadCenter);
+    const isRoad = roadDist <= 2.1;
+    const isOldCobble = roadDist <= 0.9 && (x * 3 + y * 5) % 5 === 0;
     const isCliff = x <= 3 || x >= width - 4;
+    const isGrassTuft = !isCliff && !isRoad && roadDist >= 3.3 && (x + y * 2) % 3 === 0;
     return {
       z: isCliff ? 2 : 0,
-      terrain: isRoad ? 'dirt_path' : isCliff ? 'dungeon_stone' : 'forest_soil',
+      terrain: isOldCobble
+        ? 'mossy_cobble'
+        : isRoad
+          ? 'dirt_path'
+          : isCliff
+            ? 'dungeon_stone'
+            : isGrassTuft
+              ? 'forest_grass'
+              : 'forest_soil',
       walkable: !isCliff
     };
   });
@@ -720,8 +748,10 @@ export function createWilczyLasScene(opts?: { withHunt?: boolean }): CustomScene
   const height = 24;
   const tiles = buildGrid(width, height, (x, y) => {
     const isBorder = x === 0 || y === 0 || x === width - 1 || y === height - 1;
-    const isClearing = Math.hypot(x - 11, y - 11) <= 5.5;
-    const isPath = Math.abs(x - 11) <= 1 && y >= 11;
+    const wobble = Math.sin(x * 0.65) * 0.6 + Math.cos(y * 0.6) * 0.6;
+    const isClearing = Math.hypot(x - 11, y - 11) <= 5.5 + wobble;
+    const pathCenter = 11 + Math.sin(y * 0.35) * 0.9;
+    const isPath = Math.abs(x - pathCenter) <= 1.2 && y >= 10;
     return {
       z: isBorder && !isPath ? 1 : 0,
       terrain: isPath ? 'dirt_path' : isClearing ? 'forest_grass' : 'forest_soil',
@@ -933,15 +963,18 @@ export function createStaryMlynScene(opts?: { isNight?: boolean }): CustomSceneC
   const width = 22;
   const height = 22;
   const tiles = buildGrid(width, height, (x, y) => {
-    const isRiver = x >= width - 4;
+    const riverBank = width - 4 + Math.round(Math.sin(y * 0.38) * 1.0);
+    const isRiver = x >= riverBank;
+    const isMudBank = x === riverBank - 1;
     const isBorder = x === 0 || y === 0 || y === height - 1;
-    const isRoad = Math.abs(x - 10) <= 1 && y >= 10;
+    const roadCenter = 10 + Math.sin(y * 0.3) * 0.8;
+    const isRoad = (Math.abs(x - roadCenter) <= 1.25 && y >= 9) || (x >= 9 && x <= 14 && y >= 8 && y <= 10);
     if (isRiver) {
       return { z: 0, terrain: 'abyss_water', walkable: false };
     }
     return {
       z: isBorder && !isRoad ? 1 : 0,
-      terrain: isRoad ? 'dirt_path' : 'forest_grass',
+      terrain: isRoad ? 'dirt_path' : isMudBank ? 'forest_soil' : 'forest_grass',
       walkable: !isBorder || isRoad
     };
   });
@@ -1081,11 +1114,16 @@ export function createTraktKupieckiScene(opts?: { withHunt?: boolean }): CustomS
   const width = 24;
   const height = 24;
   const tiles = buildGrid(width, height, (x, y) => {
-    const isRoad = Math.abs(x - 12) <= 2;
+    const roadCenter = 12 + Math.sin(y * 0.26) * 1.2;
+    const roadDist = Math.abs(x - roadCenter);
+    const isWagonTurnout = x >= 9 && x <= 11 && y >= 11 && y <= 14;
+    const isCampTurnout = x >= 14 && x <= 16 && y >= 8 && y <= 10;
+    const isRoad = roadDist <= 2.1 || isWagonTurnout || isCampTurnout;
+    const isShoulder = !isRoad && roadDist <= 3.0;
     const isBorder = x === 0 || y === 0 || x === width - 1 || y === height - 1;
     return {
       z: isBorder && !isRoad ? 1 : 0,
-      terrain: isRoad ? 'dirt_path' : 'forest_grass',
+      terrain: isRoad ? 'dirt_path' : isShoulder ? 'forest_soil' : 'forest_grass',
       walkable: !isBorder || isRoad
     };
   });
@@ -1268,11 +1306,14 @@ export function createLesniczowkaScene(opts?: { withHunt?: boolean }): CustomSce
   const height = 22;
   const tiles = buildGrid(width, height, (x, y) => {
     const isBorder = x === 0 || y === 0 || x === width - 1 || y === height - 1;
-    const isYard = x >= 6 && x <= 15 && y >= 6 && y <= 15;
-    const isPath = Math.abs(x - 11) <= 1 && y >= 14;
+    const wobble = Math.sin(x * 0.7) * 0.08 + Math.cos(y * 0.7) * 0.08;
+    const isYard = Math.hypot((x - 10.5) / 5.1, (y - 10.5) / 5.1) + wobble <= 1.02;
+    const pathCenter = 11 + Math.sin(y * 0.35) * 0.75;
+    const isPath = Math.abs(x - pathCenter) <= 1.25 && y >= 14;
+    const isOakSoil = Math.hypot(x - 5.5, y - 9) <= 2.2;
     return {
       z: isBorder && !isPath ? 1 : 0,
-      terrain: isYard || isPath ? 'dirt_path' : 'forest_grass',
+      terrain: isYard || isPath ? 'dirt_path' : isOakSoil ? 'forest_soil' : 'forest_grass',
       walkable: !isBorder || isPath
     };
   });
@@ -1466,11 +1507,24 @@ export function createRuinyStraznicyScene(opts?: { withHunt?: boolean }): Custom
   const height = 24;
   const tiles = buildGrid(width, height, (x, y) => {
     const isBorder = x === 0 || y === 0 || x === width - 1 || y === height - 1;
-    const isCourtyard = x >= 6 && x <= 17 && y >= 5 && y <= 16;
-    const isRoad = Math.abs(x - 12) <= 1 && y >= 15;
+    const wobble = Math.sin(x * 0.65) * 0.65 + Math.cos(y * 0.65) * 0.65;
+    const courtyardDist = Math.hypot((x - 11.5) / 6.1, (y - 10.5) / 6.1);
+    const isCourtyard = courtyardDist <= 1.0 + wobble * 0.1;
+    const isOvergrownPatch = isCourtyard && courtyardDist > 0.78 && (x * 7 + y * 11) % 4 === 0;
+    const roadCenter = 12 + Math.sin(y * 0.35) * 0.7;
+    const isRoad = Math.abs(x - roadCenter) <= 1.25 && y >= 15;
+    const isPerimeterGrass = !isBorder && !isCourtyard && !isRoad && (x + y * 3) % 3 === 0;
     return {
       z: isBorder && !isRoad ? 1 : 0,
-      terrain: isCourtyard ? 'mossy_cobble' : isRoad ? 'dirt_path' : 'forest_soil',
+      terrain: isOvergrownPatch
+        ? 'forest_soil'
+        : isCourtyard
+          ? 'mossy_cobble'
+          : isRoad
+            ? 'dirt_path'
+            : isPerimeterGrass
+              ? 'forest_grass'
+              : 'forest_soil',
       walkable: !isBorder || isRoad
     };
   });
