@@ -59,6 +59,31 @@ async function bootstrapOstrze(): Promise<void> {
     sceneView.centerCameraOnPlayer();
   };
 
+  // Prevent edge-panning when hovering over Ostrze UI windows (top-right hub/description panel,
+  // modals, journal/chronicle, combat log, top bar) — matching engine HUD behavior.
+  const uiPanBlockSelector = [
+    '.ostrze-hub-bar',
+    '.ostrze-overlay',
+    '.ostrze-toast',
+    '.top-bar',
+    '.hero-card',
+    '.chronicle-log',
+    '.combat-log-dock',
+    '.combat-tactical-bar',
+    '.inventory-drawer',
+    '.inspector-card',
+    '.inspector-expand-btn',
+    '.dialogue-modal',
+    '[data-ui-block-pan]'
+  ].join(', ');
+
+  window.addEventListener('mousemove', (e) => {
+    const target = e.target as HTMLElement | null;
+    if (target?.closest(uiPanBlockSelector)) {
+      sceneView.updateEdgePanPointerState(e.clientX, e.clientY, true, true);
+    }
+  });
+
   hud = new HudOverlay(hudRoot, engine, sceneView, { devMode: isDevMode });
   if (isDevMode) {
     inspector = new InspectorPanel(inspectorRoot, engine, sceneView, refreshUi);
