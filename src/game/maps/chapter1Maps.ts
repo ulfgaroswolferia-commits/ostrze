@@ -3,6 +3,7 @@ import { IsometricWorldMap, MapId, TileCell, TileTerrainType } from '@ulf/core/w
 import { createDefaultProficiencies } from '@ulf/rpg/combatSystem';
 import { ActorEntity } from '@ulf/rpg/gameLoop';
 import type { CustomSceneConfig } from '../../engine-bridge/OstrzeEngineState';
+import { organicEdgeWobble, organicPatchNoise } from './terrainNoise';
 
 function buildGrid(
   width: number,
@@ -120,7 +121,11 @@ export function createWilczyBrodScene(): CustomSceneConfig {
       isWatchtowerApproach;
     return {
       z: 0,
-      terrain: isDirt ? 'dirt_path' : isInnerEdge && (x + y) % 2 === 0 ? 'forest_soil' : 'forest_grass',
+      terrain: isDirt
+        ? 'dirt_path'
+        : isInnerEdge && organicPatchNoise(x, y, 2) > 0.05
+          ? 'forest_soil'
+          : 'forest_grass',
       walkable: true
     };
   });
@@ -582,9 +587,9 @@ export function createKamiennaPrzeleczScene(): CustomSceneConfig {
     const roadCenter = 12 + Math.sin(y * 0.25) * 1.3;
     const roadDist = Math.abs(x - roadCenter);
     const isRoad = roadDist <= 2.1;
-    const isOldCobble = roadDist <= 0.9 && (x * 3 + y * 5) % 5 === 0;
+    const isOldCobble = roadDist <= 1.15 && organicPatchNoise(x, y, 3) > 0.42;
     const isCliff = x <= 3 || x >= width - 4;
-    const isGrassTuft = !isCliff && !isRoad && roadDist >= 3.3 && (x + y * 2) % 3 === 0;
+    const isGrassTuft = !isCliff && !isRoad && roadDist >= 3.2 && organicPatchNoise(x, y, 4) > 0.12;
     return {
       z: isCliff ? 2 : 0,
       terrain: isOldCobble
@@ -748,7 +753,7 @@ export function createWilczyLasScene(opts?: { withHunt?: boolean }): CustomScene
   const height = 24;
   const tiles = buildGrid(width, height, (x, y) => {
     const isBorder = x === 0 || y === 0 || x === width - 1 || y === height - 1;
-    const wobble = Math.sin(x * 0.65) * 0.6 + Math.cos(y * 0.6) * 0.6;
+    const wobble = organicEdgeWobble(x, y, 1.2, 0.62);
     const isClearing = Math.hypot(x - 11, y - 11) <= 5.5 + wobble;
     const pathCenter = 11 + Math.sin(y * 0.35) * 0.9;
     const isPath = Math.abs(x - pathCenter) <= 1.2 && y >= 10;
@@ -1306,7 +1311,7 @@ export function createLesniczowkaScene(opts?: { withHunt?: boolean }): CustomSce
   const height = 22;
   const tiles = buildGrid(width, height, (x, y) => {
     const isBorder = x === 0 || y === 0 || x === width - 1 || y === height - 1;
-    const wobble = Math.sin(x * 0.7) * 0.08 + Math.cos(y * 0.7) * 0.08;
+    const wobble = organicEdgeWobble(x, y, 0.16, 0.7);
     const isYard = Math.hypot((x - 10.5) / 5.1, (y - 10.5) / 5.1) + wobble <= 1.02;
     const pathCenter = 11 + Math.sin(y * 0.35) * 0.75;
     const isPath = Math.abs(x - pathCenter) <= 1.25 && y >= 14;
@@ -1507,13 +1512,13 @@ export function createRuinyStraznicyScene(opts?: { withHunt?: boolean }): Custom
   const height = 24;
   const tiles = buildGrid(width, height, (x, y) => {
     const isBorder = x === 0 || y === 0 || x === width - 1 || y === height - 1;
-    const wobble = Math.sin(x * 0.65) * 0.65 + Math.cos(y * 0.65) * 0.65;
+    const wobble = organicEdgeWobble(x, y, 0.13, 0.65);
     const courtyardDist = Math.hypot((x - 11.5) / 6.1, (y - 10.5) / 6.1);
-    const isCourtyard = courtyardDist <= 1.0 + wobble * 0.1;
-    const isOvergrownPatch = isCourtyard && courtyardDist > 0.78 && (x * 7 + y * 11) % 4 === 0;
+    const isCourtyard = courtyardDist <= 1.0 + wobble;
+    const isOvergrownPatch = isCourtyard && courtyardDist > 0.72 && organicPatchNoise(x, y, 5) > 0.22;
     const roadCenter = 12 + Math.sin(y * 0.35) * 0.7;
     const isRoad = Math.abs(x - roadCenter) <= 1.25 && y >= 15;
-    const isPerimeterGrass = !isBorder && !isCourtyard && !isRoad && (x + y * 3) % 3 === 0;
+    const isPerimeterGrass = !isBorder && !isCourtyard && !isRoad && organicPatchNoise(x, y, 6) > 0.1;
     return {
       z: isBorder && !isRoad ? 1 : 0,
       terrain: isOvergrownPatch

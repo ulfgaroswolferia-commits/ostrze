@@ -3,6 +3,7 @@ import { IsometricWorldMap, MapId, TileCell, TileTerrainType } from '@ulf/core/w
 import { createDefaultProficiencies } from '@ulf/rpg/combatSystem';
 import { ActorEntity } from '@ulf/rpg/gameLoop';
 import type { CustomSceneConfig } from '../../engine-bridge/OstrzeEngineState';
+import { organicEdgeWobble, organicPatchNoise } from './terrainNoise';
 
 function buildGrid(
   width: number,
@@ -108,7 +109,7 @@ export function createBrzezinaYardScene(opts?: {
   const tiles = buildGrid(width, height, (x, y) => {
     const isBorder = x === 0 || y === 0 || x === width - 1 || y === height - 1;
     const isSouthGate = x >= 10 && x <= 11 && y >= 15;
-    const yardWobble = Math.sin(x * 0.65) * 0.06 + Math.cos(y * 0.65) * 0.06;
+    const yardWobble = organicEdgeWobble(x, y, 0.12, 0.65);
     const yardDist = Math.hypot((x - 10.5) / 6.1, (y - 10.5) / 6.1) + yardWobble;
     const isYard = yardDist <= 1.02;
     const isCottageApproach = x >= 9 && x <= 11 && y >= 4 && y <= 6;
@@ -119,7 +120,7 @@ export function createBrzezinaYardScene(opts?: {
     const terrain: TileTerrainType =
       isYard || isSouthGate || isCottageApproach
         ? 'dirt_path'
-        : isInnerEdge && (x + y) % 3 !== 0
+        : isInnerEdge && organicPatchNoise(x, y, 1) > -0.1
           ? 'forest_soil'
           : 'forest_grass';
     return {
@@ -553,7 +554,7 @@ export function createUroczyskoNocScene(): CustomSceneConfig {
   const width = 22;
   const height = 22;
   const tiles = buildGrid(width, height, (x, y) => {
-    const wobble = Math.sin(x * 0.7) * 0.45 + Math.cos(y * 0.65) * 0.45;
+    const wobble = organicEdgeWobble(x, y, 0.9, 0.68);
     const dist = Math.hypot(x - 10.5, y - 10.5);
     const isOuter = dist >= 9.5;
     const terrain: TileTerrainType =
@@ -789,9 +790,9 @@ export function createPobojowiskoSwitScene(): CustomSceneConfig {
         seed: 351,
         name: 'Rozdroże ku Wilczemu Brodowi',
         title: 'Wybierz dalszą drogę',
-        x: 12,
+        x: 13,
         y: 10,
-        z: tiles[10][12].z,
+        z: tiles[10][13].z,
         torso: 'torso_przeszywanica',
         head: 'helm_shadow_hood'
       })

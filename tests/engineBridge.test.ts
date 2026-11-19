@@ -78,14 +78,31 @@ describe('OstrzeEngineState bridge', () => {
 
     for (const scene of scenes) {
       const { map, spawnX, spawnY, actors } = scene;
+      const blockedPropTiles = new Set<number>();
+      for (const prop of map.props) {
+        expect(prop.x, `${scene.id} prop ${prop.id} x in bounds`).toBeGreaterThanOrEqual(0);
+        expect(prop.y, `${scene.id} prop ${prop.id} y in bounds`).toBeGreaterThanOrEqual(0);
+        expect(prop.x + prop.sizeX, `${scene.id} prop ${prop.id} maxX in bounds`).toBeLessThanOrEqual(map.width);
+        expect(prop.y + prop.sizeY, `${scene.id} prop ${prop.id} maxY in bounds`).toBeLessThanOrEqual(map.height);
+        if (prop.blocksMovement) {
+          for (let py = prop.y; py < prop.y + prop.sizeY; py++) {
+            for (let px = prop.x; px < prop.x + prop.sizeX; px++) {
+              blockedPropTiles.add(py * map.width + px);
+            }
+          }
+        }
+      }
+
       const spawnCell = map.tiles[spawnY]?.[spawnX];
       expect(spawnCell, `${scene.id} spawn tile exists`).toBeDefined();
       expect(spawnCell.walkable, `${scene.id} spawn tile is walkable`).toBe(true);
+      expect(blockedPropTiles.has(spawnY * map.width + spawnX), `${scene.id} spawn not blocked by prop`).toBe(false);
 
       for (const actor of actors ?? []) {
         const cell = map.tiles[actor.tileY]?.[actor.tileX];
         expect(cell, `${scene.id} actor ${actor.id} tile exists`).toBeDefined();
         expect(cell.walkable, `${scene.id} actor ${actor.id} stands on walkable tile`).toBe(true);
+        expect(blockedPropTiles.has(actor.tileY * map.width + actor.tileX), `${scene.id} actor ${actor.id} not blocked by prop`).toBe(false);
         expect(actor.z, `${scene.id} actor ${actor.id} elevation matches tile`).toBe(cell.z);
       }
 
@@ -108,7 +125,7 @@ describe('OstrzeEngineState bridge', () => {
         spawnX,
         spawnY,
         4,
-        (tx, ty) => Boolean(map.tiles[ty]?.[tx]?.walkable),
+        (tx, ty) => Boolean(map.tiles[ty]?.[tx]?.walkable) && !blockedPropTiles.has(ty * map.width + tx),
         (tx, ty) => map.tiles[ty]?.[tx]?.z ?? 0,
         1
       );
