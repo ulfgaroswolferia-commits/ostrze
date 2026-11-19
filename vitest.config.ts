@@ -6,7 +6,7 @@ export default mergeConfig(
   defineConfig({
     test: {
       include: ['tests/**/*.test.ts'],
-      exclude: ['origin/**', 'node_modules/**', 'dist/**']
+      exclude: ['origin/**', 'engine/**', 'node_modules/**', 'dist/**']
     }
   })
 );

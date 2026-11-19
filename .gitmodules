@@ -1,0 +1,4 @@
+[submodule "engine"]
+	path = engine
+	url = https://github.com/ulfgaroswolferia-commits/Ulf-cRPG-Engine.git
+	branch = main
