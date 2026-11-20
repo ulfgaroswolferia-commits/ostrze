@@ -1161,7 +1161,10 @@ export class PrologueDirector {
       this.engine.npcs.push(createTraktCampfireActor(this.engine.map.tiles[15]?.[11]?.z ?? 0));
     } else if (phase === 'noc_istota') {
       for (let i = this.engine.npcs.length - 1; i >= 0; i--) {
-        if (this.engine.npcs[i].id.startsWith('enemy_upior_')) {
+        if (
+          this.engine.npcs[i].id.startsWith('enemy_upior_') ||
+          this.engine.npcs[i].id.startsWith('npc_noc_')
+        ) {
           this.engine.npcs.splice(i, 1);
         }
       }
