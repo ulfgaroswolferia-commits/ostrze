@@ -6,9 +6,16 @@ import { createRng } from '../src/game/rules/dice';
 import { Chapter1Director } from '../src/game/scenes/Chapter1Director';
 import { PrologueDirector } from '../src/game/scenes/PrologueDirector';
 import {
+  CHAPTER_DEV_SCENES,
+  clearOstrzeSave,
   exportSaveKey,
+  hasOstrzeSave,
   importSaveKey,
-  normalizeSavePayload
+  isValidChapterId,
+  loadOstrzeGame,
+  normalizeSavePayload,
+  saveOstrzeGame,
+  VALID_CHAPTER_IDS
 } from '../src/game/state/saveManager';
 
 function createSampleState() {
@@ -108,6 +115,13 @@ describe('Save/Load E2E, Portable Keys & Restore Stability', () => {
     expect(normalized!.state.inventory.quickBelt).toEqual([null, null, null, null]);
     expect(normalized!.state.world.eventsSeen).toEqual([]);
     expect(normalized!.state.character?.effects).toEqual([]);
+
+    expect(VALID_CHAPTER_IDS).toEqual(['prologue', 'chapter1']);
+    expect(CHAPTER_DEV_SCENES.map((s) => s.id)).toEqual([...VALID_CHAPTER_IDS]);
+    expect(isValidChapterId('prologue')).toBe(true);
+    expect(isValidChapterId('chapter1')).toBe(true);
+    expect(isValidChapterId('unknown_chapter')).toBe(false);
+    expect(normalizeSavePayload({ ...legacyRaw, chapter: 'unknown_chapter' })).toBeNull();
   });
 
   it('restores Prologue phases cleanly — including removing npc_noc_* silhouettes in noc_istota', () => {
@@ -153,5 +167,52 @@ describe('Save/Load E2E, Portable Keys & Restore Stability', () => {
     ch1.restoreFromSave(loaded.sceneId);
     expect(engine.activeCustomSceneId).toBe('wilczy_brod');
     expect(ch1.hasBrzezinaMemoryEchoAvailable()).toBe(true);
+  });
+
+  it('caches hasOstrzeSave() across save/clear cycles without re-parsing JSON on every HUD render', () => {
+    const store = new Map<string, string>();
+    let getItemCalls = 0;
+    const origWindow = (globalThis as any).window;
+
+    try {
+      (globalThis as any).window = {
+        localStorage: {
+          getItem: (k: string) => {
+            getItemCalls++;
+            return store.get(k) ?? null;
+          },
+          setItem: (k: string, v: string) => {
+            store.set(k, v);
+          },
+          removeItem: (k: string) => {
+            store.delete(k);
+          }
+        }
+      };
+
+      clearOstrzeSave();
+      expect(hasOstrzeSave()).toBe(false);
+
+      const state = createSampleState();
+      expect(
+        saveOstrzeGame({
+          chapter: 'chapter1',
+          sceneId: 'wilczy_brod',
+          state
+        })
+      ).toBe(true);
+
+      const callsBefore = getItemCalls;
+      expect(hasOstrzeSave()).toBe(true);
+      expect(hasOstrzeSave()).toBe(true);
+      expect(hasOstrzeSave()).toBe(true);
+      expect(getItemCalls).toBe(callsBefore);
+
+      expect(loadOstrzeGame()?.sceneId).toBe('wilczy_brod');
+      clearOstrzeSave();
+      expect(hasOstrzeSave()).toBe(false);
+    } finally {
+      (globalThis as any).window = origWindow;
+    }
   });
 });

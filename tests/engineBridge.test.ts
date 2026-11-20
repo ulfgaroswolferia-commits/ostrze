@@ -1,7 +1,12 @@
 import {
+  bakeCharacterBuffers,
+  computeCharacterRecipeHash
+} from '@ulf/assets/characterBakery';
+import {
   computeReachableTilesBfs,
   computeTileTransitions
 } from '@ulf/assets/terrainBlending';
+import { resolvePropVisualTransform } from '@ulf/renderer/isoSceneView';
 import { describe, expect, it } from 'vitest';
 import { OstrzeEngineState } from '../src/engine-bridge/OstrzeEngineState';
 import { getPropVisualTransform } from '../src/game/assets/buildingScaling';
@@ -203,5 +208,15 @@ describe('OstrzeEngineState bridge', () => {
     expect(dormScale).toBeGreaterThan(cottageScale);
     expect(cottageScale).toBeGreaterThan(shedScale);
     expect(towerScale).toBeGreaterThan(cottageScale);
+
+    // Verify official engine hooks (registerPropVisualTransform & registerCustomCharacterBaker) are active
+    new OstrzeEngineState();
+    expect(resolvePropVisualTransform(school).scaleX).toBe(schoolScale);
+    const wolfScene = createWilczaNoraScene();
+    const wolfActor = wolfScene.actors!.find((a) => a.id === 'enemy_wilk_1')!;
+    expect(computeCharacterRecipeHash(wolfActor.recipe)).toBe(
+      `wolf|${wolfActor.recipe.id}|${wolfActor.recipe.name}`
+    );
+    expect(bakeCharacterBuffers(wolfActor.recipe).recipeHash).toContain('wolf_');
   });
 });

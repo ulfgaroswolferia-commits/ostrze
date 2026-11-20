@@ -16,11 +16,14 @@ import { syncWorldLighting } from './game/rules/worldCycle';
 import { Chapter1Director } from './game/scenes/Chapter1Director';
 import { PrologueDirector, type ProloguePhase } from './game/scenes/PrologueDirector';
 import {
+  CHAPTER_DEV_SCENES,
   exportSaveKey,
   hasOstrzeSave,
   importSaveKey,
+  isValidChapterId,
   loadOstrzeGame,
   saveOstrzeGame,
+  type ChapterId,
   type OstrzeSavePayload
 } from './game/state/saveManager';
 import { OstrzeModalUi } from './game/ui/OstrzeModalUi';
@@ -221,7 +224,7 @@ async function bootstrapOstrze(): Promise<void> {
     onUiRefresh: refreshUi
   });
 
-  let activeChapter: 'prologue' | 'chapter1' = startChapter === '1' ? 'chapter1' : 'prologue';
+  let activeChapter: ChapterId = startChapter === '1' ? 'chapter1' : 'prologue';
 
   const performSave = (silent = false): void => {
     prologue.state.rngState = prologue.rng.getState();
@@ -340,8 +343,9 @@ async function bootstrapOstrze(): Promise<void> {
   };
 
   const switchToDevChapter = (chapterId: string): void => {
+    const nextChapter: ChapterId = isValidChapterId(chapterId) ? chapterId : 'prologue';
     modalUi.closeAll();
-    if (chapterId === 'chapter1') {
+    if (nextChapter === 'chapter1') {
       ensureDevTestCharacter();
       activeChapter = 'chapter1';
       chapter1.enterWilczyBrod();
@@ -382,10 +386,7 @@ async function bootstrapOstrze(): Promise<void> {
 
   hud = new HudOverlay(hudRoot, engine, sceneView, {
     devMode: isDevMode,
-    devScenes: [
-      { id: 'prologue', label: 'Prolog — Brzezina' },
-      { id: 'chapter1', label: 'Akt I — Wilczy Bród' }
-    ],
+    devScenes: CHAPTER_DEV_SCENES,
     getActiveDevSceneId: () => activeChapter,
     onSelectDevScene: switchToDevChapter,
     getHeroMeta: () => {

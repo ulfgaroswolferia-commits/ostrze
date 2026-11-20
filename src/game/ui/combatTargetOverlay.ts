@@ -8,6 +8,7 @@ import {
   resolveEnemyOriginId,
   resolveEnemyPixArtId
 } from '../rules/combatEnemyMeta';
+import { escapeHtml } from './escapeHtml';
 
 /**
  * Compact Ostrze combat target card mounted alongside engine HudOverlay
@@ -19,30 +20,38 @@ export class CombatTargetOverlay {
   private readonly root: HTMLElement;
   private readonly engine: OstrzeEngineState;
   private readonly data: OriginGameData;
+  private readonly abortController = new AbortController();
+  private disposed = false;
 
   private selectedEnemyId: string | null = null;
   private wasCombatActive = false;
   private lastSeenLogHead: string | null = null;
   private critFlashUntil = 0;
+  private lastRenderedKey: string | null = null;
 
   constructor(engine: OstrzeEngineState, data: OriginGameData) {
     this.engine = engine;
     this.data = data;
 
+    document.getElementById('ostrze-combat-target-root')?.remove();
     this.root = document.createElement('div');
     this.root.id = 'ostrze-combat-target-root';
     document.body.appendChild(this.root);
   }
 
+  public destroy(): void {
+    if (this.disposed) return;
+    this.disposed = true;
+    this.abortController.abort();
+    this.root.remove();
+  }
+
   private escape(str: string): string {
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+    return escapeHtml(str);
   }
 
   public sync(): void {
+    if (this.disposed) return;
     const isActive = this.engine.combatState.active;
 
     // Combat start / end audio transitions
@@ -66,6 +75,7 @@ export class CombatTargetOverlay {
       if (this.root.innerHTML !== '') {
         this.root.innerHTML = '';
       }
+      this.lastRenderedKey = null;
       return;
     }
 
@@ -87,6 +97,7 @@ export class CombatTargetOverlay {
     const livingEnemies = this.engine.npcs.filter((n) => n.combat?.isHostile && n.combat.isAlive);
     if (livingEnemies.length === 0) {
       this.root.innerHTML = '';
+      this.lastRenderedKey = null;
       return;
     }
 
@@ -97,6 +108,26 @@ export class CombatTargetOverlay {
 
     const target = livingEnemies.find((e) => e.id === this.selectedEnemyId) ?? livingEnemies[0];
     const c = target.combat!;
+    const isCritFlash = Date.now() < this.critFlashUntil;
+    const stateKey = [
+      target.id,
+      target.recipe.name,
+      c.hp,
+      c.maxHp,
+      c.ap,
+      c.maxAp,
+      c.dazedHeadTurns,
+      c.crippledLegsTurns,
+      c.defending ? 1 : 0,
+      isCritFlash ? 1 : 0,
+      livingEnemies.map((e) => `${e.id}:${e.recipe.name}`).join(',')
+    ].join('|');
+
+    if (stateKey === this.lastRenderedKey) {
+      return;
+    }
+    this.lastRenderedKey = stateKey;
+
     const hpPct = Math.min(100, Math.max(0, Math.round((c.hp / Math.max(1, c.maxHp)) * 100)));
 
     const pixId = resolveEnemyPixArtId(target.id, target.recipe.name);
@@ -151,7 +182,6 @@ export class CombatTargetOverlay {
       `
       : '';
 
-    const isCritFlash = Date.now() < this.critFlashUntil;
     const defenseVal = originDef?.defense ?? 12;
 
     this.root.innerHTML = `
@@ -176,14 +206,18 @@ export class CombatTargetOverlay {
     `;
 
     this.root.querySelectorAll<HTMLElement>('[data-combat-target]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const id = btn.dataset.combatTarget ?? null;
-        if (id && id !== this.selectedEnemyId) {
-          this.selectedEnemyId = id;
-          ostrzeAudio.playUiClick();
-          this.sync();
-        }
-      });
+      btn.addEventListener(
+        'click',
+        () => {
+          const id = btn.dataset.combatTarget ?? null;
+          if (id && id !== this.selectedEnemyId) {
+            this.selectedEnemyId = id;
+            ostrzeAudio.playUiClick();
+            this.sync();
+          }
+        },
+        { signal: this.abortController.signal }
+      );
     });
   }
 }

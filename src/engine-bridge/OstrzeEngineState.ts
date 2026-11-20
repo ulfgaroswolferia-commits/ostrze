@@ -1,9 +1,26 @@
+import { registerCustomCharacterBaker } from '@ulf/assets/characterBakery';
 import { FovGridState } from '@ulf/core/fov';
 import { IsometricWorldMap, MapId } from '@ulf/core/worldMap';
+import { registerPropVisualTransform } from '@ulf/renderer/isoSceneView';
 import { DIALOGUE_TREES, DialogueNode } from '@ulf/rpg/dialogueSystem';
 import { ActorEntity, CrpgGameState, LogSeverity } from '@ulf/rpg/gameLoop';
+import { bakeWolfCharacterBuffers, isWolfRecipe } from '../game/assets/beastSprites';
+import { getPropVisualTransform } from '../game/assets/buildingScaling';
 import type { OriginGameData, OstrzeGameState } from '../game/data/originTypes';
 import { ComputedStats, getStats } from '../game/rules/stats';
+
+let ostrzeEngineExtensionsRegistered = false;
+
+export function ensureOstrzeEngineExtensionsRegistered(): void {
+  if (ostrzeEngineExtensionsRegistered) return;
+  ostrzeEngineExtensionsRegistered = true;
+  registerCustomCharacterBaker({
+    matches: (recipe) => isWolfRecipe(recipe),
+    computeHash: (recipe) => `wolf|${recipe.id}|${recipe.name}`,
+    bake: (recipe) => bakeWolfCharacterBuffers(recipe)
+  });
+  registerPropVisualTransform(getPropVisualTransform);
+}
 
 export interface CustomSceneConfig {
   id: string;
@@ -34,6 +51,7 @@ export class OstrzeEngineState extends CrpgGameState {
   private readonly persistentMarkers = new Map<string, string>();
 
   constructor() {
+    ensureOstrzeEngineExtensionsRegistered();
     super('forest_clearing');
     this.chronicleEntries.length = 0;
     this.logs.length = 0;
@@ -217,21 +235,7 @@ export class OstrzeEngineState extends CrpgGameState {
       return false;
     }
 
-    // Let base engine reset all internal combat/dialogue state cleanly first,
-    // without polluting Ostrze's Chronicle with the default engine map welcome entry.
-    const prevChronicleHeadId = this.chronicleEntries[0]?.id ?? null;
-    const prevLogsLength = this.logs.length;
-    super.loadMap('forest_clearing');
-    while (
-      this.chronicleEntries.length > 0 &&
-      this.chronicleEntries[0].id !== prevChronicleHeadId
-    ) {
-      this.chronicleEntries.shift();
-    }
-    while (this.logs.length > prevLogsLength) {
-      this.logs.shift();
-    }
-
+    this.resetRuntimeStateForCustomMap();
     this.persistentMarkers.clear();
     this.wasCombatActive = false;
     this.activeCustomSceneId = sceneId;
@@ -239,7 +243,6 @@ export class OstrzeEngineState extends CrpgGameState {
     this.fov = new FovGridState(this.map.width, this.map.height);
     this.rebuildPropGrid();
     this.bumpMapRevision();
-    this.npcs.length = 0;
 
     if (typeof scene.ambientLightIntensity === 'number') {
       this.ambientLightIntensity = scene.ambientLightIntensity;

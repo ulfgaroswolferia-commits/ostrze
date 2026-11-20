@@ -2,14 +2,28 @@ import type { OstrzeGameState } from '../data/originTypes';
 
 export const OSTRZE_SAVE_KEY = 'ostrze_25d_save_v1';
 
+export const VALID_CHAPTER_IDS = ['prologue', 'chapter1'] as const;
+export type ChapterId = (typeof VALID_CHAPTER_IDS)[number];
+
+export const CHAPTER_DEV_SCENES: ReadonlyArray<{ id: ChapterId; label: string }> = [
+  { id: 'prologue', label: 'Prolog — Brzezina' },
+  { id: 'chapter1', label: 'Akt I — Wilczy Bród' }
+];
+
+export function isValidChapterId(value: unknown): value is ChapterId {
+  return typeof value === 'string' && (VALID_CHAPTER_IDS as ReadonlyArray<string>).includes(value);
+}
+
 export interface OstrzeSavePayload {
   version: 1;
   savedAt: string;
-  chapter: 'prologue' | 'chapter1';
+  chapter: ChapterId;
   sceneId: string;
   prologueStep?: string;
   state: OstrzeGameState;
 }
+
+let cachedHasSave: boolean | null = null;
 
 function getStorage(): Storage | null {
   try {
@@ -35,6 +49,7 @@ export function saveOstrzeGame(payload: Omit<OstrzeSavePayload, 'version' | 'sav
       state: payload.state
     };
     storage.setItem(OSTRZE_SAVE_KEY, JSON.stringify(full));
+    cachedHasSave = true;
     return true;
   } catch {
     return false;
@@ -50,7 +65,7 @@ export function normalizeSavePayload(raw: unknown): OstrzeSavePayload | null {
   const parsed = raw as Partial<OstrzeSavePayload>;
   if (
     parsed.version !== 1 ||
-    (parsed.chapter !== 'prologue' && parsed.chapter !== 'chapter1') ||
+    !isValidChapterId(parsed.chapter) ||
     typeof parsed.sceneId !== 'string' ||
     !parsed.sceneId ||
     !parsed.state ||
@@ -114,21 +129,45 @@ export function normalizeSavePayload(raw: unknown): OstrzeSavePayload | null {
 
 export function loadOstrzeGame(): OstrzeSavePayload | null {
   const storage = getStorage();
-  if (!storage) return null;
+  if (!storage) {
+    cachedHasSave = false;
+    return null;
+  }
   try {
     const raw = storage.getItem(OSTRZE_SAVE_KEY);
-    if (!raw) return null;
-    return normalizeSavePayload(JSON.parse(raw));
+    if (!raw) {
+      cachedHasSave = false;
+      return null;
+    }
+    const normalized = normalizeSavePayload(JSON.parse(raw));
+    cachedHasSave = normalized !== null;
+    return normalized;
   } catch {
+    cachedHasSave = false;
     return null;
   }
 }
 
 export function hasOstrzeSave(): boolean {
-  return loadOstrzeGame() !== null;
+  if (cachedHasSave !== null) {
+    return cachedHasSave;
+  }
+  const storage = getStorage();
+  if (!storage) {
+    cachedHasSave = false;
+    return false;
+  }
+  try {
+    cachedHasSave = Boolean(storage.getItem(OSTRZE_SAVE_KEY));
+    return cachedHasSave;
+  } catch {
+    cachedHasSave = false;
+    return false;
+  }
 }
 
 export function clearOstrzeSave(): void {
+  cachedHasSave = false;
   const storage = getStorage();
   if (!storage) return;
   try {
