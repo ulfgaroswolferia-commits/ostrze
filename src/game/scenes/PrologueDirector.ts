@@ -334,225 +334,56 @@ export class PrologueDirector {
     const statusLine = `${ch?.name ?? 'Adept'} · Poz. ${ch?.level ?? 1} · HP ${ch?.hp ?? 0}/${hpMax} · ${ch?.money ?? 0} gr · ${this.formatClock()}`;
 
     let questsLine = '';
-    const actions: Array<{ id: string; label: string; disabled?: boolean; alert?: boolean; onClick: () => void }> = [];
 
     switch (this.phase) {
       case 'brzezina_gnieworad':
-        questsLine = 'Cel: Podejdź na dziedzińcu do Mistrza Gnieworada (❗) i kliknij na niego.';
-        actions.push({
-          id: 'walk_gnieworad',
-          label: '🚶 Mistrz Gnieworad',
-          onClick: () => this.engine.commandTalkToNpc('npc_gnieworad')
-        });
+        questsLine = 'Cel: Podejdź na dziedzińcu do Mistrza Gnieworada (❗) i porozmawiaj.';
         break;
       case 'brzezina_sparing_talk':
         questsLine = 'Cel: Podejdź do Instruktora Radogosta (⚔️) na środku placu, aby stoczyć sparing.';
-        actions.push({
-          id: 'walk_radogost',
-          label: '🚶 Instruktor Radogost',
-          onClick: () => this.engine.commandTalkToNpc('npc_radogost')
-        });
         break;
       case 'brzezina_sparing_fight':
         questsLine = 'Walka ćwiczebna z Instruktorem Radogostem w toku!';
         break;
       case 'brzezina_kurier':
         questsLine = 'Cel: Podejdź do Cesarskiego Kuriera w czerwonym płaszczu (❗) i porozmawiaj.';
-        actions.push({
-          id: 'walk_kurier',
-          label: '🚶 Cesarski Kurier',
-          onClick: () => this.engine.commandTalkToNpc('npc_kurier')
-        });
         break;
       case 'brzezina_delegacja':
         questsLine = 'Cel: Wróć do Mistrza Gnieworada (❗) po decyzję w sprawie delegacji.';
-        actions.push({
-          id: 'walk_gnieworad_del',
-          label: '🚶 Mistrz Gnieworad',
-          onClick: () => this.engine.commandTalkToNpc('npc_gnieworad')
-        });
         break;
       case 'brzezina_towarzysze':
-        questsLine = 'Cel: Porozmawiaj z towarzyszami przy bramie (Skarimir, Ragnosława, Wojmir) i pomóż im przed wymarszem lub zajrzyj do Dobrogosta.';
-        actions.push(
-          {
-            id: 'walk_skarimir',
-            label: '💬 Skarimir',
-            onClick: () => this.engine.commandTalkToNpc('npc_skarimir')
-          },
-          {
-            id: 'walk_ragnoslawa',
-            label: '💬 Ragnosława',
-            onClick: () => this.engine.commandTalkToNpc('npc_ragnoslawa')
-          },
-          {
-            id: 'walk_wojmir',
-            label: '💬 Wojmir',
-            onClick: () => this.engine.commandTalkToNpc('npc_wojmir')
-          },
-          {
-            id: 'walk_dobrogost',
-            label: '🛒 Kwatermistrz Dobrogost',
-            onClick: () => this.engine.commandTalkToNpc('npc_dobrogost')
-          }
-        );
+        questsLine = 'Cel: Porozmawiaj z towarzyszami przy bramie (Skarimir, Ragnosława, Wojmir) lub zajrzyj do kramu Dobrogosta.';
         break;
       case 'brzezina_gotowy_do_wymarszu':
-        questsLine = 'Cel: Możesz jeszcze porozmawiać z towarzyszami i dokończyć ich przysługi albo ruszyć na trakt ku Wilczemu Brodowi.';
-        actions.push(
-          {
-            id: 'march_out',
-            label: '🚶 Wymarsz na trakt (Dzień 1)',
-            onClick: () => this.beginMarchDay1()
-          },
-          {
-            id: 'walk_skarimir_ready',
-            label: '💬 Skarimir',
-            onClick: () => this.engine.commandTalkToNpc('npc_skarimir')
-          },
-          {
-            id: 'walk_ragnoslawa_ready',
-            label: '💬 Ragnosława',
-            onClick: () => this.engine.commandTalkToNpc('npc_ragnoslawa')
-          },
-          {
-            id: 'walk_wojmir_ready',
-            label: '💬 Wojmir',
-            onClick: () => this.engine.commandTalkToNpc('npc_wojmir')
-          },
-          {
-            id: 'walk_dobrogost_ready',
-            label: '🛒 Kwatermistrz Dobrogost',
-            onClick: () => this.engine.commandTalkToNpc('npc_dobrogost')
-          }
-        );
+        questsLine = 'Cel: Dokończ sprawy w Brzezinie lub kliknij podświetloną Bramę na Trakt na południu dziedzińca, by ruszyć w drogę.';
         break;
       case 'trakt_bandyci':
         questsLine = 'Cel: Zasadzka na gościńcu! Podejdź do bandytów (⚔️) i odeprzyj atak.';
         break;
       case 'trakt_ognisko':
         questsLine = 'Cel: Porozmawiaj z towarzyszami przy ognisku, a gdy będziesz gotów, kliknij Ognisko (❗), by ruszyć dalej przed zmrokiem.';
-        if (!this.state.flags.og_skarimir) {
-          actions.push({
-            id: 'walk_trakt_skarimir',
-            label: '💬 Skarimir',
-            onClick: () => this.engine.commandTalkToNpc('npc_trakt_skarimir')
-          });
-        }
-        if (!this.state.flags.og_ragnoslawa) {
-          actions.push({
-            id: 'walk_trakt_ragnoslawa',
-            label: '💬 Ragnosława',
-            onClick: () => this.engine.commandTalkToNpc('npc_trakt_ragnoslawa')
-          });
-        }
-        if (!this.state.flags.og_wojmir) {
-          actions.push({
-            id: 'walk_trakt_wojmir',
-            label: '💬 Wojmir',
-            onClick: () => this.engine.commandTalkToNpc('npc_trakt_wojmir')
-          });
-        }
-        actions.push({
-          id: 'walk_ognisko',
-          label: '🔥 Ognisko — Ruszaj dalej',
-          onClick: () => this.engine.commandTalkToNpc('npc_trakt_ognisko')
-        });
         break;
       case 'noc_upiory':
         questsLine = 'Noc Upiorów! Broń obozu przed Upiorami Nocy.';
         break;
       case 'noc_istota':
         questsLine = 'Cel: Podejdź do tajemniczej Istoty przy wygasłym ognisku (❗).';
-        actions.push({
-          id: 'walk_istota',
-          label: '🚶 Istota przy ognisku',
-          onClick: () => this.engine.commandTalkToNpc('npc_istota')
-        });
         break;
       case 'pobojowisko':
         questsLine = 'Cel: Pożegnaj poległych towarzyszy (🕯️) i zbadaj porzucony tobół przewodnika (❗).';
-        if (!this.state.flags.pobojowisko_skarimir) {
-          actions.push({
-            id: 'walk_pob_skarimir',
-            label: '🕯️ Skarimir',
-            onClick: () => this.engine.commandTalkToNpc('npc_pobojowisko_skarimir')
-          });
-        }
-        if (!this.state.flags.pobojowisko_ragnoslawa) {
-          actions.push({
-            id: 'walk_pob_ragnoslawa',
-            label: '🕯️ Ragnosława',
-            onClick: () => this.engine.commandTalkToNpc('npc_pobojowisko_ragnoslawa')
-          });
-        }
-        if (!this.state.flags.pobojowisko_wojmir) {
-          actions.push({
-            id: 'walk_pob_wojmir',
-            label: '🕯️ Wojmir',
-            onClick: () => this.engine.commandTalkToNpc('npc_pobojowisko_wojmir')
-          });
-        }
-        actions.push({
-          id: 'walk_pobojowisko',
-          label: '🚶 Tobół przewodnika',
-          onClick: () => this.engine.commandTalkToNpc('npc_pobojowisko_slad')
-        });
         break;
       case 'rozdroze':
         questsLine = 'Cel: Podejdź do Rozdroża (❗) i zdecyduj o dalszej drodze.';
-        actions.push({
-          id: 'walk_rozdroze',
-          label: '🚶 Rozdroże',
-          onClick: () => this.engine.commandTalkToNpc('npc_rozdroze_szlak')
-        });
         break;
       default:
         break;
     }
 
-    if (ch) {
-      const pendingPts = ch.freeAttributePoints + ch.freeSkillPoints + ch.freePerkPicks;
-      actions.push({
-        id: 'char_sheet',
-        label: pendingPts > 0 ? `⬆️ Awans (+${pendingPts})` : '📜 Postać',
-        alert: pendingPts > 0,
-        onClick: () => {
-          this.ui?.showCharacterSheet(() => {
-            this.syncHeroTo25D();
-            this.refreshObjectiveTracker();
-            this.onAutoSave?.();
-          });
-        }
-      });
-    }
-    if (this.onSaveRequested) {
-      actions.push({
-        id: 'save_game',
-        label: '💾 Zapisz',
-        onClick: () => this.onSaveRequested?.()
-      });
-    }
-    if (this.onLoadRequested && this.hasSave?.()) {
-      actions.push({
-        id: 'load_game',
-        label: '📂 Wczytaj',
-        onClick: () => this.onLoadRequested?.()
-      });
-    }
-    if (this.onKeyRequested) {
-      actions.push({
-        id: 'save_key',
-        label: '🔑 Klucz',
-        onClick: () => this.onKeyRequested?.()
-      });
-    }
-
     this.ui.setHubPanel({
-      title: 'Prolog — Zadanie w świecie 2.5D',
+      title: 'Prolog: Cień Szkoły',
       statusLine,
       questsLine,
-      actions
+      actions: []
     });
   }
 

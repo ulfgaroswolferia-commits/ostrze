@@ -117,8 +117,20 @@ export class OstrzeModalUi {
   private isCombatActiveFn: (() => boolean) | null = null;
   private activeCampfire: {
     onPerform: (recipeId: string) => { ok: boolean; message: string };
+    onWaitHour?: (hour: number) => void;
     onClosed?: () => void;
   } | null = null;
+  private activePauseMenu: {
+    hasSave: boolean;
+    isMuted: boolean;
+    onSave: () => void;
+    onLoad: () => void;
+    onOpenKey: () => void;
+    onToggleMute: () => boolean;
+    onNewGame: () => void;
+    onClosed?: () => void;
+  } | null = null;
+  private lastEscapeClosedAt = 0;
   public onOpenCampfire?: () => void;
   private readonly shopBoughtCounts = new Map<string, number>();
   private onDialogueClosed: (() => void) | null = null;
@@ -180,9 +192,18 @@ export class OstrzeModalUi {
       }
 
       if (e.key !== 'Escape') return;
+      if (this.activePauseMenu) {
+        const cb = this.activePauseMenu.onClosed;
+        this.activePauseMenu = null;
+        this.lastEscapeClosedAt = performance.now();
+        this.render();
+        cb?.();
+        return;
+      }
       if (this.activeCampfire) {
         const cb = this.activeCampfire.onClosed;
         this.activeCampfire = null;
+        this.lastEscapeClosedAt = performance.now();
         this.render();
         cb?.();
         return;
@@ -190,27 +211,32 @@ export class OstrzeModalUi {
       if (this.activeSaveKey) {
         const cb = this.activeSaveKey.onClosed;
         this.activeSaveKey = null;
+        this.lastEscapeClosedAt = performance.now();
         this.render();
         cb?.();
       } else if (this.activeCharacterSheet) {
         const cb = this.activeCharacterSheet.onUpdated;
         this.activeCharacterSheet = null;
+        this.lastEscapeClosedAt = performance.now();
         this.render();
         cb?.();
       } else if (this.activeNoticeBoard) {
         const cb = this.activeNoticeBoard.onClosed;
         this.activeNoticeBoard = null;
-      this.activeTravel = null;
+        this.activeTravel = null;
+        this.lastEscapeClosedAt = performance.now();
         this.render();
         cb?.();
       } else if (this.activeTravel) {
         const cb = this.activeTravel.onClosed;
         this.activeTravel = null;
+        this.lastEscapeClosedAt = performance.now();
         this.render();
         cb?.();
       } else if (this.activeShop) {
         const cb = this.activeShop.onClosed;
         this.activeShop = null;
+        this.lastEscapeClosedAt = performance.now();
         this.render();
         cb?.();
       }
@@ -292,8 +318,56 @@ export class OstrzeModalUi {
     this.render();
   }
 
-  public showCharacterSheet(onUpdated?: () => void): void {
+  public showCharacterSheet(
+    onUpdated?: () => void,
+    initialTab?: 'stats' | 'gear' | 'journal'
+  ): void {
+    // Toggle off if already open on the same tab via hotkey
+    if (this.activeCharacterSheet && initialTab && this.activeCharacterTab === initialTab) {
+      const cb = this.activeCharacterSheet.onUpdated;
+      this.activeCharacterSheet = null;
+      this.render();
+      cb?.();
+      return;
+    }
+    if (initialTab) {
+      this.activeCharacterTab = initialTab;
+    }
     this.activeCharacterSheet = { onUpdated };
+    this.render();
+  }
+
+  public hasOpenModal(): boolean {
+    return Boolean(
+      this.activePauseMenu ||
+        this.activeSaveKey ||
+        this.activeWelcome ||
+        this.activeNarrative ||
+        this.activeDialogue ||
+        this.activeShop ||
+        this.activeCharacterSheet ||
+        this.activeNoticeBoard ||
+        this.activeTravel ||
+        this.activeCampfire ||
+        this.creatorOpen
+    );
+  }
+
+  public wasEscapeJustConsumed(): boolean {
+    return performance.now() - this.lastEscapeClosedAt < 80;
+  }
+
+  public showPauseMenu(opts: {
+    hasSave: boolean;
+    isMuted: boolean;
+    onSave: () => void;
+    onLoad: () => void;
+    onOpenKey: () => void;
+    onToggleMute: () => boolean;
+    onNewGame: () => void;
+    onClosed?: () => void;
+  }): void {
+    this.activePauseMenu = opts;
     this.render();
   }
 
@@ -327,6 +401,7 @@ export class OstrzeModalUi {
   }
 
   public closeAll(): void {
+    this.activePauseMenu = null;
     this.activeWelcome = null;
     this.activeSaveKey = null;
     this.activeNarrative = null;
@@ -335,6 +410,7 @@ export class OstrzeModalUi {
     this.activeCharacterSheet = null;
     this.activeNoticeBoard = null;
     this.activeTravel = null;
+    this.activeCampfire = null;
     this.creatorOpen = false;
     this.render();
   }
@@ -351,6 +427,10 @@ export class OstrzeModalUi {
 
   public render(): void {
     this.renderHubPanel();
+    if (this.activePauseMenu) {
+      this.renderPauseMenu();
+      return;
+    }
     if (this.activeSaveKey) {
       this.renderSaveKeyModal();
       return;
@@ -436,55 +516,15 @@ export class OstrzeModalUi {
     const phenomPillHtml = atmo.phenomenonName
       ? `<span class="ostrze-atmo-pill is-phenom" title="${this.escape(atmo.phenomenonSummary ?? '')}">${this.escape(atmo.phenomenonName)}</span>`
       : '';
-    const campBtnHtml = this.onOpenCampfire
-      ? `<button class="ostrze-hub-btn" data-hub-camp title="Otwórz panel obozowy: alchemia, ostrzenie, gotowanie, sen">🔥 Obóz</button>`
-      : '';
-
-    const muted = ostrzeAudio.getMuted();
-    const ch = this.state.character;
-    let vitalsHtml = `<div class="ostrze-hub-meta">${this.escape(this.hubPanel.statusLine)}</div>`;
-    if (ch) {
-      const stats = getStats(this.state, this.data);
-      const hpMax = Math.max(1, stats.derived.hpMax);
-      const hpPct = Math.min(100, Math.max(0, Math.round((ch.hp / hpMax) * 100)));
-      const curFloorXp = xpRequiredForLevel(ch.level, this.data.rules.leveling.xpStep);
-      const nextLvXp = xpRequiredForLevel(ch.level + 1, this.data.rules.leveling.xpStep);
-      const xpPct = Math.min(
-        100,
-        Math.max(0, Math.round(((ch.xp - curFloorXp) / Math.max(1, nextLvXp - curFloorXp)) * 100))
-      );
-      vitalsHtml = `
-        <div class="ostrze-hub-vitals">
-          <div class="ostrze-hub-vitals-top">
-            <span class="ostrze-hub-hero-name">${this.escape(ch.name)}</span>
-            <span class="ostrze-hub-lvl-pill">Poz. ${ch.level}</span>
-            <span class="ostrze-purse-pill">🪙 ${ch.money} gr</span>
-          </div>
-          <div class="ostrze-hp-bar" title="Zdrowie: ${ch.hp} / ${hpMax} HP">
-            <div class="ostrze-hp-fill ${hpPct <= 30 ? 'is-low' : ''}" style="width:${hpPct}%"></div>
-            <span class="ostrze-hp-label">${ch.hp} / ${hpMax} HP</span>
-          </div>
-          <div class="ostrze-hub-xp-bar" title="Doświadczenie: ${ch.xp} / ${nextLvXp} XP">
-            <div class="ostrze-hub-xp-fill" style="width:${xpPct}%"></div>
-          </div>
-        </div>
-      `;
-    }
 
     this.hubRoot.innerHTML = `
       <div class="ostrze-hub-bar">
         <div class="ostrze-hub-header">
           <div class="ostrze-hub-title">${this.escape(this.hubPanel.title)}</div>
-          <div style="display:flex;gap:4px;">
-            <button class="ostrze-hub-toggle" data-hub-mute title="${muted ? 'Włącz dźwięk' : 'Wycisz dźwięk'}">
-              ${muted ? '🔇' : '🔊'}
-            </button>
-            <button class="ostrze-hub-toggle" data-hub-toggle title="${this.hubCollapsed ? 'Rozwiń panel' : 'Zwiń panel'}">
-              ${this.hubCollapsed ? '+' : '–'}
-            </button>
-          </div>
+          <button class="ostrze-hub-toggle" data-hub-toggle title="${this.hubCollapsed ? 'Rozwiń tracker celu' : 'Zwiń tracker celu'}">
+            ${this.hubCollapsed ? '+' : '–'}
+          </button>
         </div>
-        ${vitalsHtml}
         <div class="ostrze-atmo-strip">
           <span class="ostrze-atmo-pill is-time">${this.escape(atmo.timeLabel)} · ${this.escape(atmo.clockText)}</span>
           ${phenomPillHtml}
@@ -495,16 +535,11 @@ export class OstrzeModalUi {
             ? ''
             : `
               <div class="ostrze-hub-quests">${this.escape(this.hubPanel.questsLine)}</div>
-              <div class="ostrze-hub-actions">${btns}${campBtnHtml}</div>
+              ${btns ? `<div class="ostrze-hub-actions">${btns}</div>` : ''}
             `
         }
       </div>
     `;
-
-    this.hubRoot.querySelector('[data-hub-mute]')?.addEventListener('click', () => {
-      ostrzeAudio.toggleMute();
-      this.renderHubPanel();
-    });
 
     this.hubRoot.querySelector('[data-hub-toggle]')?.addEventListener('click', () => {
       this.hubCollapsed = !this.hubCollapsed;
@@ -516,9 +551,6 @@ export class OstrzeModalUi {
         this.hubRoot
           .querySelector(`[data-hub-act="${act.id}"]`)
           ?.addEventListener('click', () => act.onClick());
-      });
-      this.hubRoot.querySelector('[data-hub-camp]')?.addEventListener('click', () => {
-        this.onOpenCampfire?.();
       });
     }
   }
@@ -708,6 +740,7 @@ export class OstrzeModalUi {
   }
 
   private renderCreator(): void {
+    const prevScrollTop = this.root.querySelector<HTMLElement>('.ostrze-creator-card')?.scrollTop ?? 0;
     const c = this.data.rules.creator;
     const remaining = this.getRemainingAttrPoints();
     const cls = this.data.classes.find((cl) => cl.id === this.draftClass)!;
@@ -723,8 +756,8 @@ export class OstrzeModalUi {
           (isTagged ? c.taggedBonus : 0);
 
         return `
-          <div class="ostrze-skill-tag ${isTagged ? 'tagged' : ''}" data-skill="${sk.id}">
-            <span>${this.escape(sk.name)} ${isLocked ? '★ (Klasa)' : isTagged ? '★' : ''}</span>
+          <div class="ostrze-skill-tag ${isTagged ? 'tagged' : ''} ${isLocked ? 'locked' : ''}" data-skill="${sk.id}" title="${this.escape(sk.name)}${isLocked ? ' — umiejętność klasowa' : ''}">
+            <span class="ostrze-skill-name">${this.escape(sk.name)} ${isLocked ? '★' : isTagged ? '★' : ''}</span>
             <strong>${val}%</strong>
           </div>
         `;
@@ -738,15 +771,15 @@ export class OstrzeModalUi {
         const max = c.attributeMax + gift;
         const val = this.draftAttrs[attr.id];
         return `
-          <div class="ostrze-row">
-            <div>
+          <div class="ostrze-row ostrze-creator-attr-row">
+            <div class="ostrze-attr-meta">
               <strong>${this.escape(attr.name)}</strong>
-              <div style="font-size:0.76rem;color:#938c7f">${this.escape(attr.description)}</div>
+              <span class="ostrze-attr-desc">${this.escape(attr.description)}</span>
             </div>
             <div class="ostrze-stepper">
-              <button class="ostrze-step-btn" data-attr-dec="${attr.id}" ${val <= min ? 'disabled' : ''}>-</button>
-              <strong style="min-width:22px;text-align:center">${val}</strong>
-              <button class="ostrze-step-btn" data-attr-inc="${attr.id}" ${val >= max || remaining <= 0 ? 'disabled' : ''}>+</button>
+              <button type="button" class="ostrze-step-btn" data-attr-dec="${attr.id}" ${val <= min ? 'disabled' : ''}>-</button>
+              <strong style="min-width:20px;text-align:center">${val}</strong>
+              <button type="button" class="ostrze-step-btn" data-attr-inc="${attr.id}" ${val >= max || remaining <= 0 ? 'disabled' : ''}>+</button>
             </div>
           </div>
         `;
@@ -756,48 +789,85 @@ export class OstrzeModalUi {
     const classButtons = this.data.classes
       .map(
         (cl) => `
-          <button class="ostrze-class-btn ${cl.id === this.draftClass ? 'active' : ''}" data-class="${cl.id}">
+          <button type="button" class="ostrze-class-btn ostrze-creator-class-btn ${cl.id === this.draftClass ? 'active' : ''}" data-class="${cl.id}" title="${this.escape(cl.description)}">
             <strong>${this.escape(cl.name)}</strong>
-            <div style="font-size:0.82rem;color:#a79f91;margin-top:3px">${this.escape(cl.description)}</div>
+            <div class="ostrze-creator-class-desc">${this.escape(cl.description)}</div>
           </button>
         `
       )
       .join('');
 
-    const canSubmit =
-      remaining === 0 &&
-      this.draftTagged.length === c.taggedCount &&
-      this.draftName.trim().length >= c.nameMin;
+    const computeStatus = (nameVal: string): { canSubmit: boolean; hint: string } => {
+      const missingAttrs = remaining > 0;
+      const missingTags = c.taggedCount - this.draftTagged.length;
+      const shortName = nameVal.trim().length < c.nameMin;
+      const parts: string[] = [];
+      if (missingAttrs) parts.push(`rozdaj wszystkie punkty atrybutów (zostało: ${remaining})`);
+      if (missingTags > 0) parts.push(`oznacz jeszcze ${missingTags} umiej.`);
+      if (shortName) parts.push(`wpisz imię (min. ${c.nameMin} zn.)`);
+      return {
+        canSubmit: !missingAttrs && missingTags === 0 && !shortName,
+        hint: parts.length > 0 ? `Aby wejść do gry: ${parts.join(' · ')}.` : '✓ Postać gotowa do drogi.'
+      };
+    };
+
+    const initialStatus = computeStatus(this.draftName);
 
     this.root.innerHTML = `
       <div class="ostrze-overlay">
-        <div class="ostrze-card">
-          <h2 class="ostrze-title">Kreator Adepta — Szkoła Ostrzy w Brzezinie</h2>
-          <p class="ostrze-subtitle">Rozdziel ${c.points} pkt atrybutów (zostało: <strong>${remaining}</strong>) oraz wybierz 3 umiejętności oznaczone (+${c.taggedBonus}%).</p>
+        <div class="ostrze-card ostrze-creator-card">
+          <div class="ostrze-creator-header">
+            <h2 class="ostrze-title">Kreator Adepta — Szkoła Ostrzy w Brzezinie</h2>
+            <p class="ostrze-subtitle">Rozdziel <strong>${c.points} pkt</strong> atrybutów (zostało: <strong class="ostrze-creator-rem ${remaining === 0 ? 'done' : ''}">${remaining}</strong>) oraz wybierz <strong>${c.taggedCount}</strong> umiejętności oznaczone (+${c.taggedBonus}%).</p>
+          </div>
           ${this.creatorError ? `<div class="ostrze-error">${this.escape(this.creatorError)}</div>` : ''}
+          <div class="ostrze-creator-top">
+            <div class="ostrze-creator-name-box">
+              <label for="ostrze-name-input">Imię bohatera</label>
+              <input class="ostrze-input" id="ostrze-name-input" maxlength="${c.nameMax}" value="${this.escape(this.draftName)}" placeholder="Imię bohatera" />
+            </div>
+            <div class="ostrze-creator-classes">
+              ${classButtons}
+            </div>
+          </div>
           <div class="ostrze-creator-grid">
             <div class="ostrze-panel">
-              <h3>Imię i Klasa</h3>
-              <input class="ostrze-input" id="ostrze-name-input" maxlength="${c.nameMax}" value="${this.escape(this.draftName)}" placeholder="Imię bohatera" />
-              ${classButtons}
-              <h3 style="margin-top:14px">Atrybuty (zostało: ${remaining})</h3>
+              <h3>Atrybuty <span class="ostrze-panel-badge ${remaining === 0 ? 'done' : ''}">zostało: ${remaining}</span></h3>
               ${attrRows}
             </div>
             <div class="ostrze-panel">
-              <h3>Umiejętności (${this.draftTagged.length}/${c.taggedCount} oznaczone)</h3>
-              ${skillRows}
+              <h3>Umiejętności <span class="ostrze-panel-badge ${this.draftTagged.length === c.taggedCount ? 'done' : ''}">${this.draftTagged.length}/${c.taggedCount} oznaczone</span></h3>
+              <div class="ostrze-skills-grid">
+                ${skillRows}
+              </div>
             </div>
           </div>
-          <button class="ostrze-btn" data-action="creator-submit" ${canSubmit ? '' : 'disabled'}>
-            Rozpocznij Sparing
-          </button>
+          <div class="ostrze-creator-footer">
+            <div class="ostrze-creator-status ${initialStatus.canSubmit ? 'ready' : ''}" id="ostrze-creator-status">${this.escape(initialStatus.hint)}</div>
+            <button type="button" class="ostrze-btn ostrze-creator-submit" data-action="creator-submit" ${initialStatus.canSubmit ? '' : 'disabled'}>
+              Wejdź do gry
+            </button>
+          </div>
         </div>
       </div>
     `;
 
+    const cardEl = this.root.querySelector<HTMLElement>('.ostrze-creator-card');
+    if (cardEl && prevScrollTop > 0) {
+      cardEl.scrollTop = prevScrollTop;
+    }
+
     const nameInput = this.root.querySelector<HTMLInputElement>('#ostrze-name-input');
+    const submitBtn = this.root.querySelector<HTMLButtonElement>('[data-action="creator-submit"]');
+    const statusEl = this.root.querySelector<HTMLElement>('#ostrze-creator-status');
     nameInput?.addEventListener('input', () => {
       this.draftName = nameInput.value;
+      const next = computeStatus(this.draftName);
+      if (submitBtn) submitBtn.disabled = !next.canSubmit;
+      if (statusEl) {
+        statusEl.textContent = next.hint;
+        statusEl.classList.toggle('ready', next.canSubmit);
+      }
     });
 
     this.root.querySelectorAll<HTMLElement>('[data-class]').forEach((btn) => {
@@ -1778,10 +1848,66 @@ export class OstrzeModalUi {
 
   public showCampfireModal(opts: {
     onPerform: (recipeId: string) => { ok: boolean; message: string };
+    onWaitHour?: (hour: number) => void;
     onClosed?: () => void;
   }): void {
     this.activeCampfire = opts;
     this.render();
+  }
+
+  private renderPauseMenu(): void {
+    const pm = this.activePauseMenu;
+    if (!pm) return;
+    this.root.innerHTML = `
+      <div class="ostrze-overlay">
+        <div class="ostrze-card" style="max-width:400px;text-align:center;">
+          <h2 class="ostrze-title" style="margin-bottom:4px;">Menu Gry</h2>
+          <p class="ostrze-subtitle" style="margin-bottom:16px;">Voided: na przekór gwiazdom</p>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <button type="button" class="ostrze-btn" id="ostrze-pm-resume">▶ Wznów grę [ESC]</button>
+            <button type="button" class="ostrze-hub-btn" id="ostrze-pm-save">💾 Zapisz grę [Ctrl+S]</button>
+            ${pm.hasSave ? `<button type="button" class="ostrze-hub-btn" id="ostrze-pm-load">📂 Wczytaj zapis</button>` : ''}
+            <button type="button" class="ostrze-hub-btn" id="ostrze-pm-key">🔑 Klucz rozgrywki</button>
+            <button type="button" class="ostrze-hub-btn" id="ostrze-pm-mute">${pm.isMuted ? '🔇 Dźwięk: Wyciszony' : '🔊 Dźwięk: Włączony'}</button>
+            <button type="button" class="ostrze-hub-btn" id="ostrze-pm-new" style="border-color:rgba(239,68,68,0.45);color:#fca5a5;">🔄 Nowa gra</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const close = (): void => {
+      const cb = pm.onClosed;
+      this.activePauseMenu = null;
+      this.render();
+      cb?.();
+    };
+
+    this.root.querySelector('#ostrze-pm-resume')?.addEventListener('click', close);
+    this.root.querySelector('#ostrze-pm-save')?.addEventListener('click', () => {
+      pm.onSave();
+      close();
+    });
+    this.root.querySelector('#ostrze-pm-load')?.addEventListener('click', () => {
+      this.activePauseMenu = null;
+      this.render();
+      pm.onLoad();
+    });
+    this.root.querySelector('#ostrze-pm-key')?.addEventListener('click', () => {
+      this.activePauseMenu = null;
+      this.render();
+      pm.onOpenKey();
+    });
+    this.root.querySelector('#ostrze-pm-mute')?.addEventListener('click', () => {
+      pm.isMuted = pm.onToggleMute();
+      this.render();
+    });
+    this.root.querySelector('#ostrze-pm-new')?.addEventListener('click', () => {
+      const ok = window.confirm('Czy na pewno chcesz zacząć nową grę? Twój obecny postęp zostanie skasowany.');
+      if (!ok) return;
+      this.activePauseMenu = null;
+      this.render();
+      pm.onNewGame();
+    });
   }
 
   private renderCampfireModal(): void {
@@ -1837,6 +1963,19 @@ export class OstrzeModalUi {
       })
       .join('');
 
+    const waitSectionHtml = modal.onWaitHour
+      ? `
+        <div class="ostrze-panel" style="margin-bottom:10px;">
+          <h3>Czekanie przy Ognisku (Przewiń czas)</h3>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="ostrze-hub-btn" data-camp-wait="6">🌅 Czekaj do świtu (06:00)</button>
+            <button type="button" class="ostrze-hub-btn" data-camp-wait="19">🌆 Czekaj do zmierzchu (19:00)</button>
+            <button type="button" class="ostrze-hub-btn" data-camp-wait="21">🌙 Czekaj do nocy (21:00)</button>
+          </div>
+        </div>
+      `
+      : '';
+
     this.root.innerHTML = `
       <div class="ostrze-overlay">
         <div class="ostrze-card" style="max-width:720px;">
@@ -1847,6 +1986,7 @@ export class OstrzeModalUi {
             }${ch && stats ? ` · HP: ${ch.hp}/${stats.derived.hpMax} · Medycyna: ${stats.skills.medycyna}` : ''}
           </p>
           <div style="max-height:58vh;overflow-y:auto;padding-right:4px;margin-bottom:14px;">
+            ${waitSectionHtml}
             ${sectionsHtml}
           </div>
           <div style="display:flex;justify-content:flex-end;">
@@ -1855,6 +1995,16 @@ export class OstrzeModalUi {
         </div>
       </div>
     `;
+
+    this.root.querySelectorAll<HTMLButtonElement>('[data-camp-wait]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const hour = Number(btn.dataset.campWait);
+        if (!Number.isNaN(hour)) {
+          modal.onWaitHour?.(hour);
+          this.render();
+        }
+      });
+    });
 
     this.root.querySelectorAll<HTMLButtonElement>('[data-camp-recipe]').forEach((btn) => {
       btn.addEventListener('click', () => {

@@ -198,10 +198,8 @@ export class Chapter1Director {
     if (propId === 'wb_drogowskaz' || propId === 'brzezina_drogowskaz') {
       if (propId === 'wb_drogowskaz' && this.state.flags.akt2_koniec && !this.chapter1Completed) {
         this.finishChapter1();
-      } else if (getVisitedOstrzeLocations(this.state).length >= 2) {
-        this.openTravelModal();
       } else {
-        this.engine.addLog('🪧 Drogowskaz wskazuje okoliczne szlaki i Kamienną Przełęcz. Wybierz cel z panelu u góry lub porozmawiaj z Ostromirem.', 'important');
+        this.openTravelModal();
       }
       return true;
     }
@@ -592,391 +590,6 @@ export class Chapter1Director {
     const tod = timeOfDay(this.state.time.minutes, this.data.rules);
     const clockText = `Dzień ${c.day}, ${String(c.hour).padStart(2, '0')}:${String(c.minute).padStart(2, '0')} (${tod})`;
 
-    const actions: Array<{ id: string; label: string; disabled?: boolean; alert?: boolean; onClick: () => void }> = [];
-
-    if (loc === 'wilczy_brod') {
-      actions.push(
-        {
-          id: 'open_tablica',
-          label: '📋 Tablica Zleceń',
-          onClick: () => this.openNoticeBoard()
-        },
-        {
-          id: 'talk_wszebor',
-          label: 'Komendant Wszebor',
-          onClick: () => this.handleNpcInteract('npc_wszebor')
-        },
-        {
-          id: 'talk_wrzosek',
-          label: 'Karczma (Wrzosek)',
-          onClick: () => this.handleNpcInteract('npc_wrzosek')
-        },
-        {
-          id: 'talk_kowal',
-          label: 'Kuźnia (Kowal Zbych)',
-          onClick: () => this.handleNpcInteract('npc_kowal_zbych')
-        },
-        {
-          id: 'talk_zona_borka',
-          label: 'Żona Borka (Studnia)',
-          onClick: () => this.handleNpcInteract('npc_zona_borka')
-        },
-        {
-          id: 'talk_corka',
-          label: 'Córka strażnika',
-          onClick: () => this.handleNpcInteract('npc_corka_straznika')
-        },
-        {
-          id: 'talk_ostromir',
-          label: 'Kupiec Ostromir',
-          onClick: () => this.handleNpcInteract('npc_ostromir')
-        },
-        {
-          id: 'open_kram',
-          label: 'Kramik (Handel)',
-          onClick: () => this.openShop('kramarz_brod')
-        },
-        {
-          id: 'talk_szkarad',
-          label: 'Rusznikarz Szkarad',
-          onClick: () => this.handleNpcInteract('npc_szkarad')
-        },
-        {
-          id: 'rest_izba',
-          label: 'Izba (Odpoczynek)',
-          onClick: () => this.restAtInn()
-        }
-      );
-      if (this.hasBrzezinaMemoryEchoAvailable()) {
-        actions.push({
-          id: 'brzezina_memory_echo',
-          label: '🕯️ Pamięć Brzeziny (Karczma)',
-          alert: true,
-          onClick: () => this.openBrzezinaMemoryEcho()
-        });
-      }
-
-      if (this.state.quests.wilcza_nora === 'active' && !this.state.flags.nora_wykonana) {
-        actions.push({
-          id: 'go_wilcza_nora',
-          label: '⚔️ Wilcza Nora',
-          alert: true,
-          onClick: () => this.startWilczaNoraQuest()
-        });
-      }
-
-      if (
-        this.isPlaceKnown('wilczy_las') ||
-        this.state.quests.lek_dla_wrzoska === 'active' ||
-        this.state.quests.zaginiony_pasterz_borek === 'active'
-      ) {
-        actions.push({
-          id: 'go_wilczy_las',
-          label: '🌲 Las Rubieży',
-          alert:
-            (this.state.quests.lek_dla_wrzoska === 'active' && !this.state.flags.ziola_zebrane) ||
-            (this.state.quests.zaginiony_pasterz_borek === 'active' && !this.state.flags.borek_slady),
-          onClick: () => this.enterWilczyLas()
-        });
-      }
-
-      if (
-        this.isPlaceKnown('stary_mlyn') ||
-        this.state.quests.zboze_dla_mlyna === 'active' ||
-        this.state.quests.swiatlo_w_mlynie === 'active'
-      ) {
-        actions.push({
-          id: 'go_stary_mlyn',
-          label: '⚙️ Stary Młyn',
-          alert:
-            (this.state.quests.zboze_dla_mlyna === 'active' && !this.state.flags.ostap_zboze) ||
-            (this.state.quests.swiatlo_w_mlynie === 'active' && !this.state.flags.odlamek_zebrany),
-          onClick: () => this.enterStaryMlyn()
-        });
-      }
-
-      if (
-        this.isPlaceKnown('trakt_kupiecki') ||
-        this.state.quests.dlug_kupca === 'active' ||
-        this.state.quests.kto_pyta_o_ocalalych === 'active'
-      ) {
-        actions.push({
-          id: 'go_trakt_kupiecki',
-          label: '🛞 Trakt Kupiecki',
-          alert:
-            (this.state.quests.dlug_kupca === 'active' && !this.state.flags.ostromir_dlug) ||
-            (this.state.quests.kto_pyta_o_ocalalych === 'active' && !this.state.flags.zwiadowcy_slysza),
-          onClick: () => this.enterTraktKupiecki()
-        });
-      }
-
-      if (this.isPlaceKnown('lesniczowka') || this.state.quests.list_do_lesniczego === 'active') {
-        actions.push({
-          id: 'go_lesniczowka',
-          label: '🏡 Leśniczówka',
-          alert: this.state.quests.list_do_lesniczego === 'active' && !this.state.flags.lesniczy_list,
-          onClick: () => this.enterLesniczowka()
-        });
-      }
-
-      if (
-        this.isPlaceKnown('ruiny_straznicy') ||
-        this.state.quests.zaginiony_pasterz_borek === 'active' ||
-        this.state.quests.amulet_z_ruin === 'active'
-      ) {
-        actions.push({
-          id: 'go_ruiny',
-          label: '🏚️ Ruiny Strażnicy',
-          alert:
-            (this.state.quests.zaginiony_pasterz_borek === 'active' && !this.state.flags.borek_znaleziony) ||
-            (this.state.quests.amulet_z_ruin === 'active' && !this.state.flags.amulet_pasuje),
-          onClick: () => this.enterRuinyStraznicy()
-        });
-      }
-
-      if (this.state.quests.eskorta_ostromira === 'active' && !this.state.flags.akt2_koniec) {
-        actions.push({
-          id: 'go_eskorta',
-          label: '🛡️ Eskortuj wóz na Przełęcz',
-          alert: true,
-          onClick: () => this.startOstromirEscort()
-        });
-      }
-
-      if (this.state.flags.akt2_koniec && !this.chapter1Completed) {
-        actions.push({
-          id: 'finish_ch1',
-          label: '⛰️ Przejdź przez Kamienną Przełęcz (Koniec Rozdziału I)',
-          alert: true,
-          onClick: () => this.finishChapter1()
-        });
-      }
-
-      if (getVisitedOstrzeLocations(this.state).length >= 2) {
-        actions.push({
-          id: 'open_travel',
-          label: '🧭 Podróż (Szlak)',
-          alert: false,
-          onClick: () => this.openTravelModal()
-        });
-      }
-    } else if (loc === 'wilczy_las') {
-      actions.push(
-        {
-          id: 'las_polana',
-          label: this.state.flags.ziola_zebrane ? '🌿 Polana ziół (zebrano)' : '🌿 Zbierz zioła na polanie',
-          alert: !this.state.flags.ziola_zebrane,
-          onClick: () => this.handleNpcInteract('npc_las_polana')
-        },
-        {
-          id: 'las_slady',
-          label: this.state.flags.borek_slady ? '🐾 Ślady za polaną (zbadano)' : '🐾 Zbadaj ślady za polaną',
-          alert: !this.state.flags.borek_slady,
-          onClick: () => this.handleNpcInteract('npc_las_slady')
-        },
-        {
-          id: 'las_drwal',
-          label: '🪓 Porozmawiaj z Drwalem',
-          onClick: () => this.handleNpcInteract('npc_las_drwal')
-        },
-        {
-          id: 'las_hunt',
-          label: '🐗 Legowisko w gęstwinie (Polowanie)',
-          onClick: () => this.enterWilczyLas(true)
-        },
-        {
-          id: 'back_wb',
-          label: '🔙 Wróć do Wilczego Brodu',
-          onClick: () => this.returnToWilczyBrod(90)
-        }
-      );
-    } else if (loc === 'stary_mlyn') {
-      actions.push(
-        {
-          id: 'mlyn_ostap',
-          label: '🌾 Młynarz Ostap',
-          alert: this.hasItem('worek_zboza') && !this.state.flags.ostap_zboze,
-          onClick: () => this.handleNpcInteract('npc_ostap')
-        },
-        {
-          id: 'mlyn_wnetrze',
-          label: this.state.flags.odlamek_zebrany ? '✨ Wnętrze młyna (zbadano)' : '🔍 Zbadaj wnętrze młyna',
-          alert: tod === 'noc' && !this.state.flags.odlamek_zebrany,
-          onClick: () => this.handleNpcInteract('npc_mlyn_wnetrze')
-        },
-        {
-          id: 'mlyn_zona',
-          label: '💬 Żona młynarza',
-          onClick: () => this.handleNpcInteract('npc_zona_mlynarza')
-        }
-      );
-      if (tod !== 'noc' && !this.state.flags.odlamek_zebrany) {
-        actions.push({
-          id: 'mlyn_wait_night',
-          label: '🌙 Czekaj do nocy (21:00)',
-          alert: this.state.quests.swiatlo_w_mlynie === 'active',
-          onClick: () => {
-            waitUntilHour(this.state, 21, this.data);
-            this.enterStaryMlyn();
-          }
-        });
-      }
-      actions.push({
-        id: 'back_wb',
-        label: '🔙 Wróć do Wilczego Brodu',
-        onClick: () => this.returnToWilczyBrod(35)
-      });
-    } else if (loc === 'trakt_kupiecki') {
-      actions.push(
-        {
-          id: 'trakt_ostromir',
-          label: '🛞 Kupiec Ostromir przy wozie',
-          alert: this.hasItem('weksel'),
-          onClick: () => this.handleNpcInteract('npc_trakt_ostromir')
-        },
-        {
-          id: 'trakt_zwiadowcy',
-          label: this.state.flags.zwiadowcy_slysza ? '🔥 Ognisko zwiadowców (podsłuchano)' : '🔥 Ognisko zwiadowców',
-          alert: !this.state.flags.zwiadowcy_slysza,
-          onClick: () => this.handleNpcInteract('npc_trakt_zwiadowcy')
-        },
-        {
-          id: 'trakt_pielgrzym',
-          label: '💬 Pielgrzym na kamieniu',
-          onClick: () => this.handleNpcInteract('npc_trakt_pielgrzym')
-        },
-        {
-          id: 'trakt_hunt',
-          label: '⚔️ Krzaki przy trakcie (Rozbójnicy)',
-          onClick: () => this.enterTraktKupiecki(true)
-        }
-      );
-      if (tod !== 'zmierzch' && tod !== 'noc' && !this.state.flags.zwiadowcy_slysza) {
-        actions.push({
-          id: 'trakt_wait_dusk',
-          label: '🌆 Czekaj do zmierzchu (19:00)',
-          alert: this.state.quests.kto_pyta_o_ocalalych === 'active',
-          onClick: () => {
-            waitUntilHour(this.state, 19, this.data);
-            this.syncHeroTo25D();
-            this.refreshHubPanel();
-          }
-        });
-      }
-      actions.push({
-        id: 'back_wb',
-        label: '🔙 Wróć do Wilczego Brodu',
-        onClick: () => this.returnToWilczyBrod(180)
-      });
-    } else if (loc === 'lesniczowka') {
-      actions.push(
-        {
-          id: 'les_lesniczy',
-          label: '🏹 Leśniczy',
-          alert: this.hasItem('list_komendanta'),
-          onClick: () => this.handleNpcInteract('npc_lesniczy')
-        },
-        {
-          id: 'les_schowek',
-          label: this.state.flags.schowek_bylo ? '📦 Skrytka pod dębem (pusta)' : '📦 Skrytka pod dębem',
-          alert: !this.state.flags.schowek_bylo,
-          onClick: () => this.inspectLesniczowkaStash()
-        },
-        {
-          id: 'les_gniewosz',
-          label: '🪓 Pomocnik Gniewosz',
-          onClick: () => this.handleNpcInteract('npc_gniewosz')
-        },
-        {
-          id: 'les_pies',
-          label: '🐕 Pies Burek',
-          onClick: () => this.handleNpcInteract('npc_pies_burek')
-        },
-        {
-          id: 'les_hunt',
-          label: '⚔️ Sidła w zagajniku (Kłusownicy)',
-          onClick: () => this.enterLesniczowka(true)
-        },
-        {
-          id: 'back_wb',
-          label: '🔙 Wróć do Wilczego Brodu',
-          onClick: () => this.returnToWilczyBrod(240)
-        }
-      );
-    } else if (loc === 'ruiny_straznicy') {
-      actions.push(
-        {
-          id: 'ruiny_borek',
-          label: this.state.flags.borek_znaleziony ? '🏚️ Rumowisko (Borek odnaleziony)' : '🏚️ Przeszukaj rumowisko (Borek)',
-          alert: !this.state.flags.borek_znaleziony,
-          onClick: () => this.handleNpcInteract('npc_borek_ruiny')
-        },
-        {
-          id: 'ruiny_mur',
-          label: this.state.flags.amulet_pasuje ? '🜂 Mur ze znakiem (sprawdzono)' : '🜂 Przyłóż amulet do muru',
-          alert: this.hasItem('amulet_strazniczy') && !this.state.flags.amulet_pasuje,
-          onClick: () => this.handleNpcInteract('npc_ruiny_mur')
-        },
-        {
-          id: 'ruiny_czcibor',
-          label: '🛡️ Wartownik Czcibor',
-          onClick: () => this.handleNpcInteract('npc_czcibor')
-        },
-        {
-          id: 'ruiny_kruk',
-          label: '🐦‍⬛ Kruk między kamieniami',
-          onClick: () => this.handleNpcInteract('npc_ruiny_kruk')
-        },
-        {
-          id: 'ruiny_hunt',
-          label: '⚔️ Obóz zbójców w ruinach',
-          onClick: () => this.enterRuinyStraznicy(true)
-        },
-        {
-          id: 'back_wb',
-          label: '🔙 Wróć do Wilczego Brodu',
-          onClick: () => this.returnToWilczyBrod(180)
-        }
-      );
-    }
-
-    if (ch) {
-      const pendingPts = ch.freeAttributePoints + ch.freeSkillPoints + ch.freePerkPicks;
-      actions.push({
-        id: 'char_sheet',
-        label: pendingPts > 0 ? `⬆️ Awans (+${pendingPts})` : '📜 Postać',
-        alert: pendingPts > 0,
-        onClick: () => {
-          this.ui?.showCharacterSheet(() => {
-            this.syncHeroTo25D();
-            this.refreshHubPanel();
-            this.onAutoSave?.();
-          });
-        }
-      });
-    }
-    if (this.onSaveRequested) {
-      actions.push({
-        id: 'save_game',
-        label: '💾 Zapisz',
-        onClick: () => this.onSaveRequested?.()
-      });
-    }
-    if (this.onLoadRequested && this.hasSave?.()) {
-      actions.push({
-        id: 'load_game',
-        label: '📂 Wczytaj',
-        onClick: () => this.onLoadRequested?.()
-      });
-    }
-    if (this.onKeyRequested) {
-      actions.push({
-        id: 'save_key',
-        label: '🔑 Klucz',
-        onClick: () => this.onKeyRequested?.()
-      });
-    }
-
     const activeQuests = this.data.quests
       .filter((q) => CHAPTER1_QUEST_IDS.has(q.id) && this.state.quests[q.id] === 'active')
       .map((q) => q.name);
@@ -984,22 +597,27 @@ export class Chapter1Director {
     this.refreshChapter1Markers();
 
     const locationTitles: Record<string, string> = {
-      wilczy_brod: 'Strażnica Wilczy Bród (Rozdział I)',
-      wilczy_las: 'Las Rubieży — Pogórze (Rozdział I)',
-      stary_mlyn: 'Stary Młyn nad Rzeką (Rozdział I)',
-      trakt_kupiecki: 'Trakt Kupiecki (Rozdział I)',
-      lesniczowka: 'Leśniczówka na Wschodzie (Rozdział I)',
-      ruiny_straznicy: 'Ruiny Strażnicy na Wzgórzu (Rozdział I)'
+      wilczy_brod: 'Strażnica Wilczy Bród (Akt I)',
+      wilczy_las: 'Las Rubieży — Pogórze (Akt I)',
+      stary_mlyn: 'Stary Młyn nad Rzeką (Akt I)',
+      trakt_kupiecki: 'Trakt Kupiecki (Akt I)',
+      lesniczowka: 'Leśniczówka na Wschodzie (Akt I)',
+      ruiny_straznicy: 'Ruiny Strażnicy na Wzgórzu (Akt I)'
     };
 
+    const defaultHint =
+      loc === 'wilczy_brod'
+        ? 'Zajrzyj na Tablicę Zleceń na placu, porozmawiaj z mieszkańcami lub wyjdź przez Bramę na Szlak.'
+        : 'Zbadaj okolicę i porozmawiaj ze spotkanymi osobami lub wróć przez drogowskaz do Wilczego Brodu.';
+
     this.ui.setHubPanel({
-      title: locationTitles[loc] ?? 'Rozdział I — Pogórze',
+      title: locationTitles[loc] ?? 'Akt I — Pogórze',
       statusLine: `${ch?.name ?? 'Adept'} · Poz. ${ch?.level ?? 1} · HP ${ch?.hp ?? 0}/${hpMax} · ${ch?.money ?? 0} gr · ${clockText}`,
       questsLine:
         activeQuests.length > 0
           ? `Aktywne zlecenia: ${activeQuests.join(', ')}`
-          : 'Brak aktywnych zleceń — zajrzyj na Tablicę Zleceń lub porozmawiaj z mieszkańcami Brodu.',
-      actions
+          : defaultHint,
+      actions: []
     });
   }
 
@@ -1885,16 +1503,117 @@ export class Chapter1Director {
   public openTravelModal(): void {
     if (!this.ui) return;
     const currentLoc = this.engine.activeCustomSceneId ?? this.state.world.location;
-    const destinations = getVisitedOstrzeLocations(this.state).map((loc) => ({
-      id: loc.id,
-      name: loc.name,
-      subtitle: loc.subtitle,
-      travelMinutes: loc.travelMinutes,
-      isCurrent: loc.id === currentLoc
-    }));
+    const destinations: Array<{
+      id: string;
+      name: string;
+      subtitle: string;
+      travelMinutes: number;
+      isCurrent: boolean;
+    }> = [];
+
+    // Active story expeditions from Wilczy Bród
+    if (this.state.quests.wilcza_nora === 'active' && !this.state.flags.nora_wykonana) {
+      destinations.push({
+        id: 'expedition:wilcza_nora',
+        name: '⚔️ Wyprawa: Wilcza Nora',
+        subtitle: 'Zlecenie Komendanta Wszebora — legowisko watahy w jarze.',
+        travelMinutes: 90,
+        isCurrent: false
+      });
+    }
+    if (this.state.quests.eskorta_ostromira === 'active' && !this.state.flags.akt2_koniec) {
+      destinations.push({
+        id: 'expedition:eskorta_ostromira',
+        name: '🛡️ Eskorta wozu na Kamienną Przełęcz',
+        subtitle: 'Wyrusz z kupcem Ostromirem w eskorcie ku przełęczy.',
+        travelMinutes: 120,
+        isCurrent: false
+      });
+    }
+    if (this.state.flags.akt2_koniec && !this.chapter1Completed) {
+      destinations.push({
+        id: 'expedition:finish_ch1',
+        name: '⛰️ Kamienna Przełęcz (Koniec Aktu I)',
+        subtitle: 'Przejdź przez przełęcz i zakończ Rozdział I.',
+        travelMinutes: 60,
+        isCurrent: false
+      });
+    }
+
+    // Satellite locations unlocked by quests, discovery, or exploration
+    const candidateIds = new Set<string>(getVisitedOstrzeLocations(this.state).map((l) => l.id));
+    if (
+      this.isPlaceKnown('wilczy_las') ||
+      this.state.quests.lek_dla_wrzoska === 'active' ||
+      this.state.quests.zaginiony_pasterz_borek === 'active'
+    ) {
+      candidateIds.add('wilczy_las');
+    }
+    if (
+      this.isPlaceKnown('stary_mlyn') ||
+      this.state.quests.zboze_dla_mlyna === 'active' ||
+      this.state.quests.swiatlo_w_mlynie === 'active'
+    ) {
+      candidateIds.add('stary_mlyn');
+    }
+    if (
+      this.isPlaceKnown('trakt_kupiecki') ||
+      this.state.quests.dlug_kupca === 'active' ||
+      this.state.quests.kto_pyta_o_ocalalych === 'active'
+    ) {
+      candidateIds.add('trakt_kupiecki');
+    }
+    if (this.isPlaceKnown('lesniczowka') || this.state.quests.list_do_lesniczego === 'active') {
+      candidateIds.add('lesniczowka');
+    }
+    if (
+      this.isPlaceKnown('ruiny_straznicy') ||
+      this.state.quests.zaginiony_pasterz_borek === 'active' ||
+      this.state.quests.amulet_z_ruin === 'active'
+    ) {
+      candidateIds.add('ruiny_straznicy');
+    }
+
+    const satelliteMeta: Record<string, { name: string; subtitle: string; travelMinutes: number }> = {
+      wilczy_las: { name: '🌲 Las Rubieży', subtitle: 'Polana ziół, ślady pasterza i drwal na pogórzu.', travelMinutes: 90 },
+      stary_mlyn: { name: '⚙️ Stary Młyn nad Rzeką', subtitle: 'Młynarz Ostap, koło młyńskie i tajemnicze światło nocą.', travelMinutes: 35 },
+      trakt_kupiecki: { name: '🛞 Trakt Kupiecki', subtitle: 'Wóz Ostromira, ognisko zwiadowców i wędrowcy.', travelMinutes: 180 },
+      lesniczowka: { name: '🏡 Leśniczówka na Wschodzie', subtitle: 'Leśniczy, pomocnik Gniewosz i skrytka pod dębem.', travelMinutes: 240 },
+      ruiny_straznicy: { name: '🏚️ Ruiny Strażnicy na Wzgórzu', subtitle: 'Stare mury, wartownik Czcibor i rumowisko.', travelMinutes: 180 }
+    };
+
+    for (const id of candidateIds) {
+      const meta = getOstrzeLocationMeta(id) ?? satelliteMeta[id];
+      if (!meta) continue;
+      destinations.push({
+        id,
+        name: meta.name,
+        subtitle: meta.subtitle,
+        travelMinutes: meta.travelMinutes,
+        isCurrent: id === currentLoc
+      });
+    }
 
     this.ui.showTravelModal(destinations, (destId) => {
-      this.startTravelTo(destId);
+      if (destId === 'expedition:wilcza_nora') {
+        this.startWilczaNoraQuest();
+      } else if (destId === 'expedition:eskorta_ostromira') {
+        this.startOstromirEscort();
+      } else if (destId === 'expedition:finish_ch1') {
+        this.finishChapter1();
+      } else if (destId === 'wilczy_las') {
+        this.enterWilczyLas();
+      } else if (destId === 'stary_mlyn') {
+        this.enterStaryMlyn();
+      } else if (destId === 'trakt_kupiecki') {
+        this.enterTraktKupiecki();
+      } else if (destId === 'lesniczowka') {
+        this.enterLesniczowka();
+      } else if (destId === 'ruiny_straznicy') {
+        this.enterRuinyStraznicy();
+      } else {
+        this.startTravelTo(destId);
+      }
     });
   }
 

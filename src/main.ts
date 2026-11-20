@@ -1,14 +1,17 @@
 import '@ulf/styles/main.css';
 import './game/styles/ostrze.css';
+import { CombatAudioEngine } from '@ulf/audio/combatAudio';
 import { IsoSceneView } from '@ulf/renderer/isoSceneView';
 import { HudOverlay } from '@ulf/ui/hudOverlay';
 import { InspectorPanel } from '@ulf/ui/inspectorPanel';
 import { OstrzeEngineState } from './engine-bridge/OstrzeEngineState';
+import { ostrzeAudio } from './game/audio/ostrzeAudio';
 import { ORIGIN_DATA } from './game/data/originData';
-import { createCharacter, createEmptyOstrzeState, grantXp } from './game/rules/character';
+import { createCharacter, createEmptyOstrzeState, grantXp, xpRequiredForLevel } from './game/rules/character';
 import { forageWorldProp, performCampRecipe } from './game/rules/campCrafting';
 import { resolveQuickBeltSlots, useCombatBeltItem } from './game/rules/combatConsumables';
 import { rollStealthCheck } from './game/rules/stealth';
+import { waitUntilHour } from './game/rules/time';
 import { syncWorldLighting } from './game/rules/worldCycle';
 import { Chapter1Director } from './game/scenes/Chapter1Director';
 import { PrologueDirector, type ProloguePhase } from './game/scenes/PrologueDirector';
@@ -103,7 +106,6 @@ async function bootstrapOstrze(): Promise<void> {
     }
   });
 
-  hud = new HudOverlay(hudRoot, engine, sceneView, { devMode: isDevMode });
   if (isDevMode) {
     inspector = new InspectorPanel(inspectorRoot, engine, sceneView, refreshUi);
   } else {
@@ -160,6 +162,20 @@ async function bootstrapOstrze(): Promise<void> {
           refreshUi();
         }
         return res;
+      },
+      onWaitHour: (hour) => {
+        waitUntilHour(prologue.state, hour, prologue.data);
+        syncWorldLighting(prologue.state, prologue.data, engine);
+        if (activeChapter === 'chapter1' && prologue.state.world.location === 'stary_mlyn') {
+          chapter1.enterStaryMlyn();
+        } else if (activeChapter === 'chapter1') {
+          chapter1.refreshHubPanel();
+        } else {
+          prologue.refreshObjectiveTracker();
+        }
+        const label = hour === 6 ? 'świtu (06:00)' : hour === 19 ? 'zmierzchu (19:00)' : 'nocy (21:00)';
+        modalUi.showToast(`Przeczekano przy ognisku do ${label}.`, 'info');
+        refreshUi();
       },
       onClosed: () => refreshUi()
     });
@@ -298,16 +314,8 @@ async function bootstrapOstrze(): Promise<void> {
   chapter1.onKeyRequested = () => openSaveKeyModal();
   chapter1.onDefeatToPrologue = returnToPrologueStart;
 
-  prologue.onPrologueCompleted = () => {
-    activeChapter = 'chapter1';
-    chapter1.enterWilczyBrod();
-    performSave(true);
-  };
-
-  if (isDevMode) {
-    engine.loadCustomScene('brzezina_dziedziniec');
-    engine.addLog('Tryb deweloperski (?dev=1): załadowano scenę Brzezina — Dziedziniec.', 'info');
-  } else if (startChapter === '1') {
+  const ensureDevTestCharacter = (): void => {
+    if (prologue.state.character) return;
     createCharacter(
       prologue.state,
       {
@@ -329,6 +337,111 @@ async function bootstrapOstrze(): Promise<void> {
     grantXp(prologue.state, 160, prologue.data);
     prologue.state.character!.money += 15;
     prologue.state.flags.ukryte_insygnia = true;
+  };
+
+  const switchToDevChapter = (chapterId: string): void => {
+    modalUi.closeAll();
+    if (chapterId === 'chapter1') {
+      ensureDevTestCharacter();
+      activeChapter = 'chapter1';
+      chapter1.enterWilczyBrod();
+      modalUi.showToast('DEV: Przełączono na Akt I — Wilczy Bród.', 'info');
+    } else {
+      activeChapter = 'prologue';
+      if (!prologue.state.character) {
+        ensureDevTestCharacter();
+      }
+      prologue.enterBrzezinaSparingPhase();
+      modalUi.showToast('DEV: Przełączono na Prolog — Brzezina.', 'info');
+    }
+    refreshUi();
+  };
+
+  const toggleUnifiedAudio = (): boolean => {
+    const engineAudio = CombatAudioEngine.getInstance();
+    const nextMuted = !engineAudio.getMuted();
+    engineAudio.setMuted(nextMuted);
+    ostrzeAudio.setMuted(nextMuted);
+    refreshUi();
+    return nextMuted;
+  };
+
+  const openPauseMenu = (): void => {
+    if (modalUi.hasOpenModal() || modalUi.wasEscapeJustConsumed()) return;
+    modalUi.showPauseMenu({
+      hasSave: hasOstrzeSave(),
+      isMuted: CombatAudioEngine.getInstance().getMuted(),
+      onSave: () => performSave(false),
+      onLoad: performLoad,
+      onOpenKey: () => openSaveKeyModal(),
+      onToggleMute: toggleUnifiedAudio,
+      onNewGame: returnToPrologueStart,
+      onClosed: () => refreshUi()
+    });
+  };
+
+  hud = new HudOverlay(hudRoot, engine, sceneView, {
+    devMode: isDevMode,
+    devScenes: [
+      { id: 'prologue', label: 'Prolog — Brzezina' },
+      { id: 'chapter1', label: 'Akt I — Wilczy Bród' }
+    ],
+    getActiveDevSceneId: () => activeChapter,
+    onSelectDevScene: switchToDevChapter,
+    getHeroMeta: () => {
+      const ch = prologue.state.character;
+      if (!ch) return null;
+      const curFloorXp = xpRequiredForLevel(ch.level, prologue.data.rules.leveling.xpStep);
+      const nextLvXp = xpRequiredForLevel(ch.level + 1, prologue.data.rules.leveling.xpStep);
+      const xpPct = Math.min(
+        100,
+        Math.max(0, Math.round(((ch.xp - curFloorXp) / Math.max(1, nextLvXp - curFloorXp)) * 100))
+      );
+      return {
+        level: ch.level,
+        xpPct,
+        xpTooltip: `Doświadczenie: ${ch.xp} / ${nextLvXp} XP`,
+        currencyText: `${ch.money} gr`,
+        pendingLevelUpPts: ch.freeAttributePoints + ch.freeSkillPoints + ch.freePerkPicks
+      };
+    },
+    unifiedCharacterSheet: true,
+    onOpenCharacterSheet: (initialTab) => {
+      if (!prologue.state.character) return;
+      modalUi.showCharacterSheet(() => {
+        engine.syncFromOstrzeState(prologue.state, prologue.data);
+        if (activeChapter === 'prologue') {
+          prologue.refreshObjectiveTracker();
+        } else {
+          chapter1.refreshHubPanel();
+        }
+        performSave(true);
+        refreshUi();
+      }, initialTab);
+    },
+    onOpenCamp: openCampfirePanel,
+    onSaveGame: () => performSave(false),
+    onLoadGame: performLoad,
+    hasSave: hasOstrzeSave,
+    onOpenSaveKey: () => openSaveKeyModal(),
+    onNewGame: returnToPrologueStart,
+    onToggleAudio: (muted) => {
+      ostrzeAudio.setMuted(muted);
+    },
+    onEscapeNoModal: openPauseMenu
+  });
+
+  prologue.onPrologueCompleted = () => {
+    activeChapter = 'chapter1';
+    chapter1.enterWilczyBrod();
+    performSave(true);
+  };
+
+  if (isDevMode) {
+    engine.loadCustomScene('brzezina_dziedziniec');
+    engine.addLog('Tryb deweloperski (?dev=1): załadowano scenę Brzezina — Dziedziniec.', 'info');
+  } else if (startChapter === '1') {
+    ensureDevTestCharacter();
     chapter1.enterWilczyBrod();
   } else {
     const showWelcome = (): void => {

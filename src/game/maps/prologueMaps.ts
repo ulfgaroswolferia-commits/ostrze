@@ -242,17 +242,51 @@ export function createBrzezinaYardScene(opts?: {
       },
       {
         id: 'brzezina_drogowskaz',
-        name: 'Brama na Trakt do Wilczego Brodu',
-        kind: 'travel_signpost',
+        name: '🚪 Brama na Trakt do Wilczego Brodu',
+        kind: 'exit_path',
+        x: 10,
+        y: 19,
+        z: 0,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: false,
+        blocksSight: false,
+        interactive: true
+      },
+      {
+        id: 'brzezina_filar_bramy_l',
+        name: 'Pochodnia Bramy Szkoły Ostrzy',
+        kind: 'torch_sconce',
+        variant: 0,
+        x: 9,
+        y: 19,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: false,
+        isOpen: true,
+        linkedLightId: 'light_brzezina_gate_l'
+      },
+      {
+        id: 'brzezina_filar_bramy_p',
+        name: 'Pochodnia Bramy Szkoły Ostrzy',
+        kind: 'torch_sconce',
+        variant: 0,
         x: 12,
         y: 19,
         z: 0,
         sizeX: 1,
         sizeY: 1,
-        heightZ: 1,
+        heightZ: 2,
         blocksMovement: true,
         blocksSight: false,
-        interactive: true
+        interactive: false,
+        isOpen: true,
+        linkedLightId: 'light_brzezina_gate_r'
       },
       {
         id: 'brzezina_kapliczka',
@@ -423,8 +457,14 @@ export function createBrzezinaYardScene(opts?: {
     reservedPoints: [
       { x: 11, y: 8, radius: 1 }, // Cesarski Kurier spawn
       { x: 10, y: 12, radius: 1 }, // Sparing center corridor
-      { x: 10, y: 18, radius: 1 }, // South gate exit corridor
-      { x: 11, y: 18, radius: 1 }
+      { x: 10, y: 18, radius: 1 }, // South gate exit corridor (full clear path)
+      { x: 11, y: 18, radius: 1 },
+      { x: 10, y: 19, radius: 1 },
+      { x: 11, y: 19, radius: 1 },
+      { x: 10, y: 20, radius: 1 },
+      { x: 11, y: 20, radius: 1 },
+      { x: 10, y: 21, radius: 1 },
+      { x: 11, y: 21, radius: 1 }
     ],
     cliffSides: ['E'],
     forestSides: ['W', 'N', 'S'],
@@ -539,8 +579,8 @@ export function createBrzezinaYardScene(opts?: {
       {
         id: 'brzezina_kukla_1',
         name: 'Kukła Treningowa (Manekin Szermierczy)',
-        kind: 'slavic_shrine',
-        variant: 1,
+        kind: 'training_dummy',
+        variant: 0,
         x: 8,
         y: 11,
         heightZ: 2
@@ -548,8 +588,8 @@ export function createBrzezinaYardScene(opts?: {
       {
         id: 'brzezina_kukla_2',
         name: 'Kukła Treningowa (Słup do Pchnięć Włócznią)',
-        kind: 'pillar',
-        variant: 3,
+        kind: 'training_dummy',
+        variant: 1,
         x: 8,
         y: 13,
         heightZ: 2
@@ -557,8 +597,8 @@ export function createBrzezinaYardScene(opts?: {
       {
         id: 'brzezina_kukla_3',
         name: 'Kukła Tarczowa do Cięć Ciężkich',
-        kind: 'pillar',
-        variant: 5,
+        kind: 'training_dummy',
+        variant: 2,
         x: 13,
         y: 12,
         heightZ: 2
@@ -703,24 +743,6 @@ export function createBrzezinaYardScene(opts?: {
         heightZ: 1
       },
       {
-        id: 'brzezina_filar_bramy_l',
-        name: 'Słup Bramy Szkoły Ostrzy',
-        kind: 'pillar',
-        variant: 0,
-        x: 9,
-        y: 18,
-        heightZ: 2
-      },
-      {
-        id: 'brzezina_filar_bramy_p',
-        name: 'Słup Bramy Szkoły Ostrzy',
-        kind: 'pillar',
-        variant: 0,
-        x: 12,
-        y: 18,
-        heightZ: 2
-      },
-      {
         id: 'brzezina_plot_brama_p1',
         name: 'Ogrodzenie Dziedzińca',
         kind: 'wattle_fence',
@@ -769,6 +791,28 @@ export function createBrzezinaYardScene(opts?: {
         intensity: 0.95,
         radius: 5.0,
         flickerSpeed: 3.4,
+        enabled: true
+      },
+      {
+        id: 'light_brzezina_gate_l',
+        x: 9,
+        y: 19,
+        z: 1.1,
+        color: { r: 255, g: 196, b: 92 },
+        intensity: 1.15,
+        radius: 5.5,
+        flickerSpeed: 3.6,
+        enabled: true
+      },
+      {
+        id: 'light_brzezina_gate_r',
+        x: 12,
+        y: 19,
+        z: 1.1,
+        color: { r: 255, g: 196, b: 92 },
+        intensity: 1.15,
+        radius: 5.5,
+        flickerSpeed: 3.8,
         enabled: true
       }
     ]

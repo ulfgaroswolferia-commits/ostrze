@@ -235,6 +235,25 @@ class OstrzeAudioManager {
     this.ambienceGain = gain;
   }
 
+  public setMuted(muted: boolean): void {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('ulf_crpg_audio_muted', muted ? 'true' : 'false');
+      }
+    } catch {
+      // ignore storage errors
+    }
+    if (muted) {
+      const savedMood = this.currentMood;
+      this.stopAmbience();
+      this.currentMood = savedMood;
+    } else if (this.currentMood !== 'none') {
+      const mood = this.currentMood;
+      this.currentMood = 'none';
+      this.setAmbience(mood);
+    }
+  }
+
   public stopAmbience(): void {
     this.currentMood = 'none';
     try {

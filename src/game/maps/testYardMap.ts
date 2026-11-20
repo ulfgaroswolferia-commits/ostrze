@@ -258,8 +258,8 @@ export function createTestBrzezinaYardScene(): {
       {
         id: 'test_kukla_1',
         name: 'Kukła Ćwiczebna',
-        kind: 'slavic_shrine',
-        variant: 1,
+        kind: 'training_dummy',
+        variant: 0,
         x: 7,
         y: 10,
         heightZ: 2
@@ -267,8 +267,8 @@ export function createTestBrzezinaYardScene(): {
       {
         id: 'test_kukla_2',
         name: 'Słup Treningowy',
-        kind: 'pillar',
-        variant: 3,
+        kind: 'training_dummy',
+        variant: 1,
         x: 7,
         y: 12,
         heightZ: 2
