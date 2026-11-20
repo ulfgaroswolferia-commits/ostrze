@@ -35,6 +35,12 @@ import {
   chooseOstrzeDialogueOption,
   getOstrzeDialogueView
 } from '../rules/dialogueEngine';
+import {
+  canSellItemToShop,
+  getShopBuyPrice,
+  getShopMerchantPortraitId,
+  sellInventoryItemToShop
+} from '../rules/shopEconomy';
 import { getStats } from '../rules/stats';
 
 export interface NarrativeCardData {
@@ -99,6 +105,7 @@ export class OstrzeModalUi {
   private activeDialogue: ActiveOstrzeDialogue | null = null;
   private activeShop: { shopId: string; onClosed?: () => void } | null = null;
   private activeCharacterSheet: { onUpdated?: () => void } | null = null;
+  private activeCharacterTab: 'stats' | 'gear' | 'journal' = 'stats';
   private activeNoticeBoard: { entries: NoticeBoardEntry[]; onClosed?: () => void } | null = null;
   private activeTravel: {
     destinations: TravelDestinationEntry[];
@@ -434,6 +441,36 @@ export class OstrzeModalUi {
       : '';
 
     const muted = ostrzeAudio.getMuted();
+    const ch = this.state.character;
+    let vitalsHtml = `<div class="ostrze-hub-meta">${this.escape(this.hubPanel.statusLine)}</div>`;
+    if (ch) {
+      const stats = getStats(this.state, this.data);
+      const hpMax = Math.max(1, stats.derived.hpMax);
+      const hpPct = Math.min(100, Math.max(0, Math.round((ch.hp / hpMax) * 100)));
+      const curFloorXp = xpRequiredForLevel(ch.level, this.data.rules.leveling.xpStep);
+      const nextLvXp = xpRequiredForLevel(ch.level + 1, this.data.rules.leveling.xpStep);
+      const xpPct = Math.min(
+        100,
+        Math.max(0, Math.round(((ch.xp - curFloorXp) / Math.max(1, nextLvXp - curFloorXp)) * 100))
+      );
+      vitalsHtml = `
+        <div class="ostrze-hub-vitals">
+          <div class="ostrze-hub-vitals-top">
+            <span class="ostrze-hub-hero-name">${this.escape(ch.name)}</span>
+            <span class="ostrze-hub-lvl-pill">Poz. ${ch.level}</span>
+            <span class="ostrze-purse-pill">🪙 ${ch.money} gr</span>
+          </div>
+          <div class="ostrze-hp-bar" title="Zdrowie: ${ch.hp} / ${hpMax} HP">
+            <div class="ostrze-hp-fill ${hpPct <= 30 ? 'is-low' : ''}" style="width:${hpPct}%"></div>
+            <span class="ostrze-hp-label">${ch.hp} / ${hpMax} HP</span>
+          </div>
+          <div class="ostrze-hub-xp-bar" title="Doświadczenie: ${ch.xp} / ${nextLvXp} XP">
+            <div class="ostrze-hub-xp-fill" style="width:${xpPct}%"></div>
+          </div>
+        </div>
+      `;
+    }
+
     this.hubRoot.innerHTML = `
       <div class="ostrze-hub-bar">
         <div class="ostrze-hub-header">
@@ -447,7 +484,7 @@ export class OstrzeModalUi {
             </button>
           </div>
         </div>
-        <div class="ostrze-hub-meta">${this.escape(this.hubPanel.statusLine)}</div>
+        ${vitalsHtml}
         <div class="ostrze-atmo-strip">
           <span class="ostrze-atmo-pill is-time">${this.escape(atmo.timeLabel)} · ${this.escape(atmo.clockText)}</span>
           ${phenomPillHtml}
@@ -487,53 +524,33 @@ export class OstrzeModalUi {
   }
 
   private getShopPrice(baseValue: number, shopId: string): number {
-    const shop = this.data.shops.find((s) => s.id === shopId);
-    const handel = this.state.character ? getStats(this.state, this.data).skills.handel : 0;
-    const shopRules = (this.data.rules as { shop?: { buyBase?: number; handelBuyDivisor?: number } }).shop;
-    const buyBase = shopRules?.buyBase ?? 1.5;
-    const handelDiv = shopRules?.handelBuyDivisor ?? 200;
-    let mult = Math.max(0.5, buyBase - handel / handelDiv);
-
-    const mods = shop?.priceModifiers as
-      | Array<{ if?: { flag?: string }; buyPercent?: number }>
-      | Record<string, number>
-      | undefined;
-    if (Array.isArray(mods)) {
-      for (const m of mods) {
-        if (m.if?.flag && this.state.flags[m.if.flag] && typeof m.buyPercent === 'number') {
-          mult *= 1 + m.buyPercent / 100;
-        }
-      }
-    } else if (mods) {
-      for (const [flagKey, modVal] of Object.entries(mods)) {
-        if (this.state.flags[flagKey] && typeof modVal === 'number') {
-          mult *= modVal;
-        }
-      }
-    }
-    return Math.max(1, Math.round(baseValue * mult));
+    return getShopBuyPrice(baseValue, shopId, this.state, this.data);
   }
 
   private renderShop(shopId: string): void {
     const shop = this.data.shops.find((s) => s.id === shopId);
     const money = this.state.character?.money ?? 0;
+    const handel = this.state.character ? getStats(this.state, this.data).skills.handel : 0;
+    const merchantMeta = getPixArtMeta(getShopMerchantPortraitId(shopId));
 
-    const rows = (shop?.stock ?? [])
+    const buyRows = (shop?.stock ?? [])
       .map((entry) => {
         const item = this.data.items.find((i) => i.id === entry.id);
         const boughtKey = `${shopId}:${entry.id}`;
         const remainingQty = Math.max(0, entry.qty - (this.shopBoughtCounts.get(boughtKey) ?? 0));
         const price = this.getShopPrice(item?.value ?? 10, shopId);
         const canBuy = money >= price && remainingQty > 0;
-        const desc = item?.description ? `<div style="font-size:0.75rem;color:#9e9689;margin-top:2px">${this.escape(item.description)}</div>` : '';
+        const desc = item?.description
+          ? `<div class="ostrze-shop-desc">${this.escape(item.description)}</div>`
+          : '';
         return `
           <div class="ostrze-row">
-            <div style="flex:1">
+            <div style="flex:1;min-width:0;">
               <strong>${this.escape(item?.name ?? entry.id)}</strong>
-              <span style="font-size:0.78rem;color:#9e9689"> (szt: ${remainingQty})</span>
+              <span class="ostrze-shop-qty"> (szt: ${remainingQty})</span>
               ${desc}
             </div>
-            <button class="ostrze-btn" style="padding:5px 12px;font-size:0.8rem" data-buy="${this.escape(entry.id)}" ${canBuy ? '' : 'disabled'}>
+            <button class="ostrze-btn ostrze-shop-btn" data-buy="${this.escape(entry.id)}" ${canBuy ? '' : 'disabled'}>
               Kup (${price} gr)
             </button>
           </div>
@@ -541,13 +558,68 @@ export class OstrzeModalUi {
       })
       .join('');
 
+    const sellRows = this.state.inventory.items
+      .map((entry) => {
+        const item = this.data.items.find((i) => i.id === entry.id);
+        const check = canSellItemToShop(entry.id, shopId, this.state, this.data);
+        return `
+          <div class="ostrze-row">
+            <div style="flex:1;min-width:0;">
+              <strong>${this.escape(item?.name ?? entry.id)}</strong>
+              <span class="ostrze-shop-qty"> ×${entry.qty}</span>
+            </div>
+            ${
+              check.ok
+                ? `<button class="ostrze-hub-btn" data-sell="${this.escape(entry.id)}">Sprzedaj (+${check.price} gr)</button>`
+                : `<span class="ostrze-shop-tag">${this.escape(check.reason ?? 'Niedostępne')}</span>`
+            }
+          </div>
+        `;
+      })
+      .join('');
+
+    const portraitHtml = merchantMeta
+      ? `
+        <div class="ostrze-shop-portrait-frame ${merchantMeta.width > merchantMeta.height ? 'is-wide' : ''}">
+          <img
+            class="ostrze-shop-portrait ostrze-pix-art"
+            src="${this.escape(merchantMeta.dataUri)}"
+            width="${merchantMeta.width}"
+            height="${merchantMeta.height}"
+            alt="${this.escape(shop?.name ?? 'Kram')}"
+          />
+        </div>
+      `
+      : '';
+
     this.root.innerHTML = `
       <div class="ostrze-overlay">
-        <div class="ostrze-card">
-          <h2 class="ostrze-title">${this.escape(shop?.name ?? 'Kram')}</h2>
-          <p class="ostrze-subtitle">Twoja sakiewka: <strong>${money} groszy</strong></p>
-          <div class="ostrze-panel" style="margin-bottom:16px">${rows || '<p>Brak towaru.</p>'}</div>
-          <button class="ostrze-btn" data-action="shop-close">Zamknij kram [ESC]</button>
+        <div class="ostrze-card ostrze-shop-card">
+          <div class="ostrze-shop-header">
+            ${portraitHtml}
+            <div style="flex:1;min-width:0;">
+              <h2 class="ostrze-title" style="margin-bottom:4px;">${this.escape(shop?.name ?? 'Kram')}</h2>
+              <div class="ostrze-shop-meta">
+                <span class="ostrze-purse-pill">🪙 Sakiewka: <strong>${money} gr</strong></span>
+                <span class="ostrze-shop-tag">Handel: ${handel}%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="ostrze-shop-grid">
+            <div class="ostrze-panel ostrze-shop-col">
+              <h3>Towar kramarza</h3>
+              ${buyRows || '<p class="ostrze-subtitle">Brak towaru.</p>'}
+            </div>
+            <div class="ostrze-panel ostrze-shop-col">
+              <h3>Twój plecak (sprzedaż)</h3>
+              ${sellRows || '<p class="ostrze-subtitle">Pusty plecak.</p>'}
+            </div>
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+            <button class="ostrze-btn" data-action="shop-close">Zamknij kram [ESC]</button>
+          </div>
         </div>
       </div>
     `;
@@ -567,6 +639,18 @@ export class OstrzeModalUi {
           if (invEntry) invEntry.qty += 1;
           else this.state.inventory.items.push({ id: itemId, qty: 1 });
           this.showToast(`Kupiono: ${item?.name ?? itemId} (-${price} gr)`, 'gold');
+          ostrzeAudio.playShopCoin();
+          this.render();
+        }
+      });
+    });
+
+    this.root.querySelectorAll<HTMLElement>('[data-sell]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const itemId = btn.dataset.sell ?? '';
+        const res = sellInventoryItemToShop(itemId, shopId, this.state, this.data);
+        if (res.sold) {
+          this.showToast(`Sprzedano: ${res.itemName} (+${res.price} gr)`, 'success');
           ostrzeAudio.playShopCoin();
           this.render();
         }
@@ -1090,21 +1174,109 @@ export class OstrzeModalUi {
             .join('')
         : '<div class="ostrze-subtitle" style="margin-bottom:0">Pusty plecak.</div>';
 
-    this.root.innerHTML = `
-      <div class="ostrze-overlay">
-        <div class="ostrze-card">
-          <h2 class="ostrze-title">${this.escape(ch.name)} — Poziom ${ch.level}</h2>
-          <p class="ostrze-subtitle">
-            ${this.escape(cls?.name ?? ch.classId)} · HP: ${ch.hp}/${stats.derived.hpMax} · AP: ${stats.derived.ap} · Złoto: ${ch.money} gr · XP: ${ch.xp}/${nextLvXp}
-          </p>
-          <div class="ostrze-xp-bar"><div class="ostrze-xp-fill" style="width:${xpPct}%"></div></div>
+    const pendingPts = ch.freeAttributePoints + ch.freeSkillPoints + ch.freePerkPicks;
+    const hpMax = Math.max(1, stats.derived.hpMax);
+    const hpPct = Math.min(100, Math.max(0, Math.round((ch.hp / hpMax) * 100)));
+    const wola = this.state.vars.wola ?? 0;
+    const dlug = this.state.vars.dlug ?? 0;
 
+    // Equipped summary for Gear tab
+    const equippedEntries = Object.entries(this.state.inventory.equipped).filter(
+      (entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].length > 0
+    );
+    const equippedHtml =
+      equippedEntries.length > 0
+        ? equippedEntries
+            .map(([slot, itemId]) => {
+              const item = this.data.items.find((i) => i.id === itemId);
+              return `<div class="ostrze-row"><span style="text-transform:capitalize;color:#9e9689">${this.escape(slot)}</span><strong>${this.escape(item?.name ?? itemId)}</strong></div>`;
+            })
+            .join('')
+        : '<div class="ostrze-subtitle" style="margin-bottom:0">Brak założonego ekwipunku.</div>';
+
+    // Journal & Brzezina Keepsakes for Tab 3
+    const questEntries = Object.entries(this.state.quests).filter(([, st]) => st && st !== 'none');
+    const activeQuests = questEntries.filter(([, st]) => st === 'active');
+    const doneQuests = questEntries.filter(([, st]) => st === 'completed');
+
+    const renderQuestList = (list: Array<[string, string]>, emptyMsg: string): string => {
+      if (list.length === 0) return `<div class="ostrze-subtitle" style="margin-bottom:0">${emptyMsg}</div>`;
+      return list
+        .map(([qId, status]) => {
+          const def = this.data.quests.find((q) => q.id === qId);
+          return `
+            <div class="ostrze-row">
+              <div>
+                <strong>${this.escape(def?.name ?? qId)}</strong>
+                ${def?.description ? `<div class="ostrze-shop-desc">${this.escape(def.description)}</div>` : ''}
+              </div>
+              <span class="ostrze-shop-tag">${status === 'completed' ? '✓ Ukończone' : 'Aktywne'}</span>
+            </div>
+          `;
+        })
+        .join('');
+    };
+
+    const keepsakeDefs: Array<{
+      id: string;
+      owner: string;
+      echoFlag: string;
+      honoredText: string;
+      pendingText: string;
+    }> = [
+      {
+        id: 'kosc_skarimira',
+        owner: 'Skarimir',
+        echoFlag: 'echo_skarimir_kosc',
+        honoredText: 'Uczczony rzutem kością w karczmie Wilczego Brodu.',
+        pendingText: 'Czeka na ostatni rzut w karczmie „Pod Wilczym Kłem”.'
+      },
+      {
+        id: 'miedziak_ragnoslawy',
+        owner: 'Ragnosława',
+        echoFlag: 'echo_ragnoslawa_toast',
+        honoredText: 'Zakład spełniony — piwo postawione w Wilczym Brodzie.',
+        pendingText: 'Zastaw za pierwsze piwo w karczmie Wilczego Brodu.'
+      },
+      {
+        id: 'list_wojmira',
+        owner: 'Wojmir Cienki',
+        echoFlag: 'echo_wojmir_list',
+        honoredText: this.state.flags.echo_wojmir_list_wyslany
+          ? 'Przekazany Wrzoskowi dla gońca do Brzeziny.'
+          : 'Zachowany przy sercu jako pamiątka.',
+        pendingText: 'Zapieczętowany list do matki — do przekazania lub zachowania w karczmie.'
+      }
+    ];
+
+    const keepsakesHtml = keepsakeDefs
+      .filter((k) => {
+        const hasItem = this.state.inventory.items.some((i) => i.id === k.id && i.qty > 0);
+        return hasItem || Boolean(this.state.flags[k.echoFlag]);
+      })
+      .map((k) => {
+        const item = this.data.items.find((i) => i.id === k.id);
+        const honored = Boolean(this.state.flags[k.echoFlag]);
+        return `
+          <div class="ostrze-keepsake-card">
+            <div class="ostrze-notice-head">
+              <span class="ostrze-notice-title">🕯️ ${this.escape(item?.name ?? k.owner)}</span>
+              <span class="ostrze-shop-tag">${honored ? '✓ Uczczono' : 'Pamiątka'}</span>
+            </div>
+            <div class="ostrze-shop-desc">${this.escape(honored ? k.honoredText : k.pendingText)}</div>
+          </div>
+        `;
+      })
+      .join('');
+
+    const tabContentHtml =
+      this.activeCharacterTab === 'stats'
+        ? `
           ${
-            ch.freeAttributePoints > 0 || ch.freeSkillPoints > 0 || ch.freePerkPicks > 0
+            pendingPts > 0
               ? `<div class="ostrze-feedback">Punkty do wydania — Cechy: ${ch.freeAttributePoints} · Umiejętności: ${ch.freeSkillPoints} · Talenty: ${ch.freePerkPicks}</div>`
               : ''
           }
-
           <div class="ostrze-creator-grid">
             <div class="ostrze-panel">
               <h3>Atrybuty ${ch.freeAttributePoints > 0 ? `(wolne: ${ch.freeAttributePoints})` : ''}</h3>
@@ -1119,26 +1291,100 @@ export class OstrzeModalUi {
               ${skillsHtml}
             </div>
           </div>
-
-          <div class="ostrze-creator-grid">
-            <div class="ostrze-panel">
-              <h3>Talenty (${ch.perks.length}/${this.data.rules.leveling.maxPerks})</h3>
-              ${pickedPerksHtml}
+          <div class="ostrze-panel" style="margin-bottom:14px">
+            <h3>Talenty (${ch.perks.length}/${this.data.rules.leveling.maxPerks})</h3>
+            ${pickedPerksHtml}
+          </div>
+          ${perkChoicesHtml ? `<div class="ostrze-panel" style="margin-bottom:14px"><h3>Wybierz nowy talent (wolne: ${ch.freePerkPicks})</h3>${perkChoicesHtml}</div>` : ''}
+        `
+        : this.activeCharacterTab === 'gear'
+          ? `
+            <div class="ostrze-creator-grid">
+              <div class="ostrze-panel">
+                <h3>Założony ekwipunek</h3>
+                ${equippedHtml}
+              </div>
+              <div class="ostrze-panel">
+                <h3>Plecak i Pas Szybkiego Użycia [4–7]</h3>
+                ${itemsHtml}
+              </div>
             </div>
-            <div class="ostrze-panel">
-              <h3>Ekwipunek</h3>
-              ${itemsHtml}
+          `
+          : `
+            <div class="ostrze-creator-grid">
+              <div class="ostrze-panel">
+                <h3>Aktywne zadania (${activeQuests.length})</h3>
+                ${renderQuestList(activeQuests, 'Brak aktywnych zadań.')}
+                <h3 style="margin-top:14px">Ukończone zadania (${doneQuests.length})</h3>
+                ${renderQuestList(doneQuests, 'Brak ukończonych zadań.')}
+              </div>
+              <div class="ostrze-panel">
+                <h3>Pamiątki z Brzeziny</h3>
+                ${
+                  keepsakesHtml ||
+                  '<div class="ostrze-subtitle" style="margin-bottom:0">Nie niesiesz jeszcze żadnych osobistych pamiątek po towarzyszach.</div>'
+                }
+                <h3 style="margin-top:14px">Poznane lokacje (${this.state.world.knownPlaces.length})</h3>
+                <div class="ostrze-shop-desc">${this.escape(this.state.world.knownPlaces.join(', ') || 'Brzezina')}</div>
+              </div>
+            </div>
+          `;
+
+    this.root.innerHTML = `
+      <div class="ostrze-overlay">
+        <div class="ostrze-card ostrze-cs-card">
+          <div class="ostrze-cs-header">
+            <div>
+              <h2 class="ostrze-title" style="margin-bottom:4px">${this.escape(ch.name)} — Poziom ${ch.level}</h2>
+              <div class="ostrze-shop-meta">
+                <span class="ostrze-shop-tag">${this.escape(cls?.name ?? ch.classId)}</span>
+                <span class="ostrze-shop-tag">AP: ${stats.derived.ap}</span>
+                <span class="ostrze-shop-tag">Wola: ${wola} · Dług: ${dlug}</span>
+                <span class="ostrze-purse-pill">🪙 ${ch.money} gr</span>
+              </div>
+            </div>
+            <div class="ostrze-cs-bars">
+              <div class="ostrze-hp-bar">
+                <div class="ostrze-hp-fill ${hpPct <= 30 ? 'is-low' : ''}" style="width:${hpPct}%"></div>
+                <span class="ostrze-hp-label">${ch.hp} / ${hpMax} HP</span>
+              </div>
+              <div class="ostrze-xp-bar" title="XP: ${ch.xp} / ${nextLvXp}" style="margin:6px 0 0;">
+                <div class="ostrze-xp-fill" style="width:${xpPct}%"></div>
+              </div>
             </div>
           </div>
 
-          ${perkChoicesHtml ? `<div class="ostrze-panel" style="margin-bottom:16px"><h3>Wybierz nowy talent (wolne: ${ch.freePerkPicks})</h3>${perkChoicesHtml}</div>` : ''}
+          <div class="ostrze-cs-tabs">
+            <button class="ostrze-cs-tab ${this.activeCharacterTab === 'stats' ? 'is-active' : ''}" data-cs-tab="stats">
+              Postać i Rozwój ${pendingPts > 0 ? `<span class="ostrze-cs-tab-badge">+${pendingPts}</span>` : ''}
+            </button>
+            <button class="ostrze-cs-tab ${this.activeCharacterTab === 'gear' ? 'is-active' : ''}" data-cs-tab="gear">
+              Ekwipunek i Pas (${this.state.inventory.items.length})
+            </button>
+            <button class="ostrze-cs-tab ${this.activeCharacterTab === 'journal' ? 'is-active' : ''}" data-cs-tab="journal">
+              Dziennik i Pamiątki
+            </button>
+          </div>
 
-          <div style="display:flex;justify-content:flex-end">
+          ${tabContentHtml}
+
+          <div style="display:flex;justify-content:flex-end;margin-top:8px">
             <button class="ostrze-btn" id="ostrze-cs-close">Zamknij [ESC]</button>
           </div>
         </div>
       </div>
     `;
+
+    this.root.querySelectorAll<HTMLElement>('[data-cs-tab]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const nextTab = btn.dataset.csTab as 'stats' | 'gear' | 'journal' | undefined;
+        if (nextTab && nextTab !== this.activeCharacterTab) {
+          this.activeCharacterTab = nextTab;
+          ostrzeAudio.playUiClick();
+          this.render();
+        }
+      });
+    });
 
     this.root.querySelectorAll<HTMLElement>('[data-cs-attr]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -1315,9 +1561,25 @@ export class OstrzeModalUi {
   }
 
   private renderWelcome(welcome: WelcomeScreenData): void {
+    const heroBanner = getPixArtMeta('wstep_gwiazdy');
+    const bannerHtml = heroBanner
+      ? `
+        <div class="ostrze-welcome-art-frame">
+          <img
+            class="ostrze-narrative-art ostrze-pix-art"
+            src="${this.escape(heroBanner.dataUri)}"
+            width="${heroBanner.width}"
+            height="${heroBanner.height}"
+            alt="Voided — Na przekór gwiazdom"
+          />
+        </div>
+      `
+      : '';
+
     this.root.innerHTML = `
       <div class="ostrze-overlay">
         <div class="ostrze-card ostrze-welcome-card">
+          ${bannerHtml}
           <h1 class="ostrze-welcome-title">VOIDED</h1>
           <p class="ostrze-welcome-subtitle">Na przekór gwiazdom</p>
 

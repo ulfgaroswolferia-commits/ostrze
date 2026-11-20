@@ -939,3 +939,263 @@ body:has(.combat-mode-active) .ostrze-toast-stack {
     animation: none;
   }
 }
+
+/* ==========================================================================
+   Welcome .pix Banner, HUD Vital Strip, 2-Column Shop & 3-Tab Character Sheet
+   ========================================================================== */
+
+.ostrze-welcome-art-frame {
+  margin: 0 auto 14px;
+  max-width: 384px;
+  padding: 5px;
+  border-radius: 6px;
+  background: #0b0d12;
+  border: 1px solid #7d6033;
+  box-shadow:
+    inset 0 0 0 1px rgba(229, 184, 105, 0.2),
+    0 10px 24px rgba(0, 0, 0, 0.65);
+}
+
+.ostrze-hub-vitals {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.ostrze-hub-vitals-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 0.82rem;
+}
+
+.ostrze-hub-hero-name {
+  font-weight: 700;
+  color: #f0d7a0;
+}
+
+.ostrze-hub-lvl-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(229, 184, 105, 0.14);
+  border: 1px solid #7d6033;
+  color: #e5b869;
+}
+
+.ostrze-purse-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.76rem;
+  padding: 1px 7px;
+  border-radius: 3px;
+  background: rgba(212, 165, 68, 0.16);
+  border: 1px solid #8c6a37;
+  color: #f5d388;
+}
+
+.ostrze-hp-bar {
+  position: relative;
+  height: 16px;
+  border-radius: 4px;
+  background: #1b1113;
+  border: 1px solid #59262a;
+  overflow: hidden;
+}
+
+.ostrze-hp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #7d1e24 0%, #b8323b 100%);
+  transition: width 0.25s ease;
+}
+
+.ostrze-hp-fill.is-low {
+  background: linear-gradient(90deg, #991b1b 0%, #ef4444 100%);
+}
+
+.ostrze-hp-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff3f3;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+.ostrze-hub-xp-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: #191c24;
+  overflow: hidden;
+}
+
+.ostrze-hub-xp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #a87b32 0%, #f0ca75 100%);
+  transition: width 0.25s ease;
+}
+
+.ostrze-shop-card {
+  width: min(940px, 100%);
+}
+
+.ostrze-shop-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.ostrze-shop-portrait-frame {
+  width: 84px;
+  height: 84px;
+  padding: 4px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  background: #0d1016;
+  border: 2px solid #8a6d3b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ostrze-shop-portrait-frame.is-wide {
+  width: 148px;
+  height: 78px;
+}
+
+.ostrze-shop-portrait {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.ostrze-shop-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.ostrze-shop-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.ostrze-shop-col {
+  max-height: 52vh;
+  overflow-y: auto;
+}
+
+.ostrze-shop-qty {
+  font-size: 0.78rem;
+  color: #9e9689;
+}
+
+.ostrze-shop-desc {
+  font-size: 0.76rem;
+  color: #9e9689;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.ostrze-shop-btn {
+  padding: 5px 11px;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.ostrze-shop-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.74rem;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid #3c3830;
+  color: #b8b0a0;
+  white-space: nowrap;
+}
+
+.ostrze-cs-card {
+  width: min(920px, 100%);
+}
+
+.ostrze-cs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.ostrze-cs-bars {
+  width: min(260px, 100%);
+  flex-shrink: 0;
+}
+
+.ostrze-cs-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #3c3426;
+  padding-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.ostrze-cs-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 4px;
+  border: 1px solid #3e372c;
+  background: #14171f;
+  color: #bdb5a6;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
+}
+
+.ostrze-cs-tab:hover {
+  border-color: #8c6a37;
+  color: #f0e6d2;
+}
+
+.ostrze-cs-tab.is-active {
+  background: linear-gradient(180deg, #3a2d1b 0%, #241b10 100%);
+  border-color: #e5b869;
+  color: #fff2d1;
+}
+
+.ostrze-cs-tab-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: #c83e3e;
+  color: #fff;
+}
+
+.ostrze-keepsake-card {
+  padding: 10px 12px;
+  border-radius: 4px;
+  background: rgba(229, 184, 105, 0.06);
+  border: 1px solid #59472a;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 720px) {
+  .ostrze-shop-grid {
+    grid-template-columns: 1fr;
+  }
+}
