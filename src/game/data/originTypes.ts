@@ -186,6 +186,7 @@ export interface DialogueOptionDef {
 
 export interface DialogueNodeDef {
   speaker?: string;
+  portrait?: string;
   text: string;
   actions?: DialogueActionSpec[];
   options?: DialogueOptionDef[];

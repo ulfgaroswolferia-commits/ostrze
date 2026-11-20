@@ -20,6 +20,7 @@ export interface ActiveOstrzeDialogue {
   dialogueId: string;
   nodeId: string;
   lastCheckFeedback?: string;
+  lastCheckOutcome?: 'success' | 'failure';
   pendingShopId?: string;
 }
 
@@ -35,9 +36,11 @@ export interface DialogueView {
   dialogueId: string;
   nodeId: string;
   speaker: string;
+  portrait?: string;
   text: string;
   options: VisibleDialogueOption[];
   lastCheckFeedback?: string;
+  lastCheckOutcome?: 'success' | 'failure';
 }
 
 function getDialogueDef(dialogueId: string, data: OriginGameData): DialogueFileDef {
@@ -253,9 +256,11 @@ export function getOstrzeDialogueView(
     dialogueId: session.dialogueId,
     nodeId: session.nodeId,
     speaker: node.speaker ?? 'Rozmówca',
+    portrait: node.portrait ?? def.portrait,
     text: node.text,
     options,
-    lastCheckFeedback: session.lastCheckFeedback
+    lastCheckFeedback: session.lastCheckFeedback,
+    lastCheckOutcome: session.lastCheckOutcome
   };
 }
 
@@ -273,6 +278,7 @@ export function chooseOstrzeDialogueOption(
 
   let nextNodeId = opt.goto ?? 'end';
   let feedback: string | undefined;
+  let outcome: 'success' | 'failure' | undefined;
 
   if (opt.check) {
     const checkId = opt.check.skill ?? opt.check.attribute ?? '';
@@ -290,12 +296,15 @@ export function chooseOstrzeDialogueOption(
 
     if (res.alreadyFailed) {
       feedback = 'Ten test był już wcześniej nieudany.';
+      outcome = 'failure';
       nextNodeId = opt.failure ?? session.nodeId;
     } else if (res.success) {
       feedback = `Test udany (${res.roll} ≤ ${res.chance}%).`;
+      outcome = 'success';
       nextNodeId = opt.success ?? opt.goto ?? 'end';
     } else {
       feedback = `Test nieudany (${res.roll} > ${res.chance}%).`;
+      outcome = 'failure';
       nextNodeId = opt.failure ?? opt.goto ?? 'end';
     }
   }
@@ -317,6 +326,7 @@ export function chooseOstrzeDialogueOption(
     dialogueId: session.dialogueId,
     nodeId: nextNodeId,
     lastCheckFeedback: feedback,
+    lastCheckOutcome: outcome,
     pendingShopId: nodeResult.pendingShopId ?? optResult.pendingShopId
   };
 }

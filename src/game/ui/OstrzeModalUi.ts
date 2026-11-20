@@ -1,4 +1,10 @@
 import { getSlavicPortrait } from '@ulf/assets/slavicPortraits';
+import {
+  getPixArtDataUri,
+  getPixArtMeta,
+  resolvePixPortraitId,
+  resolveSpeakerRole
+} from '../assets/pixArt';
 import { ostrzeAudio } from '../audio/ostrzeAudio';
 import {
   CAMP_RECIPES,
@@ -35,6 +41,7 @@ import { getStats } from '../rules/stats';
 export interface NarrativeCardData {
   title: string;
   subtitle?: string;
+  artId?: string;
   text: string;
   buttonLabel?: string;
   onContinue: () => void;
@@ -141,6 +148,31 @@ export class OstrzeModalUi {
     this.draftAttrs = this.buildInitialCreatorAttrs();
 
     window.addEventListener('keydown', (e) => {
+      const target = e.target as HTMLElement | null;
+      const isTyping =
+        target &&
+        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+
+      if (!isTyping && this.activeDialogue && /^[1-9]$/.test(e.key)) {
+        const btn = this.root.querySelector<HTMLButtonElement>(
+          `[data-shortcut="${e.key}"]:not(:disabled)`
+        );
+        if (btn) {
+          e.preventDefault();
+          btn.click();
+          return;
+        }
+      }
+
+      if (!isTyping && this.activeNarrative && (e.key === 'Enter' || e.key === ' ')) {
+        const nextBtn = this.root.querySelector<HTMLButtonElement>('[data-action="narrative-next"]');
+        if (nextBtn) {
+          e.preventDefault();
+          nextBtn.click();
+          return;
+        }
+      }
+
       if (e.key !== 'Escape') return;
       if (this.activeCampfire) {
         const cb = this.activeCampfire.onClosed;
@@ -551,15 +583,34 @@ export class OstrzeModalUi {
   }
 
   private renderNarrative(card: NarrativeCardData): void {
+    const artMeta = getPixArtMeta(card.artId);
+    const artHtml = artMeta
+      ? `
+        <div class="ostrze-narrative-art-frame">
+          <img
+            class="ostrze-narrative-art ostrze-pix-art"
+            src="${this.escape(artMeta.dataUri)}"
+            width="${artMeta.width}"
+            height="${artMeta.height}"
+            alt="${this.escape(card.title)}"
+          />
+        </div>
+      `
+      : '';
+
     this.root.innerHTML = `
       <div class="ostrze-overlay">
-        <div class="ostrze-card">
+        <div class="ostrze-card ostrze-narrative-card">
           <h2 class="ostrze-title">${this.escape(card.title)}</h2>
           ${card.subtitle ? `<p class="ostrze-subtitle">${this.escape(card.subtitle)}</p>` : ''}
+          ${artHtml}
           <div class="ostrze-prose">${this.escape(card.text)}</div>
-          <button class="ostrze-btn" data-action="narrative-next">
-            ${this.escape(card.buttonLabel ?? 'Dalej')}
-          </button>
+          <div class="ostrze-narrative-footer">
+            <button class="ostrze-btn" data-action="narrative-next">
+              ${this.escape(card.buttonLabel ?? 'Dalej')}
+            </button>
+            <span class="ostrze-shortcut-hint">Enter / Spacja</span>
+          </div>
         </div>
       </div>
     `;
@@ -753,34 +804,96 @@ export class OstrzeModalUi {
 
   private renderDialogue(session: ActiveOstrzeDialogue): void {
     const view = getOstrzeDialogueView(session, this.state, this.data);
-    const portraitUrl = getSlavicPortrait(this.resolvePortraitId(view.speaker));
+    const pixPortraitId = resolvePixPortraitId(view.portrait, view.speaker);
+    const pixPortraitUrl = pixPortraitId ? getPixArtDataUri(pixPortraitId) : null;
+    const isPixPortrait = Boolean(pixPortraitUrl);
+    const portraitUrl = pixPortraitUrl ?? getSlavicPortrait(this.resolvePortraitId(view.speaker));
+    const speakerRole = resolveSpeakerRole(view.speaker);
 
     const optionsHtml = view.options
-      .map((item) => {
-        const badge = item.checkLabel
-          ? `<span class="ostrze-check-badge">${this.escape(item.checkLabel)} · ${item.checkChance}%</span>`
-          : '';
+      .map((item, displayIdx) => {
+        const shortcutNum = displayIdx < 9 ? displayIdx + 1 : null;
+        const badges: string[] = [];
+
+        if (item.checkLabel) {
+          if (item.alreadyFailed) {
+            badges.push(
+              `<span class="ostrze-check-badge ostrze-check-badge--failed">${this.escape(item.checkLabel)} · Nieudany</span>`
+            );
+          } else {
+            const chance = item.checkChance ?? 50;
+            const tier =
+              chance >= 70
+                ? 'ostrze-check-badge--high'
+                : chance >= 40
+                  ? 'ostrze-check-badge--mid'
+                  : 'ostrze-check-badge--low';
+            badges.push(
+              `<span class="ostrze-check-badge ${tier}">${this.escape(item.checkLabel)} · ${chance}%</span>`
+            );
+          }
+        }
+
+        const actions = item.option.actions ?? [];
+        const totalCost = actions.reduce((sum, a) => sum + (a.takeMoney ?? 0), 0);
+        if (totalCost > 0) {
+          badges.push(`<span class="ostrze-action-badge ostrze-action-badge--cost">-${totalCost} gr</span>`);
+        }
+        if (actions.some((a) => Boolean(a.openShop))) {
+          badges.push(`<span class="ostrze-action-badge ostrze-action-badge--shop">🛒 Sklep</span>`);
+        }
+
+        const keyBadge =
+          shortcutNum !== null
+            ? `<span class="ostrze-opt-key">${shortcutNum}</span>`
+            : '';
+
         return `
-          <button class="ostrze-dialogue-opt" data-opt-idx="${item.index}" ${item.alreadyFailed ? 'disabled' : ''}>
-            <span>${this.escape(item.option.text)}</span>
-            ${badge}
+          <button
+            class="ostrze-dialogue-opt ${item.alreadyFailed ? 'ostrze-dialogue-opt--failed' : ''}"
+            data-opt-idx="${item.index}"
+            ${shortcutNum !== null ? `data-shortcut="${shortcutNum}"` : ''}
+            ${item.alreadyFailed ? 'disabled' : ''}
+          >
+            <span class="ostrze-dialogue-opt-main">
+              ${keyBadge}
+              <span class="ostrze-dialogue-opt-text">${this.escape(item.option.text)}</span>
+            </span>
+            ${badges.length > 0 ? `<span class="ostrze-opt-badges">${badges.join('')}</span>` : ''}
           </button>
         `;
       })
       .join('');
 
+    const feedbackClass =
+      view.lastCheckOutcome === 'success'
+        ? 'ostrze-feedback ostrze-feedback--success'
+        : view.lastCheckOutcome === 'failure'
+          ? 'ostrze-feedback ostrze-feedback--failure'
+          : 'ostrze-feedback';
+
     this.root.innerHTML = `
       <div class="ostrze-overlay">
-        <div class="ostrze-card">
-          <div class="ostrze-dialogue-header">
-            <img class="ostrze-dialogue-avatar" src="${this.escape(portraitUrl)}" alt="${this.escape(view.speaker)}" />
-            <div>
-              <h2 class="ostrze-title" style="margin:0;">${this.escape(view.speaker)}</h2>
+        <div class="ostrze-card ostrze-dialogue-card">
+          <div class="ostrze-dialogue-layout">
+            <aside class="ostrze-dialogue-portrait-col">
+              <div class="ostrze-dialogue-avatar-frame">
+                <img
+                  class="ostrze-dialogue-avatar ${isPixPortrait ? 'ostrze-pix-art' : ''}"
+                  src="${this.escape(portraitUrl)}"
+                  alt="${this.escape(view.speaker)}"
+                />
+              </div>
+              <h2 class="ostrze-dialogue-speaker">${this.escape(view.speaker)}</h2>
+              ${speakerRole ? `<div class="ostrze-dialogue-role">${this.escape(speakerRole)}</div>` : ''}
+            </aside>
+            <div class="ostrze-dialogue-body-col">
+              ${view.lastCheckFeedback ? `<div class="${feedbackClass}">${this.escape(view.lastCheckFeedback)}</div>` : ''}
+              <div class="ostrze-prose ostrze-dialogue-prose">${this.escape(view.text)}</div>
+              <div class="ostrze-dialogue-options">${optionsHtml}</div>
+              <div class="ostrze-dialogue-hint">Skróty klawiszowe: [1–9] wybierz odpowiedź</div>
             </div>
           </div>
-          ${view.lastCheckFeedback ? `<div class="ostrze-feedback">${this.escape(view.lastCheckFeedback)}</div>` : ''}
-          <div class="ostrze-prose">${this.escape(view.text)}</div>
-          <div class="ostrze-dialogue-options">${optionsHtml}</div>
         </div>
       </div>
     `;
@@ -797,7 +910,7 @@ export class OstrzeModalUi {
         );
 
         if (next?.lastCheckFeedback) {
-          ostrzeAudio.playDialogueCheck(next.lastCheckFeedback.includes('udany'));
+          ostrzeAudio.playDialogueCheck(next.lastCheckOutcome === 'success');
         } else {
           ostrzeAudio.playUiClick();
         }

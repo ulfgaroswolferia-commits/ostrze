@@ -94,14 +94,18 @@ export class PrologueDirector {
     bandyci_ucieczka: 'Ucieczka z traktu'
   };
 
-  private getStoryScene(id: string): { title: string; text: string } {
+  private getStoryScene(id: string): { title: string; text: string; art?: string } {
     const raw =
       this.data.story.scenes.find((s) => s.id === id) ??
       this.data.travelScenes[id];
     const rawTitle = typeof raw?.title === 'string' ? raw.title.trim() : '';
+    const rawArt = typeof (raw as { art?: unknown } | undefined)?.art === 'string'
+      ? ((raw as { art: string }).art).trim()
+      : '';
     return {
       title: rawTitle || PrologueDirector.FALLBACK_TITLES[id] || 'Prolog',
-      text: typeof raw?.text === 'string' ? raw.text.trim() : ''
+      text: typeof raw?.text === 'string' ? raw.text.trim() : '',
+      art: rawArt || undefined
     };
   }
 
@@ -125,6 +129,7 @@ export class PrologueDirector {
     this.ui.showNarrative({
       title: scene.title,
       subtitle,
+      artId: scene.art,
       text: scene.text,
       buttonLabel,
       onContinue
@@ -1026,6 +1031,7 @@ export class PrologueDirector {
       this.ui.showNarrative({
         title: zasadzka.title || 'Zasadzka na trakcie',
         subtitle: this.formatClock(),
+        artId: wymarsz.art ?? zasadzka.art,
         text: combinedText,
         buttonLabel: 'Broń się!',
         onContinue: startAmbushCombat
