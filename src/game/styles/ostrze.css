@@ -499,3 +499,164 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.65);
   background: #0d1016;
 }
+
+/* ==========================================================================
+   cRPG Ambient Chronicle UX (Ghost Idle -> Fast Fade-In -> Slow Fade-Out
+   + Click-Through Map Panning + Proximity Glint + Primary Expanded Drawer)
+   ========================================================================== */
+
+#hud-root .bottom-hud:not(.combat-mode-active) .chronicle-log:not(.expanded) {
+  pointer-events: none;
+  background: rgba(11, 14, 21, calc(0.05 + 0.87 * var(--chronicle-vis, 0)));
+  border: 1px solid rgba(196, 158, 84, calc(0.2 + 0.5 * var(--chronicle-vis, 0)));
+  box-shadow: 0 10px 28px rgba(0, 0, 0, calc(0.68 * var(--chronicle-vis, 0)));
+  backdrop-filter: blur(calc(8px * var(--chronicle-vis, 0)));
+  -webkit-backdrop-filter: blur(calc(8px * var(--chronicle-vis, 0)));
+  transition: border-color 0.22s ease;
+}
+
+#hud-root .bottom-hud:not(.combat-mode-active) .chronicle-log:not(.expanded) .log-header-title,
+#hud-root .bottom-hud:not(.combat-mode-active) .chronicle-log:not(.expanded) .log-entries,
+#hud-root .bottom-hud:not(.combat-mode-active) .chronicle-log:not(.expanded) .combat-log-tabs {
+  opacity: calc(0.1 + 0.9 * var(--chronicle-vis, 0));
+}
+
+#hud-root .bottom-hud:not(.combat-mode-active) .chronicle-log:not(.expanded) .log-entries {
+  overflow-y: hidden;
+}
+
+#hud-root .bottom-hud:not(.combat-mode-active) .chronicle-log:not(.expanded) .chronicle-toggle-btn,
+#hud-root .bottom-hud:not(.combat-mode-active) .chronicle-log:not(.expanded) .combat-tab-btn,
+#hud-root .bottom-hud:not(.combat-mode-active) .chronicle-log:not(.expanded) .combat-report-tag-btn {
+  pointer-events: auto;
+}
+
+#hud-root .bottom-hud:not(.combat-mode-active) .chronicle-log:not(.expanded) .chronicle-toggle-btn {
+  position: relative;
+  overflow: hidden;
+  opacity: calc(0.24 + 0.76 * var(--chronicle-vis, 0));
+  transition:
+    opacity 0.18s ease,
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.2s ease,
+    color 0.18s ease,
+    transform 0.18s ease;
+}
+
+#hud-root .bottom-hud:not(.combat-mode-active) .chronicle-log:not(.expanded) .chronicle-toggle-btn::after {
+  content: '';
+  position: absolute;
+  top: -30%;
+  left: -135%;
+  width: 65%;
+  height: 160%;
+  background: linear-gradient(
+    110deg,
+    rgba(255, 244, 208, 0) 0%,
+    rgba(255, 240, 190, 0.62) 50%,
+    rgba(255, 244, 208, 0) 100%
+  );
+  transform: skewX(-20deg);
+  pointer-events: none;
+}
+
+/* Hovering over the transparent Chronicle region reveals frame & glints "Rozwiń"
+   while keeping map edge-panning and clicks passing straight through */
+#hud-root[data-chronicle-near='1'] .bottom-hud:not(.combat-mode-active) .chronicle-log:not(.expanded) {
+  border-color: rgba(229, 184, 105, calc(0.48 + 0.32 * var(--chronicle-vis, 0)));
+}
+
+#hud-root[data-chronicle-near='1'] .bottom-hud:not(.combat-mode-active) .chronicle-log:not(.expanded) .chronicle-toggle-btn {
+  opacity: 1;
+  background: linear-gradient(180deg, rgba(68, 52, 28, 0.96) 0%, rgba(36, 27, 15, 0.96) 100%);
+  border-color: #e5b869;
+  color: #fff6df;
+  box-shadow:
+    0 4px 16px rgba(229, 184, 105, 0.42),
+    0 2px 6px rgba(0, 0, 0, 0.65);
+  transform: translateY(-1px);
+}
+
+#hud-root[data-chronicle-near='1'] .bottom-hud:not(.combat-mode-active) .chronicle-log:not(.expanded) .chronicle-toggle-btn::after {
+  animation: chronicleExpandGlint 0.68s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+#hud-root .bottom-hud:not(.combat-mode-active) .chronicle-log:not(.expanded) .chronicle-toggle-btn:hover,
+#hud-root .bottom-hud:not(.combat-mode-active) .chronicle-log:not(.expanded) .chronicle-toggle-btn:focus-visible {
+  opacity: 1;
+  background: linear-gradient(180deg, rgba(88, 67, 35, 0.98) 0%, rgba(48, 36, 20, 0.98) 100%);
+  border-color: #f6d38b;
+  color: #ffffff;
+  outline: 2px solid rgba(246, 211, 139, 0.45);
+  outline-offset: 2px;
+}
+
+/* Keep the battlefield & top-center combat banner unobstructed during active combat */
+body:has(.combat-mode-active) .ostrze-hub-bar {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+body:has(.combat-mode-active) .ostrze-toast-stack {
+  bottom: 168px;
+}
+
+/* Expanded Chronicle: primary foreground drawer positioned cleanly below .ostrze-hub-bar */
+#hud-root .chronicle-log.expanded {
+  pointer-events: auto;
+  position: fixed;
+  top: var(--chronicle-expanded-top, 76px);
+  bottom: 14px;
+  right: 16px;
+  left: auto;
+  width: min(460px, calc(100vw - 32px));
+  z-index: 960;
+  background: linear-gradient(180deg, rgba(16, 20, 30, 0.98) 0%, rgba(10, 13, 20, 0.98) 100%);
+  border: 1px solid rgba(229, 184, 105, 0.72);
+  box-shadow:
+    0 22px 54px rgba(0, 0, 0, 0.88),
+    0 4px 18px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  animation: chronicleExpandIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#hud-root .chronicle-log.expanded .log-header-title,
+#hud-root .chronicle-log.expanded .log-entries,
+#hud-root .chronicle-log.expanded .combat-log-tabs {
+  opacity: 1;
+}
+
+@keyframes chronicleExpandGlint {
+  0% {
+    left: -135%;
+    opacity: 0.95;
+  }
+  100% {
+    left: 145%;
+    opacity: 0;
+  }
+}
+
+@keyframes chronicleExpandIn {
+  from {
+    opacity: 0.72;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #hud-root[data-chronicle-near='1'] .chronicle-log:not(.expanded) .chronicle-toggle-btn::after {
+    animation: none;
+  }
+  #hud-root .chronicle-log.expanded {
+    animation: none;
+  }
+}

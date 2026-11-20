@@ -16,6 +16,7 @@ import {
   type OstrzeSavePayload
 } from './game/state/saveManager';
 import { OstrzeModalUi } from './game/ui/OstrzeModalUi';
+import { ChronicleUxController } from './game/ui/chronicleUxController';
 
 async function bootstrapOstrze(): Promise<void> {
   window.addEventListener('contextmenu', (e) => {
@@ -38,10 +39,12 @@ async function bootstrapOstrze(): Promise<void> {
 
   let hud: HudOverlay | null = null;
   let inspector: InspectorPanel | null = null;
+  const chronicleUx = new ChronicleUxController(hudRoot, engine);
 
   const refreshUi = (): void => {
     hud?.render();
     inspector?.render();
+    chronicleUx.sync();
   };
 
   const sceneView = new IsoSceneView(engine, refreshUi);
@@ -69,8 +72,13 @@ async function bootstrapOstrze(): Promise<void> {
     '.ostrze-toast',
     '.top-bar',
     '.hero-card',
-    '.chronicle-log',
+    '.chronicle-log.expanded',
+    '.chronicle-log .chronicle-toggle-btn',
+    '.chronicle-log .combat-tab-btn',
+    '.chronicle-log .combat-report-tag-btn',
+    '.combat-top-banner',
     '.combat-log-dock',
+    '.combat-live-log',
     '.combat-tactical-bar',
     '.inventory-drawer',
     '.inspector-card',

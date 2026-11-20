@@ -4,6 +4,7 @@ import {
 } from '@ulf/assets/terrainBlending';
 import { describe, expect, it } from 'vitest';
 import { OstrzeEngineState } from '../src/engine-bridge/OstrzeEngineState';
+import { getPropVisualTransform } from '../src/game/assets/buildingScaling';
 import {
   createKamiennaPrzeleczScene,
   createLesniczowkaScene,
@@ -161,5 +162,46 @@ describe('OstrzeEngineState bridge', () => {
     expect(
       brzezina.map.props.some((p) => (p.kind === 'pine_tree' || p.kind === 'ancient_oak') && p.blocksSight)
     ).toBe(true);
+  });
+
+  it('scales buildings and assigns architectural variants according to their purpose', () => {
+    const brzezina = createBrzezinaYardScene();
+    const wilczyBrod = createWilczyBrodScene();
+    const staryMlyn = createStaryMlynScene();
+    const lesniczowka = createLesniczowkaScene();
+
+    const school = brzezina.map.props.find((p) => p.id === 'brzezina_dwor_szkoly')!;
+    const schoolTower = brzezina.map.props.find((p) => p.id === 'brzezina_baszta_szkoly')!;
+    const dorm1 = brzezina.map.props.find((p) => p.id === 'brzezina_dormitorium_1')!;
+    const inn = wilczyBrod.map.props.find((p) => p.id === 'wb_karczma')!;
+    const barracks = wilczyBrod.map.props.find((p) => p.id === 'wb_koszary_straznicy')!;
+    const smithy = wilczyBrod.map.props.find((p) => p.id === 'wb_kuznia')!;
+    const peasantCottage = wilczyBrod.map.props.find((p) => p.id === 'wb_chata_osadnikow_1')!;
+    const watermill = staryMlyn.map.props.find((p) => p.id === 'mlyn_budynek')!;
+    const shed = lesniczowka.map.props.find((p) => p.id === 'lesniczowka_szopa')!;
+
+    // Grand institutions & public halls use Row 3 (variants 12..15) manor sprites, never tiny Row 0 shacks
+    expect(school.variant).toBeGreaterThanOrEqual(12);
+    expect(inn.variant).toBeGreaterThanOrEqual(12);
+    expect(barracks.variant).toBeGreaterThanOrEqual(12);
+    expect(watermill.variant).toBeGreaterThanOrEqual(12);
+    // Smithy uses a medium stone-chimney building, never a Row 0 shed
+    expect(smithy.variant).toBeGreaterThanOrEqual(4);
+    // Shed genuinely uses a compact Row 0 shed sprite
+    expect(shed.variant).toBeLessThan(4);
+
+    // Visual scale hierarchy: School > Inn/Barracks/Watermill > Dormitory > Village Cottage > Shed
+    const schoolScale = getPropVisualTransform(school).scaleX;
+    const innScale = getPropVisualTransform(inn).scaleX;
+    const dormScale = getPropVisualTransform(dorm1).scaleX;
+    const cottageScale = getPropVisualTransform(peasantCottage).scaleX;
+    const shedScale = getPropVisualTransform(shed).scaleX;
+    const towerScale = getPropVisualTransform(schoolTower).scaleX;
+
+    expect(schoolScale).toBeGreaterThan(innScale);
+    expect(innScale).toBeGreaterThan(dormScale);
+    expect(dormScale).toBeGreaterThan(cottageScale);
+    expect(cottageScale).toBeGreaterThan(shedScale);
+    expect(towerScale).toBeGreaterThan(cottageScale);
   });
 });

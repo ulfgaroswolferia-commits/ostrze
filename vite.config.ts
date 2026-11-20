@@ -24,6 +24,38 @@ function ostrzeEnginePatchesPlugin(): Plugin {
           map: null
         };
       }
+      if (norm.endsWith('/renderer/isoSceneView.ts')) {
+        const injectedImport =
+          "import { getPropVisualTransform } from '@ostrze/game/assets/buildingScaling';\n";
+        const injectedBody = code
+          .replace(
+            'const scr = gridToScreen(fp.rx + 0.5, fp.ry + 0.5, prop.z);',
+            `const vt = getPropVisualTransform(prop);
+      const scr = vt.centerOnFootprint
+        ? gridToScreen(fp.rx + fp.width * 0.5, fp.ry + fp.height * 0.5, prop.z)
+        : gridToScreen(fp.rx + 0.5, fp.ry + 0.5, prop.z);`
+          )
+          .replace(
+            'const baseRx = Math.max(16, (fp.width + fp.height) * 14);',
+            'const baseRx = Math.max(16, (fp.width + fp.height) * 14 * vt.aoScale);'
+          )
+          .replace(
+            'const baseRy = Math.max(8, (fp.width + fp.height) * 7);',
+            'const baseRy = Math.max(8, (fp.width + fp.height) * 7 * vt.aoScale);'
+          )
+          .replace(
+            'sp.position.set(scr.x, scr.y);',
+            'sp.position.set(scr.x, scr.y + vt.offsetY);\n          if (vt.scaleX !== 1 || vt.scaleY !== 1) {\n            sp.scale.set(vt.scaleX, vt.scaleY);\n          }'
+          )
+          .replace(
+            "'.top-bar button, .hero-card, .chronicle-log, .combat-top-banner, .combat-tactical-bar, .combat-live-log, .inventory-drawer, .inspector-card, .inspector-expand-btn, .dialogue-modal'",
+            "'.top-bar button, .hero-card, .chronicle-log.expanded, .chronicle-log .chronicle-toggle-btn, .chronicle-log .combat-tab-btn, .chronicle-log .combat-report-tag-btn, .combat-top-banner, .combat-tactical-bar, .combat-live-log, .inventory-drawer, .inspector-card, .inspector-expand-btn, .dialogue-modal'"
+          );
+        return {
+          code: injectedImport + injectedBody,
+          map: null
+        };
+      }
       return null;
     }
   };
