@@ -922,6 +922,38 @@ export function createTraktZasadzkaScene(): CustomSceneConfig {
       attack: 5,
       defense: 11,
       xpReward: 40
+    }),
+    makeNpc({
+      id: 'npc_trakt_skarimir',
+      seed: 104,
+      name: 'Skarimir',
+      title: 'Towarzysz z Brzeziny',
+      x: 10,
+      y: 16,
+      z: tiles[16][10].z,
+      direction: 2,
+      mainHand: 'weapon_sunblade_longsword'
+    }),
+    makeNpc({
+      id: 'npc_trakt_ragnoslawa',
+      seed: 105,
+      name: 'Ragnosława',
+      title: 'Towarzyszka z Brzeziny',
+      x: 14,
+      y: 15,
+      z: tiles[15][14].z,
+      direction: 6,
+      mainHand: 'weapon_astral_staff'
+    }),
+    makeNpc({
+      id: 'npc_trakt_wojmir',
+      seed: 106,
+      name: 'Wojmir Cienki',
+      title: 'Towarzysz z Brzeziny',
+      x: 13,
+      y: 17,
+      z: tiles[17][13].z,
+      direction: 0
     })
   ];
 
@@ -1186,6 +1218,38 @@ export function createUroczyskoNocScene(): CustomSceneConfig {
       attack: 16,
       defense: 24,
       xpReward: 120
+    }),
+    makeNpc({
+      id: 'npc_noc_skarimir',
+      seed: 104,
+      name: 'Skarimir',
+      title: 'Osłania obóz w burzy iskier',
+      x: 8,
+      y: 13,
+      z: tiles[13][8].z,
+      direction: 1,
+      mainHand: 'weapon_sunblade_longsword'
+    }),
+    makeNpc({
+      id: 'npc_noc_ragnoslawa',
+      seed: 105,
+      name: 'Ragnosława',
+      title: 'Staje z włócznią przeciw zmorom',
+      x: 12,
+      y: 13,
+      z: tiles[13][12].z,
+      direction: 7,
+      mainHand: 'weapon_astral_staff'
+    }),
+    makeNpc({
+      id: 'npc_noc_wojmir',
+      seed: 106,
+      name: 'Wojmir Cienki',
+      title: 'Cofnięty pod skraj uroczyska',
+      x: 10,
+      y: 15,
+      z: tiles[15][10].z,
+      direction: 0
     })
   ];
 
@@ -1423,9 +1487,44 @@ export function createPobojowiskoSwitScene(): CustomSceneConfig {
 
   const pobojowiskoActors: ActorEntity[] = [
     makeNpc({
+      id: 'npc_pobojowisko_skarimir',
+      seed: 104,
+      name: 'Poległy Skarimir',
+      title: 'Zbadaj ciało Skarimira',
+      x: 8,
+      y: 13,
+      z: tiles[13][8].z,
+      direction: 4,
+      torso: 'torso_przeszywanica',
+      mainHand: 'weapon_sunblade_longsword'
+    }),
+    makeNpc({
+      id: 'npc_pobojowisko_ragnoslawa',
+      seed: 105,
+      name: 'Poległa Ragnosława',
+      title: 'Zbadaj ciało Ragnosławy',
+      x: 10,
+      y: 14,
+      z: tiles[14][10].z,
+      direction: 4,
+      torso: 'torso_przeszywanica',
+      mainHand: 'weapon_astral_staff'
+    }),
+    makeNpc({
+      id: 'npc_pobojowisko_wojmir',
+      seed: 106,
+      name: 'Poległy Wojmir',
+      title: 'Zbadaj ciało Wojmira',
+      x: 8,
+      y: 11,
+      z: tiles[11][8].z,
+      direction: 4,
+      torso: 'torso_slavic_giezlo'
+    }),
+    makeNpc({
       id: 'npc_pobojowisko_slad',
       seed: 350,
-      name: 'Polegli Towarzysze i Tobół',
+      name: 'Porzucony Tobół Przewodnika',
       title: 'Zbadaj pobojowisko o świcie',
       x: 9,
       y: 12,

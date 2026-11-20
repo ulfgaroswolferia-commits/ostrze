@@ -227,12 +227,42 @@ export class PrologueDirector {
         break;
       case 'brzezina_towarzysze':
         this.engine.setNpcMarker('npc_dobrogost', '💬 Kram (opcjonalnie)');
-        this.engine.setNpcMarker('npc_skarimir', '❗ Towarzysze u bramy');
-        this.engine.setNpcMarker('npc_ragnoslawa', '❗ Porozmawiaj');
-        this.engine.setNpcMarker('npc_wojmir', '❗ Porozmawiaj');
+        this.engine.setNpcMarker(
+          'npc_skarimir',
+          this.state.flags.przysluga_skarimir_start && !this.state.flags.przysluga_skarimir_done
+            ? '❗ Skarimir (słonina)'
+            : '❗ Skarimir'
+        );
+        this.engine.setNpcMarker(
+          'npc_ragnoslawa',
+          this.state.flags.przysluga_ragnoslawa_start && !this.state.flags.przysluga_ragnoslawa_done
+            ? '❗ Ragnosława (pieczęć)'
+            : '❗ Ragnosława'
+        );
+        this.engine.setNpcMarker(
+          'npc_wojmir',
+          this.state.flags.przysluga_wojmir_start && !this.state.flags.przysluga_wojmir_done
+            ? '❗ Wojmir (sakwa)'
+            : '❗ Wojmir'
+        );
+        if (this.state.flags.przysluga_ragnoslawa_start && !this.state.flags.ragnoslawa_trop_odkryty) {
+          this.engine.setNpcMarker('npc_radogost', '💬 Zapytaj o pieczęć');
+        }
         break;
       case 'brzezina_gotowy_do_wymarszu':
         this.engine.setNpcMarker('npc_dobrogost', '💬 Kram');
+        if (!this.state.flags.tow_skarimir || (this.state.flags.przysluga_skarimir_start && !this.state.flags.przysluga_skarimir_done)) {
+          this.engine.setNpcMarker('npc_skarimir', '💬 Skarimir');
+        }
+        if (!this.state.flags.tow_ragnoslawa || (this.state.flags.przysluga_ragnoslawa_start && !this.state.flags.przysluga_ragnoslawa_done)) {
+          this.engine.setNpcMarker('npc_ragnoslawa', '💬 Ragnosława');
+        }
+        if (!this.state.flags.tow_wojmir || (this.state.flags.przysluga_wojmir_start && !this.state.flags.przysluga_wojmir_done)) {
+          this.engine.setNpcMarker('npc_wojmir', '💬 Wojmir');
+        }
+        if (this.state.flags.przysluga_ragnoslawa_start && !this.state.flags.ragnoslawa_trop_odkryty) {
+          this.engine.setNpcMarker('npc_radogost', '💬 Zapytaj o pieczęć');
+        }
         break;
       case 'trakt_bandyci':
         this.engine.setNpcMarker('enemy_bandyta_1', '⚔️ Zasadzka!');
@@ -240,6 +270,15 @@ export class PrologueDirector {
         break;
       case 'trakt_ognisko':
         this.engine.setNpcMarker('npc_trakt_ognisko', '❗ Ognisko — Porozmawiaj');
+        if (!this.state.flags.og_skarimir) {
+          this.engine.setNpcMarker('npc_trakt_skarimir', '💬 Skarimir');
+        }
+        if (!this.state.flags.og_ragnoslawa) {
+          this.engine.setNpcMarker('npc_trakt_ragnoslawa', '💬 Ragnosława');
+        }
+        if (!this.state.flags.og_wojmir) {
+          this.engine.setNpcMarker('npc_trakt_wojmir', '💬 Wojmir');
+        }
         break;
       case 'noc_upiory':
         this.engine.setNpcMarker('enemy_upior_1', '☠️ Upiór Nocy');
@@ -250,9 +289,27 @@ export class PrologueDirector {
         break;
       case 'pobojowisko':
         this.engine.setNpcMarker('npc_pobojowisko_slad', '❗ Zbadaj pobojowisko');
+        if (!this.state.flags.pobojowisko_skarimir) {
+          this.engine.setNpcMarker('npc_pobojowisko_skarimir', '🕯️ Skarimir');
+        }
+        if (!this.state.flags.pobojowisko_ragnoslawa) {
+          this.engine.setNpcMarker('npc_pobojowisko_ragnoslawa', '🕯️ Ragnosława');
+        }
+        if (!this.state.flags.pobojowisko_wojmir) {
+          this.engine.setNpcMarker('npc_pobojowisko_wojmir', '🕯️ Wojmir');
+        }
         break;
       case 'rozdroze':
         this.engine.setNpcMarker('npc_rozdroze_szlak', '❗ Rozdroże — Wybierz drogę');
+        if (!this.state.flags.pobojowisko_skarimir) {
+          this.engine.setNpcMarker('npc_pobojowisko_skarimir', '🕯️ Skarimir');
+        }
+        if (!this.state.flags.pobojowisko_ragnoslawa) {
+          this.engine.setNpcMarker('npc_pobojowisko_ragnoslawa', '🕯️ Ragnosława');
+        }
+        if (!this.state.flags.pobojowisko_wojmir) {
+          this.engine.setNpcMarker('npc_pobojowisko_wojmir', '🕯️ Wojmir');
+        }
         break;
       default:
         break;
@@ -311,12 +368,22 @@ export class PrologueDirector {
         });
         break;
       case 'brzezina_towarzysze':
-        questsLine = 'Cel: Podejdź do towarzyszy przy południowej bramie (❗ Skarimir / Ragnosława / Wojmir). Możesz też zajrzeć do Kwatermistrza Dobrogosta.';
+        questsLine = 'Cel: Porozmawiaj z towarzyszami przy bramie (Skarimir, Ragnosława, Wojmir) i pomóż im przed wymarszem lub zajrzyj do Dobrogosta.';
         actions.push(
           {
             id: 'walk_skarimir',
-            label: '🚶 Towarzysze przy bramie',
+            label: '💬 Skarimir',
             onClick: () => this.engine.commandTalkToNpc('npc_skarimir')
+          },
+          {
+            id: 'walk_ragnoslawa',
+            label: '💬 Ragnosława',
+            onClick: () => this.engine.commandTalkToNpc('npc_ragnoslawa')
+          },
+          {
+            id: 'walk_wojmir',
+            label: '💬 Wojmir',
+            onClick: () => this.engine.commandTalkToNpc('npc_wojmir')
           },
           {
             id: 'walk_dobrogost',
@@ -326,12 +393,27 @@ export class PrologueDirector {
         );
         break;
       case 'brzezina_gotowy_do_wymarszu':
-        questsLine = 'Cel: Podejdź do drogowskazu przy bramie lub ruszaj na trakt ku Wilczemu Brodowi.';
+        questsLine = 'Cel: Możesz jeszcze porozmawiać z towarzyszami i dokończyć ich przysługi albo ruszyć na trakt ku Wilczemu Brodowi.';
         actions.push(
           {
             id: 'march_out',
             label: '🚶 Wymarsz na trakt (Dzień 1)',
             onClick: () => this.beginMarchDay1()
+          },
+          {
+            id: 'walk_skarimir_ready',
+            label: '💬 Skarimir',
+            onClick: () => this.engine.commandTalkToNpc('npc_skarimir')
+          },
+          {
+            id: 'walk_ragnoslawa_ready',
+            label: '💬 Ragnosława',
+            onClick: () => this.engine.commandTalkToNpc('npc_ragnoslawa')
+          },
+          {
+            id: 'walk_wojmir_ready',
+            label: '💬 Wojmir',
+            onClick: () => this.engine.commandTalkToNpc('npc_wojmir')
           },
           {
             id: 'walk_dobrogost_ready',
@@ -344,10 +426,31 @@ export class PrologueDirector {
         questsLine = 'Cel: Zasadzka na gościńcu! Podejdź do bandytów (⚔️) i odeprzyj atak.';
         break;
       case 'trakt_ognisko':
-        questsLine = 'Cel: Podejdź do Skarimira przy Ognisku (❗), zanim zapadnie zmrok.';
+        questsLine = 'Cel: Porozmawiaj z towarzyszami przy ognisku, a gdy będziesz gotów, kliknij Ognisko (❗), by ruszyć dalej przed zmrokiem.';
+        if (!this.state.flags.og_skarimir) {
+          actions.push({
+            id: 'walk_trakt_skarimir',
+            label: '💬 Skarimir',
+            onClick: () => this.engine.commandTalkToNpc('npc_trakt_skarimir')
+          });
+        }
+        if (!this.state.flags.og_ragnoslawa) {
+          actions.push({
+            id: 'walk_trakt_ragnoslawa',
+            label: '💬 Ragnosława',
+            onClick: () => this.engine.commandTalkToNpc('npc_trakt_ragnoslawa')
+          });
+        }
+        if (!this.state.flags.og_wojmir) {
+          actions.push({
+            id: 'walk_trakt_wojmir',
+            label: '💬 Wojmir',
+            onClick: () => this.engine.commandTalkToNpc('npc_trakt_wojmir')
+          });
+        }
         actions.push({
           id: 'walk_ognisko',
-          label: '🚶 Skarimir przy ognisku',
+          label: '🔥 Ognisko — Ruszaj dalej',
           onClick: () => this.engine.commandTalkToNpc('npc_trakt_ognisko')
         });
         break;
@@ -363,10 +466,31 @@ export class PrologueDirector {
         });
         break;
       case 'pobojowisko':
-        questsLine = 'Cel: Podejdź do śladów poległych towarzyszy i tobołu przewodnika (❗).';
+        questsLine = 'Cel: Pożegnaj poległych towarzyszy (🕯️) i zbadaj porzucony tobół przewodnika (❗).';
+        if (!this.state.flags.pobojowisko_skarimir) {
+          actions.push({
+            id: 'walk_pob_skarimir',
+            label: '🕯️ Skarimir',
+            onClick: () => this.engine.commandTalkToNpc('npc_pobojowisko_skarimir')
+          });
+        }
+        if (!this.state.flags.pobojowisko_ragnoslawa) {
+          actions.push({
+            id: 'walk_pob_ragnoslawa',
+            label: '🕯️ Ragnosława',
+            onClick: () => this.engine.commandTalkToNpc('npc_pobojowisko_ragnoslawa')
+          });
+        }
+        if (!this.state.flags.pobojowisko_wojmir) {
+          actions.push({
+            id: 'walk_pob_wojmir',
+            label: '🕯️ Wojmir',
+            onClick: () => this.engine.commandTalkToNpc('npc_pobojowisko_wojmir')
+          });
+        }
         actions.push({
           id: 'walk_pobojowisko',
-          label: '🚶 Ślady na pobojowisku',
+          label: '🚶 Tobół przewodnika',
           onClick: () => this.engine.commandTalkToNpc('npc_pobojowisko_slad')
         });
         break;
@@ -444,11 +568,30 @@ export class PrologueDirector {
       return true;
     }
     if (propId === 'brzezina_ognisko') {
-      this.engine.addLog('🔥 Ognisko na dziedzińcu Szkoły Ostrzy. Z kotła pachnie kaszą bez omasty.', 'info');
+      const hasBacon = this.state.inventory.items.some((i) => i.id === 'slonina_na_droge' && i.qty > 0);
+      if (
+        (this.phase === 'brzezina_towarzysze' || this.phase === 'brzezina_gotowy_do_wymarszu') &&
+        this.state.flags.przysluga_skarimir_start &&
+        !this.state.flags.przysluga_skarimir_done &&
+        !hasBacon
+      ) {
+        this.runDialogue('brzezina_skarimir_kociol', () => this.refreshMarkersAndTracker());
+      } else {
+        this.engine.addLog('🔥 Ognisko na dziedzińcu Szkoły Ostrzy. Z kotła pachnie kaszą bez omasty.', 'info');
+      }
       return true;
     }
     if (propId === 'brzezina_studnia') {
-      this.engine.addLog('💧 Studnia przy murze szkoły. Zimna woda zmywa pot po musztrze.', 'info');
+      if (
+        (this.phase === 'brzezina_towarzysze' || this.phase === 'brzezina_gotowy_do_wymarszu') &&
+        this.state.flags.przysluga_wojmir_start &&
+        !this.state.flags.wojmir_tobol_uratowany &&
+        !this.state.flags.przysluga_wojmir_done
+      ) {
+        this.runDialogue('brzezina_wojmir_studnia', () => this.refreshMarkersAndTracker());
+      } else {
+        this.engine.addLog('💧 Studnia przy murze szkoły. Zimna woda zmywa pot po musztrze.', 'info');
+      }
       return true;
     }
     if (propId === 'trakt_ognisko' && this.phase === 'trakt_ognisko') {
@@ -525,6 +668,14 @@ export class PrologueDirector {
         this.engine.startCombatWithEnemy('npc_radogost');
         return true;
       }
+      if (
+        (this.phase === 'brzezina_towarzysze' || this.phase === 'brzezina_gotowy_do_wymarszu') &&
+        this.state.flags.przysluga_ragnoslawa_start &&
+        !this.state.flags.ragnoslawa_trop_odkryty
+      ) {
+        this.runDialogue('brzezina_ragnoslawa_trop', () => this.refreshMarkersAndTracker());
+        return true;
+      }
       this.engine.addLog('Instruktor Radogost ociera pot z czoła: „Jeszcze się wyrobisz.”', 'info');
       return true;
     }
@@ -541,6 +692,14 @@ export class PrologueDirector {
             'important'
           );
         });
+        return true;
+      }
+      if (
+        (this.phase === 'brzezina_towarzysze' || this.phase === 'brzezina_gotowy_do_wymarszu') &&
+        this.state.flags.przysluga_ragnoslawa_start &&
+        !this.state.flags.ragnoslawa_trop_odkryty
+      ) {
+        this.runDialogue('brzezina_ragnoslawa_trop', () => this.refreshMarkersAndTracker());
         return true;
       }
       this.engine.addLog('Cesarski Kurier poprawia siodło i nie ma już nic do dodania.', 'info');
@@ -569,32 +728,49 @@ export class PrologueDirector {
       return true;
     }
 
-    // 5. Brzezina: Towarzysze przy bramie
+    // 5. Brzezina: Towarzysze przy bramie (dwuetapowo: reakcje przed delegacją, potem 1-na-1 + przysługi)
     if (npcId === 'npc_skarimir' || npcId === 'npc_ragnoslawa' || npcId === 'npc_wojmir') {
-      if (this.phase === 'brzezina_towarzysze') {
-        advanceMinutes(this.state, 20, this.data);
-        this.runDialogue('towarzysze', () => {
-          this.phase = 'brzezina_gotowy_do_wymarszu';
+      if (this.phase === 'brzezina_towarzysze' || this.phase === 'brzezina_gotowy_do_wymarszu') {
+        const dialogueMap: Record<string, string> = {
+          npc_skarimir: 'brzezina_skarimir',
+          npc_ragnoslawa: 'brzezina_ragnoslawa',
+          npc_wojmir: 'brzezina_wojmir'
+        };
+        advanceMinutes(this.state, 10, this.data);
+        this.runDialogue(dialogueMap[npcId], () => {
+          if (this.phase === 'brzezina_towarzysze') {
+            this.phase = 'brzezina_gotowy_do_wymarszu';
+            this.engine.addLog(
+              '🚶 Możesz jeszcze porozmawiać z resztą towarzyszy i pomóc im w Brzezinie, albo ruszyć na trakt przy bramie.',
+              'important'
+            );
+          }
           this.refreshMarkersAndTracker();
-          this.engine.addLog(
-            '🚶 Towarzysze gotowi! Kliknij drogowskaz przy bramie lub przycisk Wymarszu.',
-            'important'
-          );
         });
         return true;
       }
-      if (this.phase === 'brzezina_gotowy_do_wymarszu') {
-        this.engine.addLog('Towarzysze czekają przy bramie gotowi do wymarszu.', 'info');
-        return true;
-      }
-      this.engine.addLog(
-        '⛔ Najpierw porozmawiaj z Mistrzem Gnieworadem i Kurierem — nie pomijaj rozkazów!',
-        'critical'
-      );
+      this.logPreDelegationCompanionBark(npcId);
       return true;
     }
 
-    // 6. Trakt: Ognisko po bandytach
+    // 6. Trakt: Indywidualne rozmowy z towarzyszami przy ognisku
+    if (
+      this.phase === 'trakt_ognisko' &&
+      (npcId === 'npc_trakt_skarimir' || npcId === 'npc_trakt_ragnoslawa' || npcId === 'npc_trakt_wojmir')
+    ) {
+      const campMap: Record<string, string> = {
+        npc_trakt_skarimir: 'trakt_ognisko_skarimir',
+        npc_trakt_ragnoslawa: 'trakt_ognisko_ragnoslawa',
+        npc_trakt_wojmir: 'trakt_ognisko_wojmir'
+      };
+      advanceMinutes(this.state, 10, this.data);
+      this.runDialogue(campMap[npcId], () => {
+        this.refreshMarkersAndTracker();
+      });
+      return true;
+    }
+
+    // 6b. Trakt: Ognisko po bandytach (domknięcie popasu i przejście do Nocy Upiorów)
     if (npcId === 'npc_trakt_ognisko' && this.phase === 'trakt_ognisko') {
       advanceMinutes(this.state, 30, this.data);
       this.runDialogue('ognisko', () => this.beginNightOfWraiths());
@@ -612,7 +788,25 @@ export class PrologueDirector {
       return true;
     }
 
-    // 8. Pobojowisko o Świcie
+    // 8. Pobojowisko o Świcie: indywidualne badanie poległych towarzyszy
+    if (
+      (this.phase === 'pobojowisko' || this.phase === 'rozdroze') &&
+      (npcId === 'npc_pobojowisko_skarimir' ||
+        npcId === 'npc_pobojowisko_ragnoslawa' ||
+        npcId === 'npc_pobojowisko_wojmir')
+    ) {
+      const fallenMap: Record<string, string> = {
+        npc_pobojowisko_skarimir: 'pobojowisko_skarimir',
+        npc_pobojowisko_ragnoslawa: 'pobojowisko_ragnoslawa',
+        npc_pobojowisko_wojmir: 'pobojowisko_wojmir'
+      };
+      this.runDialogue(fallenMap[npcId], () => {
+        this.refreshMarkersAndTracker();
+      });
+      return true;
+    }
+
+    // 8b. Pobojowisko o Świcie: tobół przewodnika / pozostałe ślady
     if (npcId === 'npc_pobojowisko_slad' && this.phase === 'pobojowisko') {
       this.runDialogue('pobojowisko', () => {
         this.phase = 'rozdroze';
@@ -717,7 +911,10 @@ export class PrologueDirector {
     if (this.phase === 'noc_upiory') {
       this.phase = 'noc_istota';
       for (let i = this.engine.npcs.length - 1; i >= 0; i--) {
-        if (this.engine.npcs[i].id.startsWith('enemy_upior_')) {
+        if (
+          this.engine.npcs[i].id.startsWith('enemy_upior_') ||
+          this.engine.npcs[i].id.startsWith('npc_noc_')
+        ) {
           this.engine.npcs.splice(i, 1);
         }
       }
@@ -821,6 +1018,7 @@ export class PrologueDirector {
       this.refreshMarkersAndTracker();
       this.engine.addLog('⚔️ Zasadzka bandytów na trakcie! Podejdź do nich lub kliknij wroga!', 'combat');
       this.engine.startCombatWithEnemy('enemy_bandyta_1');
+      this.applyCompanionAmbushSupport();
       this.onUiRefresh?.();
     };
 
@@ -854,6 +1052,7 @@ export class PrologueDirector {
     const startWraithCombat = (): void => {
       this.refreshMarkersAndTracker();
       this.engine.addLog('☠️ Noc Upiorów — Burza Iskier rozrywa niebo!', 'critical');
+      this.logNightOfWraithsCompanionCries();
       this.engine.startCombatWithEnemy('enemy_upior_1');
       this.onUiRefresh?.();
     };
@@ -961,6 +1160,120 @@ export class PrologueDirector {
     }
     this.syncHeroTo25D();
     this.refreshMarkersAndTracker();
+  }
+
+  private logPreDelegationCompanionBark(npcId: string): void {
+    const wonSparing = this.state.flags.combat_demo_sparing_walka_wygrana === true;
+    const lostSparing = this.state.flags.combat_demo_sparing_walka_porazka === true;
+
+    if (npcId === 'npc_skarimir') {
+      if (wonSparing) {
+        this.engine.addLog(
+          'Skarimir gwiżdże z uznaniem: „Rozłożyłeś Radogosta! Stawiam miskę kaszy, że Gnieworad ma już cię na oku.”',
+          'info'
+        );
+      } else if (lostSparing) {
+        this.engine.addLog(
+          'Skarimir klepie cię po ramieniu: „Nie łam się, mnie Radogost wczoraj wbił w błoto po same uszy!”',
+          'info'
+        );
+      } else {
+        this.engine.addLog(
+          'Skarimir podrzuca kość do gry: „Najpierw załatw sprawę z Gnieworadem i Radogostem, potem pogadamy przy kotle!”',
+          'info'
+        );
+      }
+      return;
+    }
+
+    if (npcId === 'npc_ragnoslawa') {
+      if (wonSparing) {
+        this.engine.addLog(
+          'Ragnosława kiwa krótko głową: „Niezła praca nóg na sparingu. Zobaczymy, co przyniósł ten kurier w czerwieni.”',
+          'info'
+        );
+      } else if (lostSparing) {
+        this.engine.addLog(
+          'Ragnosława opiera się o włócznię: „Radogost bije za mocno jak na ćwiczenia. Uważaj na ten list od kuriera — coś tu śmierdzi.”',
+          'info'
+        );
+      } else {
+        this.engine.addLog(
+          'Ragnosława patrzy na plac: „Idź najpierw do Mistrza Gnieworada. Nie lubię, gdy w szkole jest tak cicho.”',
+          'info'
+        );
+      }
+      return;
+    }
+
+    if (wonSparing) {
+      this.engine.addLog(
+        'Wojmir Cienki notuje coś pospiesznie: „Niesamowite, jak wybroniłeś cięcie Radogosta! Słuchaj, ten cesarski posłaniec chyba czeka na placu.”',
+        'info'
+      );
+    } else if (lostSparing) {
+      this.engine.addLog(
+        'Wojmir Cienki podaje ci szmatkę: „Wszystko w porządku? Radogost nie ma litości... ale zaraz, czy to nie cesarski kurier wjechał na dziedziniec?”',
+        'info'
+      );
+    } else {
+      this.engine.addLog(
+        'Wojmir Cienki poprawia rzemienie: „Mistrz Gnieworad wzywał cię na środek placu. Lepiej go nie drażnić!”',
+        'info'
+      );
+    }
+  }
+
+  private applyCompanionAmbushSupport(): void {
+    const skarimirBond = (this.state.vars.wiez_skarimir ?? 0) >= 2 || this.state.flags.przysluga_skarimir_done;
+    const ragnoslawaBond = (this.state.vars.wiez_ragnoslawa ?? 0) >= 2 || this.state.flags.przysluga_ragnoslawa_done;
+    const wojmirBond = (this.state.vars.wiez_wojmir ?? 0) >= 2 || this.state.flags.przysluga_wojmir_done;
+
+    if (skarimirBond && this.engine.player.combat) {
+      this.engine.player.combat.ap += 1;
+      this.state.flags.trakt_wsparcie_skarimir = true;
+      this.engine.addLog(
+        '🤝 Skarimir ciska kamieniem w krzaki, odwracając uwagę zbójów (+1 AP w pierwszej turze)!',
+        'important'
+      );
+    }
+    if (ragnoslawaBond && this.engine.player.combat) {
+      this.engine.player.combat.customArmorBonus = (this.engine.player.combat.customArmorBonus ?? 0) + 2;
+      this.state.flags.trakt_wsparcie_ragnoslawa = true;
+      this.engine.addLog(
+        '🤝 Ragnosława osłania twoją flankę włócznią (+2 do pancerza na czas zasadzki)!',
+        'important'
+      );
+    }
+    if (wojmirBond) {
+      const firstBandit = this.engine.npcs.find((n) => n.id === 'enemy_bandyta_1');
+      if (firstBandit?.combat) {
+        firstBandit.combat.hp = Math.max(1, firstBandit.combat.hp - 4);
+      }
+      this.state.flags.trakt_wsparcie_wojmir = true;
+      this.engine.addLog(
+        '🤝 Wojmir wypatrzył zasadzkę ułamek sekundy wcześniej — pierwszy bandyta traci impet (-4 HP na start)!',
+        'important'
+      );
+    }
+  }
+
+  private logNightOfWraithsCompanionCries(): void {
+    if ((this.state.vars.wiez_skarimir ?? 0) >= 2) {
+      this.engine.addLog('Skarimir: „Nie dam cię zajść z boku! Trzymaj się, druhu!”', 'combat');
+    } else {
+      this.engine.addLog('Skarimir: „Co to za cholerstwo?! Ostrza przez nie przechodzą!”', 'combat');
+    }
+    if ((this.state.vars.wiez_ragnoslawa ?? 0) >= 2) {
+      this.engine.addLog('Ragnosława: „Zwieraj szyk! Jeszcze wisisz mi to piwo w stolicy!”', 'combat');
+    } else {
+      this.engine.addLog('Ragnosława: „Włócznie naprzód! Nie cofać się!”', 'combat');
+    }
+    if ((this.state.vars.wiez_wojmir ?? 0) >= 2) {
+      this.engine.addLog('Wojmir Cienki: „Uciekaj! Jeśli przeżyjesz — pamiętaj o liście!”', 'combat');
+    } else {
+      this.engine.addLog('Wojmir Cienki: „Burza iskier... to nie są żywi ludzie!”', 'combat');
+    }
   }
 
   private formatClock(): string {

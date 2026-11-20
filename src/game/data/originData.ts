@@ -47,6 +47,10 @@ import dlgZnalPorzuconyWozek from '../../../origin/data/dialogues/znal_porzucony
 import dlgZnalKapliczkaOfiary from '../../../origin/data/dialogues/znal_kapliczka_ofiary.json';
 import dlgMoralGlodnaWdowa from '../../../origin/data/dialogues/moral_glodna_wdowa.json';
 
+import {
+  PROLOGUE_COMPANION_DIALOGUES,
+  PROLOGUE_COMPANION_ITEMS
+} from './prologueCompanionsData';
 import type {
   AttributeDef,
   ClassDef,
@@ -86,7 +90,7 @@ export const ORIGIN_DATA: OriginGameData = {
   perks: perksJson as unknown as PerkDef[],
   effects: effectsJson as unknown as EffectDef[],
   phenomena: phenomenaJson as unknown as PhenomenonDef[],
-  items: itemsJson as unknown as ItemDef[],
+  items: [...(itemsJson as unknown as ItemDef[]), ...PROLOGUE_COMPANION_ITEMS],
   enemies: enemiesJson as unknown as EnemyDef[],
   shops: shopsJson as unknown as ShopDef[],
   quests: questsJson as unknown as QuestDef[],
@@ -127,7 +131,8 @@ export const ORIGIN_DATA: OriginGameData = {
     lesniczy: dlgLesniczy as unknown as DialogueFileDef,
     zwiadowcy: dlgZwiadowcy as unknown as DialogueFileDef,
     po_zwiadowcach: dlgPoZwiadowcach as unknown as DialogueFileDef,
-    borek_ruiny: dlgBorekRuiny as unknown as DialogueFileDef
+    borek_ruiny: dlgBorekRuiny as unknown as DialogueFileDef,
+    ...PROLOGUE_COMPANION_DIALOGUES
   }
 };
 

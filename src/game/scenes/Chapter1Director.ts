@@ -116,6 +116,28 @@ export class Chapter1Director {
     this.engine.registerCustomScene(createRuinyStraznicyScene());
   }
 
+  public hasBrzezinaMemoryEchoAvailable(): boolean {
+    const hasItem = (id: string): boolean =>
+      this.state.inventory.items.some((i) => i.id === id && i.qty > 0);
+    const hasRagnoslawa = hasItem('miedziak_ragnoslawy') && !this.state.flags.echo_ragnoslawa_toast;
+    const hasWojmir = hasItem('list_wojmira') && !this.state.flags.echo_wojmir_list;
+    const hasSkarimir = hasItem('kosc_skarimira') && !this.state.flags.echo_skarimir_kosc;
+    const ocalaliStatus = this.state.quests.kto_pyta_o_ocalalych;
+    const hasAnyBond =
+      (this.state.vars.wiez_skarimir ?? 0) >= 1 ||
+      (this.state.vars.wiez_ragnoslawa ?? 0) >= 1 ||
+      (this.state.vars.wiez_wojmir ?? 0) >= 1;
+    const hasOcalaliEcho =
+      (ocalaliStatus === 'active' || ocalaliStatus === 'completed') &&
+      !this.state.flags.echo_ocalali_wspomnienie &&
+      hasAnyBond;
+    return hasRagnoslawa || hasWojmir || hasSkarimir || hasOcalaliEcho;
+  }
+
+  public openBrzezinaMemoryEcho(): void {
+    this.runDialogue('wilczy_brod_pamiec_brzeziny');
+  }
+
   private addItemStack(itemId: string, qty: number): void {
     const existing = this.state.inventory.items.find((i) => i.id === itemId);
     if (existing) {
@@ -622,6 +644,14 @@ export class Chapter1Director {
           onClick: () => this.restAtInn()
         }
       );
+      if (this.hasBrzezinaMemoryEchoAvailable()) {
+        actions.push({
+          id: 'brzezina_memory_echo',
+          label: '🕯️ Pamięć Brzeziny (Karczma)',
+          alert: true,
+          onClick: () => this.openBrzezinaMemoryEcho()
+        });
+      }
 
       if (this.state.quests.wilcza_nora === 'active' && !this.state.flags.nora_wykonana) {
         actions.push({
