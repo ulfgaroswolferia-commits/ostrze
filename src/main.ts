@@ -5,6 +5,10 @@ import { HudOverlay } from '@ulf/ui/hudOverlay';
 import { InspectorPanel } from '@ulf/ui/inspectorPanel';
 import { OstrzeEngineState } from './engine-bridge/OstrzeEngineState';
 import { createCharacter, createEmptyOstrzeState, grantXp } from './game/rules/character';
+import { forageWorldProp, performCampRecipe } from './game/rules/campCrafting';
+import { resolveQuickBeltSlots, useCombatBeltItem } from './game/rules/combatConsumables';
+import { rollStealthCheck } from './game/rules/stealth';
+import { syncWorldLighting } from './game/rules/worldCycle';
 import { Chapter1Director } from './game/scenes/Chapter1Director';
 import { PrologueDirector, type ProloguePhase } from './game/scenes/PrologueDirector';
 import {
@@ -108,6 +112,84 @@ async function bootstrapOstrze(): Promise<void> {
   const modalUi = new OstrzeModalUi(prologue.data, prologue.state, prologue.rng);
   modalUi.setCombatChecker(() => engine.combatState.active);
   prologue.attachUi(modalUi);
+
+  engine.getCombatQuickBeltSlots = () => {
+    const pCombat = engine.player.combat;
+    const livingEnemies = engine.npcs.filter((n) => n.combat?.isHostile && n.combat.isAlive);
+    return resolveQuickBeltSlots(prologue.state, prologue.data, pCombat?.ap ?? 0, {
+      playerHp: pCombat?.hp,
+      playerMaxHp: pCombat?.maxHp,
+      hasLivingEnemy: livingEnemies.length > 0
+    });
+  };
+  engine.onUseCombatQuickBeltSlot = (slotIndex) => {
+    const res = useCombatBeltItem({
+      state: prologue.state,
+      data: prologue.data,
+      rng: prologue.rng,
+      engine,
+      slotIndex
+    });
+    if (res.used) {
+      refreshUi();
+    }
+    return res.used;
+  };
+  engine.onStealthDetectionCheck = (_enemy, distance) => {
+    const check = rollStealthCheck(prologue.state, prologue.data, prologue.rng, distance);
+    return check.detected;
+  };
+
+  const openCampfirePanel = (): void => {
+    if (engine.combatState.active || !prologue.state.character) return;
+    modalUi.showCampfireModal({
+      onPerform: (recipeId) => {
+        const res = performCampRecipe({
+          state: prologue.state,
+          data: prologue.data,
+          rng: prologue.rng,
+          recipeId,
+          engine
+        });
+        if (res.ok) {
+          refreshUi();
+        }
+        return res;
+      },
+      onClosed: () => refreshUi()
+    });
+  };
+  modalUi.onOpenCampfire = openCampfirePanel;
+
+  engine.onFallbackPropInteract = (propId) => {
+    const prop = engine.map.props.find((p) => p.id === propId);
+    if (!prop) return false;
+    if (prop.kind === 'campfire') {
+      openCampfirePanel();
+      return true;
+    }
+    if (prop.kind === 'wildflower_patch' || prop.kind === 'berry_bush') {
+      const res = forageWorldProp({
+        prop,
+        state: prologue.state,
+        data: prologue.data,
+        rng: prologue.rng,
+        engine
+      });
+      if (res.message) {
+        modalUi.showToast(res.message, res.harvested ? 'success' : 'info');
+      }
+      refreshUi();
+      return true;
+    }
+    return false;
+  };
+
+  const baseOnSceneLoaded = engine.onSceneLoaded;
+  engine.onSceneLoaded = (sceneId) => {
+    baseOnSceneLoaded?.(sceneId);
+    syncWorldLighting(prologue.state, prologue.data, engine);
+  };
 
   const chapter1 = new Chapter1Director({
     engine,

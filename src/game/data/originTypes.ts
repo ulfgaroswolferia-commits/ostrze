@@ -336,6 +336,7 @@ export interface OstrzeGameState {
   inventory: {
     items: Array<{ id: string; qty: number }>;
     equipped: Record<string, string | null>;
+    quickBelt?: Array<string | null>;
   };
   time: {
     minutes: number;

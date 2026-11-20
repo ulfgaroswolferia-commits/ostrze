@@ -29,6 +29,7 @@ export class OstrzeEngineState extends CrpgGameState {
   public onCombatEnded?: (outcome: 'victory' | 'defeat' | 'fled') => void;
   public onNpcInteract?: (npcId: string) => boolean;
   public onPropInteract?: (propId: string) => boolean;
+  public onFallbackPropInteract?: (propId: string) => boolean;
   public onSceneLoaded?: (sceneId: string) => void;
   private readonly persistentMarkers = new Map<string, string>();
 
@@ -66,6 +67,9 @@ export class OstrzeEngineState extends CrpgGameState {
 
   public override togglePropInteraction(propId: string): void {
     if (this.onPropInteract?.(propId)) {
+      return;
+    }
+    if (this.onFallbackPropInteract?.(propId)) {
       return;
     }
     super.togglePropInteraction(propId);

@@ -274,9 +274,10 @@ export function applyWorldDressing(
           });
           markOccupied(x, y, 1, 1, 0);
         } else if (roll < 0.70) {
+          const isForageable = hashInt(x, y, opts.seed + 227, 3) === 0;
           map.props.push({
             id: `bg_bush_${x}_${y}`,
-            name: 'LeśnePoszycie',
+            name: isForageable ? 'Krzak Leśnych Jagód (Zbierz)' : 'Leśne Poszycie',
             kind: 'berry_bush',
             variant: hashInt(x, y, opts.seed + 223, 16),
             x,
@@ -287,14 +288,19 @@ export function applyWorldDressing(
             heightZ: 1,
             blocksMovement: false,
             blocksSight: false,
-            interactive: false
+            interactive: isForageable
           });
           markOccupied(x, y, 1, 1, 0);
         } else if (roll < 0.79) {
           const isStump = hashInt(x, y, opts.seed + 229, 3) === 0;
+          const isForageable = !isStump && hashInt(x, y, opts.seed + 239, 3) === 0;
           map.props.push({
             id: `bg_flora_${x}_${y}`,
-            name: isStump ? 'Omszały Pniak' : 'Kępa Paproci i Ziół',
+            name: isStump
+              ? 'Omszały Pniak'
+              : isForageable
+                ? 'Kępa Ziół Leczniczych (Zbierz)'
+                : 'Kępa Paproci i Ziół',
             kind: isStump ? 'tree_stump' : 'wildflower_patch',
             variant: hashInt(x, y, opts.seed + 233, 40),
             x,
@@ -305,7 +311,7 @@ export function applyWorldDressing(
             heightZ: isStump ? 1 : 0,
             blocksMovement: isStump,
             blocksSight: false,
-            interactive: false
+            interactive: isForageable
           });
           markOccupied(x, y, 1, 1, 0);
         } else if (opts.ruinsScatter && roll < 0.86) {

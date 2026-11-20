@@ -1,5 +1,14 @@
 import { getSlavicPortrait } from '@ulf/assets/slavicPortraits';
 import { ostrzeAudio } from '../audio/ostrzeAudio';
+import {
+  CAMP_RECIPES,
+  canPerformCampRecipe
+} from '../rules/campCrafting';
+import {
+  isQuickBeltEligible,
+  pinItemToQuickBelt
+} from '../rules/combatConsumables';
+import { getWorldAtmosphere } from '../rules/worldCycle';
 import type {
   AttributeId,
   ClassId,
@@ -93,6 +102,11 @@ export class OstrzeModalUi {
   private hubPanel: HubPanelData | null = null;
   private hubCollapsed = false;
   private isCombatActiveFn: (() => boolean) | null = null;
+  private activeCampfire: {
+    onPerform: (recipeId: string) => { ok: boolean; message: string };
+    onClosed?: () => void;
+  } | null = null;
+  public onOpenCampfire?: () => void;
   private readonly shopBoughtCounts = new Map<string, number>();
   private onDialogueClosed: (() => void) | null = null;
   private onOpenShop: ((shopId: string) => void) | null = null;
@@ -128,6 +142,13 @@ export class OstrzeModalUi {
 
     window.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
+      if (this.activeCampfire) {
+        const cb = this.activeCampfire.onClosed;
+        this.activeCampfire = null;
+        this.render();
+        cb?.();
+        return;
+      }
       if (this.activeSaveKey) {
         const cb = this.activeSaveKey.onClosed;
         this.activeSaveKey = null;
@@ -316,6 +337,10 @@ export class OstrzeModalUi {
       this.renderNoticeBoard();
       return;
     }
+    if (this.activeCampfire) {
+      this.renderCampfireModal();
+      return;
+    }
     if (this.activeTravel) {
       this.renderTravelModal();
       return;
@@ -343,7 +368,8 @@ export class OstrzeModalUi {
       this.activeShop ||
       this.activeCharacterSheet ||
       this.activeNoticeBoard ||
-      this.activeTravel
+      this.activeTravel ||
+      this.activeCampfire
     ) {
       this.hubRoot.innerHTML = '';
       return;
@@ -357,6 +383,24 @@ export class OstrzeModalUi {
         `
       )
       .join('');
+
+    const atmo = getWorldAtmosphere(this.state, this.data);
+    const chEffects = this.state.character?.effects ?? [];
+    const effectPillsHtml = chEffects
+      .slice(0, 4)
+      .map((eff) => {
+        const def = this.data.effects.find((d) => d.id === eff.id);
+        const isBuff =
+          eff.id === 'najedzony' || eff.id === 'mocny_napar' || eff.id === 'natluszczone_ostrze';
+        return `<span class="ostrze-atmo-pill ${isBuff ? 'is-buff' : 'is-debuff'}">${this.escape(def?.name ?? eff.id)}</span>`;
+      })
+      .join('');
+    const phenomPillHtml = atmo.phenomenonName
+      ? `<span class="ostrze-atmo-pill is-phenom" title="${this.escape(atmo.phenomenonSummary ?? '')}">${this.escape(atmo.phenomenonName)}</span>`
+      : '';
+    const campBtnHtml = this.onOpenCampfire
+      ? `<button class="ostrze-hub-btn" data-hub-camp title="Otwórz panel obozowy: alchemia, ostrzenie, gotowanie, sen">🔥 Obóz</button>`
+      : '';
 
     const muted = ostrzeAudio.getMuted();
     this.hubRoot.innerHTML = `
@@ -373,12 +417,17 @@ export class OstrzeModalUi {
           </div>
         </div>
         <div class="ostrze-hub-meta">${this.escape(this.hubPanel.statusLine)}</div>
+        <div class="ostrze-atmo-strip">
+          <span class="ostrze-atmo-pill is-time">${this.escape(atmo.timeLabel)} · ${this.escape(atmo.clockText)}</span>
+          ${phenomPillHtml}
+          ${effectPillsHtml}
+        </div>
         ${
           this.hubCollapsed
             ? ''
             : `
               <div class="ostrze-hub-quests">${this.escape(this.hubPanel.questsLine)}</div>
-              <div class="ostrze-hub-actions">${btns}</div>
+              <div class="ostrze-hub-actions">${btns}${campBtnHtml}</div>
             `
         }
       </div>
@@ -399,6 +448,9 @@ export class OstrzeModalUi {
         this.hubRoot
           .querySelector(`[data-hub-act="${act.id}"]`)
           ?.addEventListener('click', () => act.onClick());
+      });
+      this.hubRoot.querySelector('[data-hub-camp]')?.addEventListener('click', () => {
+        this.onOpenCampfire?.();
       });
     }
   }
@@ -869,13 +921,28 @@ export class OstrzeModalUi {
                 : typeof healFlat === 'number' && healFlat > 0
                   ? `Użyj (+${healFlat} HP)`
                   : 'Użyj';
+              const beltEligible = isQuickBeltEligible(item);
+              const pinnedSlotIdx = (this.state.inventory.quickBelt ?? []).indexOf(entry.id);
+              const beltPinHtml = beltEligible
+                ? pinnedSlotIdx >= 0
+                  ? `<button class="ostrze-hub-btn" data-cs-belt-unpin="${pinnedSlotIdx}" title="Odepnij z pasa szybkiego użycia">Pas [${pinnedSlotIdx + 4}] ✕</button>`
+                  : `<select class="ostrze-belt-select" data-cs-belt-pin="${this.escape(entry.id)}" title="Przypnij do slotu pasa walki [4]–[7]">
+                      <option value="">+ Pas…</option>
+                      <option value="0">Slot [4]</option>
+                      <option value="1">Slot [5]</option>
+                      <option value="2">Slot [6]</option>
+                      <option value="3">Slot [7]</option>
+                    </select>`
+                : '';
               return `
                 <div class="ostrze-row">
                   <span>
                     ${this.escape(item?.name ?? entry.id)} ×${entry.qty}
                     ${isEquipped ? '<span style="color:#6fd18e;font-size:0.75rem"> [Założono]</span>' : ''}
+                    ${pinnedSlotIdx >= 0 ? `<span style="color:#e5b869;font-size:0.75rem"> [Pas ${pinnedSlotIdx + 4}]</span>` : ''}
                   </span>
                   <span class="ostrze-stepper">
+                    ${beltPinHtml}
                     ${canEquip ? `<button class="ostrze-hub-btn" data-cs-equip="${this.escape(entry.id)}">Załóż</button>` : ''}
                     ${canUse ? `<button class="ostrze-hub-btn" data-cs-use="${this.escape(entry.id)}">${useLabel}</button>` : ''}
                   </span>
@@ -1016,6 +1083,31 @@ export class OstrzeModalUi {
             healed > 0 ? `Użyto ${item.name} (+${healed} HP)` : `Użyto ${item.name}`,
             'success'
           );
+          this.activeCharacterSheet?.onUpdated?.();
+          this.render();
+        }
+      });
+    });
+
+    this.root.querySelectorAll<HTMLSelectElement>('[data-cs-belt-pin]').forEach((sel) => {
+      sel.addEventListener('change', () => {
+        const itemId = sel.dataset.csBeltPin ?? '';
+        const slotIdx = Number(sel.value);
+        if (itemId && !Number.isNaN(slotIdx)) {
+          pinItemToQuickBelt(this.state, slotIdx, itemId);
+          this.showToast(`Przypięto do pasa szybkiego użycia [Slot ${slotIdx + 4}].`, 'info');
+          this.activeCharacterSheet?.onUpdated?.();
+          this.render();
+        }
+      });
+    });
+
+    this.root.querySelectorAll<HTMLElement>('[data-cs-belt-unpin]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const slotIdx = Number(btn.dataset.csBeltUnpin);
+        if (!Number.isNaN(slotIdx)) {
+          pinItemToQuickBelt(this.state, slotIdx, null);
+          this.showToast(`Odpięto slot [${slotIdx + 4}] (powrót do auto-doboru).`, 'info');
           this.activeCharacterSheet?.onUpdated?.();
           this.render();
         }
@@ -1279,6 +1371,104 @@ export class OstrzeModalUi {
       ostrzeAudio.playUiClick();
       const cb = modal.onClosed;
       this.activeTravel = null;
+      this.render();
+      cb?.();
+    });
+  }
+
+  public showCampfireModal(opts: {
+    onPerform: (recipeId: string) => { ok: boolean; message: string };
+    onClosed?: () => void;
+  }): void {
+    this.activeCampfire = opts;
+    this.render();
+  }
+
+  private renderCampfireModal(): void {
+    const modal = this.activeCampfire;
+    if (!modal) return;
+    const ch = this.state.character;
+    const atmo = getWorldAtmosphere(this.state, this.data);
+    const stats = ch ? getStats(this.state, this.data) : null;
+
+    const groups: Array<{ key: 'alchemy' | 'weapon' | 'cooking' | 'sleep'; title: string }> = [
+      { key: 'alchemy', title: 'Alchemia i Opatrunki (Medycyna)' },
+      { key: 'weapon', title: 'Konserwacja Ostrza' },
+      { key: 'cooking', title: 'Gotowanie nad Ogniskiem' },
+      { key: 'sleep', title: 'Sen i Regeneracja' }
+    ];
+
+    const sectionsHtml = groups
+      .map((g) => {
+        const rows = CAMP_RECIPES.filter((r) => r.category === g.key)
+          .map((recipe) => {
+            const check = canPerformCampRecipe(this.state, this.data, recipe);
+            const ingText =
+              recipe.ingredients.length > 0
+                ? recipe.ingredients
+                    .map((ing) => {
+                      const def = this.data.items.find((i) => i.id === ing.itemId);
+                      const have =
+                        this.state.inventory.items.find((i) => i.id === ing.itemId)?.qty ?? 0;
+                      return `${def?.name ?? ing.itemId} (${have}/${ing.qty})`;
+                    })
+                    .join(' · ')
+                : 'Bez składników';
+            return `
+              <div class="ostrze-row">
+                <div style="flex:1;min-width:0;">
+                  <div style="font-weight:600;color:#f4dfba;">${this.escape(recipe.label)}</div>
+                  <div style="font-size:0.8rem;color:#9e9689;">${this.escape(recipe.description)} · <span>${this.escape(ingText)}</span></div>
+                </div>
+                <button
+                  type="button"
+                  class="ostrze-hub-btn"
+                  data-camp-recipe="${this.escape(recipe.id)}"
+                  ${!check.ok ? 'disabled' : ''}
+                  title="${this.escape(check.reason ?? recipe.description)}"
+                >
+                  ${check.ok ? 'Wykonaj' : this.escape(check.reason ?? 'Brak')}
+                </button>
+              </div>
+            `;
+          })
+          .join('');
+        return `<div class="ostrze-panel" style="margin-bottom:10px;"><h3>${this.escape(g.title)}</h3>${rows}</div>`;
+      })
+      .join('');
+
+    this.root.innerHTML = `
+      <div class="ostrze-overlay">
+        <div class="ostrze-card" style="max-width:720px;">
+          <h2 class="ostrze-title">Przygotowanie Obozowe przy Ognisku</h2>
+          <p class="ostrze-subtitle">
+            ${this.escape(atmo.timeLabel)} · ${this.escape(atmo.clockText)}${
+              atmo.phenomenonName ? ` · ${this.escape(atmo.phenomenonName)}` : ''
+            }${ch && stats ? ` · HP: ${ch.hp}/${stats.derived.hpMax} · Medycyna: ${stats.skills.medycyna}` : ''}
+          </p>
+          <div style="max-height:58vh;overflow-y:auto;padding-right:4px;margin-bottom:14px;">
+            ${sectionsHtml}
+          </div>
+          <div style="display:flex;justify-content:flex-end;">
+            <button type="button" class="ostrze-hub-btn" id="ostrze-camp-close">Zamknij [ESC]</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    this.root.querySelectorAll<HTMLButtonElement>('[data-camp-recipe]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const recipeId = btn.dataset.campRecipe;
+        if (!recipeId) return;
+        const res = modal.onPerform(recipeId);
+        this.showToast(res.message, res.ok ? 'success' : 'info');
+        this.render();
+      });
+    });
+
+    this.root.querySelector('#ostrze-camp-close')?.addEventListener('click', () => {
+      const cb = modal.onClosed;
+      this.activeCampfire = null;
       this.render();
       cb?.();
     });

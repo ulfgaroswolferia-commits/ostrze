@@ -601,7 +601,60 @@ body:has(.combat-mode-active) .ostrze-hub-bar {
 }
 
 body:has(.combat-mode-active) .ostrze-toast-stack {
-  bottom: 168px;
+  bottom: 204px;
+}
+
+.ostrze-belt-select {
+  background: #141822;
+  border: 1px solid #594b36;
+  color: #e5b869;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.ostrze-belt-select:hover,
+.ostrze-belt-select:focus-visible {
+  border-color: #e5b869;
+  outline: none;
+}
+
+/* World Atmosphere & Character Status Strip in Hub Bar */
+.ostrze-atmo-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0 8px 0;
+}
+
+.ostrze-atmo-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid rgba(196, 158, 84, 0.35);
+  background: rgba(20, 24, 34, 0.85);
+  color: #e5d8bd;
+}
+
+.ostrze-atmo-pill.is-phenom {
+  border-color: rgba(168, 85, 247, 0.55);
+  background: rgba(88, 28, 135, 0.28);
+  color: #e9d5ff;
+}
+
+.ostrze-atmo-pill.is-buff {
+  border-color: rgba(74, 222, 128, 0.45);
+  background: rgba(22, 101, 52, 0.28);
+  color: #bbf7d0;
+}
+
+.ostrze-atmo-pill.is-debuff {
+  border-color: rgba(248, 113, 113, 0.5);
+  background: rgba(153, 27, 27, 0.28);
+  color: #fecaca;
 }
 
 /* Expanded Chronicle: primary foreground drawer positioned cleanly below .ostrze-hub-bar */
