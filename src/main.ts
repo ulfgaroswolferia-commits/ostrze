@@ -4,6 +4,7 @@ import { IsoSceneView } from '@ulf/renderer/isoSceneView';
 import { HudOverlay } from '@ulf/ui/hudOverlay';
 import { InspectorPanel } from '@ulf/ui/inspectorPanel';
 import { OstrzeEngineState } from './engine-bridge/OstrzeEngineState';
+import { ORIGIN_DATA } from './game/data/originData';
 import { createCharacter, createEmptyOstrzeState, grantXp } from './game/rules/character';
 import { forageWorldProp, performCampRecipe } from './game/rules/campCrafting';
 import { resolveQuickBeltSlots, useCombatBeltItem } from './game/rules/combatConsumables';
@@ -21,6 +22,7 @@ import {
 } from './game/state/saveManager';
 import { OstrzeModalUi } from './game/ui/OstrzeModalUi';
 import { ChronicleUxController } from './game/ui/chronicleUxController';
+import { CombatTargetOverlay } from './game/ui/combatTargetOverlay';
 
 async function bootstrapOstrze(): Promise<void> {
   window.addEventListener('contextmenu', (e) => {
@@ -44,11 +46,13 @@ async function bootstrapOstrze(): Promise<void> {
   let hud: HudOverlay | null = null;
   let inspector: InspectorPanel | null = null;
   const chronicleUx = new ChronicleUxController(hudRoot, engine);
+  const combatTargetOverlay = new CombatTargetOverlay(engine, ORIGIN_DATA);
 
   const refreshUi = (): void => {
     hud?.render();
     inspector?.render();
     chronicleUx.sync();
+    combatTargetOverlay.sync();
   };
 
   const sceneView = new IsoSceneView(engine, refreshUi);
@@ -72,6 +76,7 @@ async function bootstrapOstrze(): Promise<void> {
   // modals, journal/chronicle, combat log, top bar) — matching engine HUD behavior.
   const uiPanBlockSelector = [
     '.ostrze-hub-bar',
+    '.ostrze-combat-target-card',
     '.ostrze-overlay',
     '.ostrze-toast',
     '.top-bar',

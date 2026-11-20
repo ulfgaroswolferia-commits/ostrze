@@ -1199,3 +1199,158 @@ body:has(.combat-mode-active) .ostrze-toast-stack {
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================================================
+   Combat Target Card (Right Top Overlay: 64x48 .pix Enemy Portrait + Statuses)
+   ========================================================================== */
+
+.ostrze-combat-target-card {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 950;
+  width: min(332px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(22, 25, 33, 0.96) 0%, rgba(13, 15, 20, 0.96) 100%);
+  border: 1px solid #6b5332;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.72);
+  color: #e6dfd0;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.ostrze-combat-target-card.is-crit-flash {
+  animation: combatCritPulse 0.52s ease-out;
+}
+
+@keyframes combatCritPulse {
+  0% {
+    border-color: #f59e0b;
+    box-shadow:
+      0 0 0 2px rgba(245, 158, 11, 0.65),
+      0 0 26px rgba(239, 68, 68, 0.65);
+    transform: scale(1.02);
+  }
+  100% {
+    border-color: #6b5332;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.72);
+    transform: scale(1);
+  }
+}
+
+.ostrze-combat-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.ostrze-combat-tab {
+  padding: 3px 8px;
+  border-radius: 3px;
+  border: 1px solid #443c30;
+  background: #14171f;
+  color: #b8b0a0;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.ostrze-combat-tab.is-active {
+  background: #3a2b18;
+  border-color: #e5b869;
+  color: #fff2d1;
+}
+
+.ostrze-combat-target-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ostrze-combat-portrait-frame {
+  width: 128px;
+  height: 96px;
+  padding: 3px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  background: #0a0c10;
+  border: 1px solid #8a6d3b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ostrze-combat-portrait {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.ostrze-combat-target-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ostrze-combat-target-name {
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: #f3dca8;
+  margin-bottom: 4px;
+  line-height: 1.25;
+}
+
+.ostrze-combat-target-stats {
+  display: flex;
+  gap: 10px;
+  font-size: 0.76rem;
+  color: #bdb5a6;
+}
+
+.ostrze-combat-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(107, 83, 50, 0.35);
+}
+
+.ostrze-combat-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.ostrze-combat-pill.is-resist {
+  background: rgba(90, 147, 212, 0.16);
+  border: 1px solid #3f6a9c;
+  color: #a8cef7;
+}
+
+.ostrze-combat-pill.is-weak {
+  background: rgba(239, 68, 68, 0.16);
+  border: 1px solid #9e3d3d;
+  color: #fca5a5;
+}
+
+.ostrze-combat-pill.is-status {
+  background: rgba(229, 184, 105, 0.16);
+  border: 1px solid #8c6a37;
+  color: #f5d388;
+}
+
+.ostrze-combat-pill.is-defend {
+  background: rgba(78, 184, 98, 0.15);
+  border: 1px solid #3d8f4f;
+  color: #8ce39e;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ostrze-combat-target-card.is-crit-flash {
+    animation: none;
+  }
+}

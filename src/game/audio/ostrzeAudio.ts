@@ -150,6 +150,37 @@ class OstrzeAudioManager {
     this.playTone(210 * pitchMod, 0.36, 'sine', 0.04, 0, 130 * pitchMod);
   }
 
+  public playCombatSfx(kind: 'start' | 'hit' | 'crit' | 'miss' | 'victory' | 'defeat'): void {
+    if (this.isMuted()) return;
+    switch (kind) {
+      case 'start':
+        this.playTone(146.83, 0.22, 'sawtooth', 0.055, 0, 110);
+        this.playTone(220, 0.28, 'triangle', 0.055, 0.09, 196);
+        break;
+      case 'hit':
+        this.playTone(170, 0.08, 'sawtooth', 0.06, 0, 72);
+        this.playTone(420, 0.05, 'triangle', 0.035, 0.01, 180);
+        break;
+      case 'crit':
+        this.playTone(130, 0.14, 'sawtooth', 0.08, 0, 58);
+        this.playTone(660, 0.18, 'triangle', 0.065, 0.02, 880);
+        this.playTone(990, 0.22, 'sine', 0.05, 0.06, 1320);
+        break;
+      case 'miss':
+        this.playTone(540, 0.09, 'sine', 0.03, 0, 260);
+        break;
+      case 'victory':
+        this.playTone(329.63, 0.14, 'triangle', 0.06, 0);
+        this.playTone(440, 0.16, 'triangle', 0.06, 0.09);
+        this.playTone(659.25, 0.34, 'sine', 0.07, 0.18);
+        break;
+      case 'defeat':
+        this.playTone(220, 0.22, 'sawtooth', 0.05, 0, 174.6);
+        this.playTone(146.83, 0.42, 'sine', 0.06, 0.16, 98);
+        break;
+    }
+  }
+
   public setAmbience(mood: OstrzeAmbienceMood): void {
     if (this.currentMood === mood) return;
     this.currentMood = mood;
