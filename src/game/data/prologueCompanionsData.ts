@@ -997,6 +997,7 @@ export const PROLOGUE_COMPANION_DIALOGUES: Record<string, DialogueFileDef> = {
   // =========================================================================
   wilczy_brod_pamiec_brzeziny: {
     id: 'wilczy_brod_pamiec_brzeziny',
+    portrait: 'karczma_pod_wilczym_klem',
     start: 'start',
     nodes: {
       start: {

@@ -949,6 +949,7 @@ export class PrologueDirector {
         this.ui.showNarrative({
           title: 'Ciemność i Cisza',
           subtitle: this.formatClock(),
+          artId: omdlenie.art ?? zaglada.art ?? 'noc_ciemnosc',
           text: combinedText,
           buttonLabel: 'Ocknij się',
           onContinue: showIstotaPrompt
@@ -1067,6 +1068,7 @@ export class PrologueDirector {
       this.ui.showNarrative({
         title: atak.title || 'Noc Upiorów',
         subtitle: `${this.formatClock()} · Zjawisko: Burza Iskier`,
+        artId: atak.art ?? zmierzch.art ?? 'noc_upiory',
         text: combinedText,
         buttonLabel: 'Staw czoła Upiorom',
         onContinue: startWraithCombat
@@ -1119,6 +1121,7 @@ export class PrologueDirector {
       this.ui.showNarrative({
         title: 'Wilczy Bród — Koniec Prologu',
         subtitle: this.formatClock(),
+        artId: 'mapa_brod',
         text: summary,
         buttonLabel: 'Ruszaj do Wilczego Brodu (Rozdział I)',
         onContinue: () => {

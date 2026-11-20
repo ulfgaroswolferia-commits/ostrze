@@ -450,6 +450,9 @@ export class Chapter1Director {
     this.ui.showNarrative({
       title: typeof intro?.title === 'string' ? intro.title : 'Wilczy Bród',
       subtitle: 'Rozdział I — Strażnica na Pogórzu',
+      artId: typeof (intro as { art?: unknown } | undefined)?.art === 'string'
+        ? (intro as { art: string }).art
+        : 'mapa_brod',
       text: typeof intro?.text === 'string' ? intro.text : '',
       buttonLabel: 'Wejdź do strażnicy',
       onContinue: showHub
@@ -1063,21 +1066,17 @@ export class Chapter1Director {
         this.engine.addLog('🌿 Polana wydeptana do gołej ziemi. Zioła już zostały zebrane.', 'info');
         return true;
       }
+      if (this.ui) {
+        this.runDialogue('satelita_polana_ziol');
+        return true;
+      }
       advanceMinutes(this.state, 30, this.data);
       this.state.flags.ziola_zebrane = true;
       this.addItemStack('ziola_dla_wrzoska', 1);
       this.engine.addLog('🌿 Zebrano: Zioła dla Wrzoska! Zanieś je karczmarzowi w Wilczym Brodzie.', 'important');
-      this.ui?.showToast('Zebrano: Zioła dla Wrzoska', 'gold');
       this.syncHeroTo25D();
       this.refreshHubPanel();
       this.onAutoSave?.();
-      this.ui?.showNarrative({
-        title: 'Polana ziół',
-        subtitle: 'Las Rubieży',
-        text: 'Polana pachnie żywicą i czymś gorzkim jak piołun. Kucasz w mokrych paprociach i rwiesz ziele, które karczmarze zwą lekiem, a felczerzy chwastem.',
-        buttonLabel: 'Schowaj zioła do torby',
-        onContinue: () => this.refreshHubPanel()
-      });
       return true;
     }
     if (npcId === 'npc_las_slady') {
@@ -1095,6 +1094,7 @@ export class Chapter1Director {
       this.ui?.showNarrative({
         title: 'Ślady za polaną',
         subtitle: 'Las Rubieży',
+        artId: 'trakt',
         text: firstTime
           ? 'Za polaną ziemia zryta owczymi racicami, a między nimi ciągną się ślady ciężkich buciorów. Dalej odciski głębsze, jakby ktoś szedł obładowany. Trop skręca ku starym murom na wzgórzu (Ruiny Strażnicy).'
           : 'Ślady stare, rozmyte błotem, ale wciąż wiodą w jedną stronę: ku murom Ruin Strażnicy na wzgórzu.',
@@ -1126,6 +1126,7 @@ export class Chapter1Director {
         }
         this.ui.showNarrative({
           title: 'Stary młyn (za dnia)',
+          artId: 'stary_mlyn',
           text: 'Koło młyńskie stoi, a woda ledwie się przy nim rusza. W środku czuć kurz, stęchłe ziarno i zimny kamień. Ostap mówił, że dziwne światło pojawia się dopiero nocą (po 21:00).',
           buttonLabel: 'Poczekaj do nocy i zbadaj młyn',
           onContinue: () => {
@@ -1142,21 +1143,18 @@ export class Chapter1Director {
         return true;
       }
 
+      if (this.ui) {
+        this.runDialogue('satelita_mlyn_noca');
+        return true;
+      }
+
       advanceMinutes(this.state, 20, this.data);
       this.state.flags.odlamek_zebrany = true;
       this.addItemStack('odlamek_szkla', 1);
       this.engine.addLog('✨ Znaleziono: Odłamek ciemnego szkła pod kołem młyńskim! Pokaż go Kowalowi Zbychowi.', 'important');
-      this.ui?.showToast('Zdobyto: Odłamek szkła z młyna', 'gold');
       this.syncHeroTo25D();
       this.refreshHubPanel();
       this.onAutoSave?.();
-      this.ui?.showNarrative({
-        title: 'Światło w młynie',
-        subtitle: 'Stary Młyn nocą',
-        text: 'Po zmroku w środku coś rozbłyska bladym, zimnym światłem. Idziesz za nim po skrzypiących schodkach. W kącie, pod kołem zębatym, leży odłamek ciemnego szkła i pulsuje.',
-        buttonLabel: 'Zabierz odłamek szkła',
-        onContinue: () => this.refreshHubPanel()
-      });
       return true;
     }
     if (npcId === 'npc_zona_mlynarza') {
@@ -1236,21 +1234,17 @@ export class Chapter1Director {
         this.engine.addLog('🧱 W głębi stoi mur z wyżłobionym wgłębieniem w kształcie znaku strażnicy.', 'info');
         return true;
       }
+      if (this.ui) {
+        this.runDialogue('satelita_ruiny_mur');
+        return true;
+      }
       advanceMinutes(this.state, 15, this.data);
       this.state.flags.amulet_pytanie = true;
       this.state.flags.amulet_pasuje = true;
       this.engine.addLog('🜂 Przyłożyłeś amulet do muru w ruinach — znak pasuje kreska w kreskę! Wróć do córki strażnika.', 'important');
-      this.ui?.showToast('Znak pasuje do muru w ruinach!', 'gold');
       this.syncHeroTo25D();
       this.refreshHubPanel();
       this.onAutoSave?.();
-      this.ui?.showNarrative({
-        title: 'Ruiny strażnicy',
-        subtitle: 'Mur z wyżłobionym znakiem',
-        text: 'W głębi stoi mur z wyżłobionym znakiem. Przykładasz amulet, a kamień drży, jakby się budził ze snu. Znak pasuje, kreska w kreskę, ale drzwi się nie otwierają. Jeszcze nie. Stary strażnik miał rację.',
-        buttonLabel: 'Wróć z wieścią do córki strażnika',
-        onContinue: () => this.refreshHubPanel()
-      });
       return true;
     }
     if (npcId === 'npc_czcibor') {
@@ -1276,6 +1270,10 @@ export class Chapter1Director {
       this.engine.addLog('📦 Skrzynka pod dębem stoi już otwarta i pusta.', 'info');
       return;
     }
+    if (this.ui) {
+      this.runDialogue('satelita_skrytka_dab');
+      return;
+    }
     this.state.flags.schowek_bylo = true;
     this.addItemStack('napar_ziol', 1);
     this.addItemStack('opatrunek', 1);
@@ -1283,17 +1281,9 @@ export class Chapter1Director {
       this.state.character.money += 20;
     }
     this.engine.addLog('📦 Skrytka pod dębem: znaleziono Napar z ziół, Opatrunek i +20 gr!', 'important');
-    this.ui?.showToast('Skrytka: Napar z ziół, Opatrunek, +20 gr', 'gold');
     this.syncHeroTo25D();
     this.refreshHubPanel();
     this.onAutoSave?.();
-    this.ui?.showNarrative({
-      title: 'Skrytka pod dębem',
-      subtitle: 'Leśniczówka',
-      text: 'Pod ułamanym dębem na skraju polany ktoś zakopał skrzynkę. W środku zioła w woreczkach, zwój czystego płótna i garść groszy (+20 gr, Napar z ziół, Opatrunek).',
-      buttonLabel: 'Zabierz znalezisko',
-      onContinue: () => this.refreshHubPanel()
-    });
   }
 
   private refreshChapter1Markers(): void {
@@ -1596,6 +1586,7 @@ export class Chapter1Director {
     this.ui.showNarrative({
       title: 'Wilcza Nora',
       subtitle: 'Wąwóz w górę strumienia',
+      artId: 'bor_klusownikow',
       text: 'Wąwóz cuchnie padliną. Pod korzeniami starego buka ziemia rozgrzebana, a wokół bieleją obgryzione owcze kości. Z ciemności błyskają trzy pary ślepi.',
       buttonLabel: 'Walcz z watahą',
       onContinue: startFight
@@ -1705,6 +1696,7 @@ export class Chapter1Director {
         this.onAutoSave?.();
         this.ui?.showNarrative({
           title: 'Wilcza Nora oczyszczona',
+          artId: 'stary_trakt',
           text: 'Wataha leży pokotem w kałuży krwi. Odcinasz uszy na dowód, bo komendant Wszebor na słowo nie uwierzy.',
           buttonLabel: 'Wróć do Wilczego Brodu',
           onContinue: () => this.refreshHubPanel()
@@ -1753,6 +1745,7 @@ export class Chapter1Director {
 
         this.ui?.showNarrative({
           title: 'Kamienna Przełęcz osiągnięta',
+          artId: 'gluszec',
           text: 'Zbiry uciekają w krzaki, gubiąc maski. Ostromir wyłazi spod wozu, otrzepuje kaftan i doprowadza wóz na przełęcz. Droga do Głuszca stoi otworem!',
           buttonLabel: 'Wróć do Wilczego Brodu',
           onContinue: () => this.refreshHubPanel()
@@ -1790,6 +1783,7 @@ export class Chapter1Director {
           this.ui.showNarrative({
             title: 'Starcie na Trakcie',
             subtitle: 'Zwycięstwo',
+            artId: 'trakt',
             text: this.pendingTravel.afterVictoryText,
             buttonLabel: 'Kontynuuj podróż',
             onContinue: () => {
@@ -1847,6 +1841,7 @@ export class Chapter1Director {
     this.ui?.showNarrative({
       title: 'Kamienna Przełęcz — Koniec Rozdziału I',
       subtitle: 'Droga do Głuszca (Rozdział II)',
+      artId: 'gluszec',
       text: summary,
       buttonLabel: 'Zostań w świecie 2.5D',
       onContinue: () => {
@@ -1954,6 +1949,7 @@ export class Chapter1Director {
         this.ui.showNarrative({
           title: sc.title ?? 'Wydarzenie na Trakcie',
           subtitle: `${getOstrzeLocationMeta(destId)?.name ?? 'Podróż'} · ${clockText}`,
+          artId: (sc as { art?: string }).art ?? 'trakt',
           text: sc.text,
           buttonLabel: 'Dalej',
           onContinue: () => runStep(idx + 1)

@@ -496,6 +496,10 @@
   padding: 26px 28px;
 }
 
+.ostrze-dialogue-card--scene {
+  width: min(820px, 100%);
+}
+
 .ostrze-dialogue-layout {
   display: grid;
   grid-template-columns: 176px 1fr;

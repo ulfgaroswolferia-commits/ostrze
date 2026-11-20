@@ -47,6 +47,7 @@ import dlgZnalPorzuconyWozek from '../../../origin/data/dialogues/znal_porzucony
 import dlgZnalKapliczkaOfiary from '../../../origin/data/dialogues/znal_kapliczka_ofiary.json';
 import dlgMoralGlodnaWdowa from '../../../origin/data/dialogues/moral_glodna_wdowa.json';
 
+import { CHAPTER1_SATELLITE_DIALOGUES } from './chapter1SatellitesData';
 import {
   PROLOGUE_COMPANION_DIALOGUES,
   PROLOGUE_COMPANION_ITEMS
@@ -132,7 +133,8 @@ export const ORIGIN_DATA: OriginGameData = {
     zwiadowcy: dlgZwiadowcy as unknown as DialogueFileDef,
     po_zwiadowcach: dlgPoZwiadowcach as unknown as DialogueFileDef,
     borek_ruiny: dlgBorekRuiny as unknown as DialogueFileDef,
-    ...PROLOGUE_COMPANION_DIALOGUES
+    ...PROLOGUE_COMPANION_DIALOGUES,
+    ...CHAPTER1_SATELLITE_DIALOGUES
   }
 };
 

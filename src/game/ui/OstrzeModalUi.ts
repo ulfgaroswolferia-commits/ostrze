@@ -1,6 +1,5 @@
 import { getSlavicPortrait } from '@ulf/assets/slavicPortraits';
 import {
-  getPixArtDataUri,
   getPixArtMeta,
   resolvePixPortraitId,
   resolveSpeakerRole
@@ -805,9 +804,10 @@ export class OstrzeModalUi {
   private renderDialogue(session: ActiveOstrzeDialogue): void {
     const view = getOstrzeDialogueView(session, this.state, this.data);
     const pixPortraitId = resolvePixPortraitId(view.portrait, view.speaker);
-    const pixPortraitUrl = pixPortraitId ? getPixArtDataUri(pixPortraitId) : null;
-    const isPixPortrait = Boolean(pixPortraitUrl);
-    const portraitUrl = pixPortraitUrl ?? getSlavicPortrait(this.resolvePortraitId(view.speaker));
+    const pixMeta = pixPortraitId ? getPixArtMeta(pixPortraitId) : null;
+    const isPanoramicScene = Boolean(pixMeta && pixMeta.width > pixMeta.height);
+    const isPixPortrait = Boolean(pixMeta);
+    const portraitUrl = pixMeta?.dataUri ?? getSlavicPortrait(this.resolvePortraitId(view.speaker));
     const speakerRole = resolveSpeakerRole(view.speaker);
 
     const optionsHtml = view.options
@@ -872,7 +872,32 @@ export class OstrzeModalUi {
           ? 'ostrze-feedback ostrze-feedback--failure'
           : 'ostrze-feedback';
 
-    this.root.innerHTML = `
+    const feedbackHtml = view.lastCheckFeedback
+      ? `<div class="${feedbackClass}">${this.escape(view.lastCheckFeedback)}</div>`
+      : '';
+
+    this.root.innerHTML = isPanoramicScene && pixMeta
+      ? `
+      <div class="ostrze-overlay">
+        <div class="ostrze-card ostrze-dialogue-card ostrze-dialogue-card--scene">
+          <h2 class="ostrze-title" style="margin-bottom:12px;">${this.escape(view.speaker)}</h2>
+          <div class="ostrze-narrative-art-frame">
+            <img
+              class="ostrze-narrative-art ostrze-pix-art"
+              src="${this.escape(pixMeta.dataUri)}"
+              width="${pixMeta.width}"
+              height="${pixMeta.height}"
+              alt="${this.escape(view.speaker)}"
+            />
+          </div>
+          ${feedbackHtml}
+          <div class="ostrze-prose ostrze-dialogue-prose">${this.escape(view.text)}</div>
+          <div class="ostrze-dialogue-options">${optionsHtml}</div>
+          <div class="ostrze-dialogue-hint">Skróty klawiszowe: [1–9] wybierz odpowiedź</div>
+        </div>
+      </div>
+    `
+      : `
       <div class="ostrze-overlay">
         <div class="ostrze-card ostrze-dialogue-card">
           <div class="ostrze-dialogue-layout">
@@ -888,7 +913,7 @@ export class OstrzeModalUi {
               ${speakerRole ? `<div class="ostrze-dialogue-role">${this.escape(speakerRole)}</div>` : ''}
             </aside>
             <div class="ostrze-dialogue-body-col">
-              ${view.lastCheckFeedback ? `<div class="${feedbackClass}">${this.escape(view.lastCheckFeedback)}</div>` : ''}
+              ${feedbackHtml}
               <div class="ostrze-prose ostrze-dialogue-prose">${this.escape(view.text)}</div>
               <div class="ostrze-dialogue-options">${optionsHtml}</div>
               <div class="ostrze-dialogue-hint">Skróty klawiszowe: [1–9] wybierz odpowiedź</div>
