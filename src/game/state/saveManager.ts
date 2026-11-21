@@ -23,6 +23,7 @@ export interface OstrzeSavePayload {
   state: OstrzeGameState;
 }
 
+let cachedSaveRaw: string | null | undefined;
 let cachedHasSave: boolean | null = null;
 
 function getStorage(): Storage | null {
@@ -48,7 +49,9 @@ export function saveOstrzeGame(payload: Omit<OstrzeSavePayload, 'version' | 'sav
       prologueStep: payload.prologueStep,
       state: payload.state
     };
-    storage.setItem(OSTRZE_SAVE_KEY, JSON.stringify(full));
+    const serialized = JSON.stringify(full);
+    storage.setItem(OSTRZE_SAVE_KEY, serialized);
+    cachedSaveRaw = serialized;
     cachedHasSave = true;
     return true;
   } catch {
@@ -130,19 +133,23 @@ export function normalizeSavePayload(raw: unknown): OstrzeSavePayload | null {
 export function loadOstrzeGame(): OstrzeSavePayload | null {
   const storage = getStorage();
   if (!storage) {
+    cachedSaveRaw = null;
     cachedHasSave = false;
     return null;
   }
   try {
     const raw = storage.getItem(OSTRZE_SAVE_KEY);
     if (!raw) {
+      cachedSaveRaw = null;
       cachedHasSave = false;
       return null;
     }
     const normalized = normalizeSavePayload(JSON.parse(raw));
+    cachedSaveRaw = raw;
     cachedHasSave = normalized !== null;
     return normalized;
   } catch {
+    cachedSaveRaw = null;
     cachedHasSave = false;
     return null;
   }
@@ -154,19 +161,34 @@ export function hasOstrzeSave(): boolean {
   }
   const storage = getStorage();
   if (!storage) {
+    cachedSaveRaw = null;
     cachedHasSave = false;
     return false;
   }
   try {
-    cachedHasSave = Boolean(storage.getItem(OSTRZE_SAVE_KEY));
+    const raw = storage.getItem(OSTRZE_SAVE_KEY);
+    if (raw === cachedSaveRaw && cachedHasSave !== null) {
+      return cachedHasSave;
+    }
+    cachedSaveRaw = raw;
+    cachedHasSave = false;
+    if (raw) {
+      try {
+        cachedHasSave = normalizeSavePayload(JSON.parse(raw)) !== null;
+      } catch {
+        cachedHasSave = false;
+      }
+    }
     return cachedHasSave;
   } catch {
+    cachedSaveRaw = null;
     cachedHasSave = false;
     return false;
   }
 }
 
 export function clearOstrzeSave(): void {
+  cachedSaveRaw = null;
   cachedHasSave = false;
   const storage = getStorage();
   if (!storage) return;

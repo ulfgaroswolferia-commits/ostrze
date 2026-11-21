@@ -8,9 +8,11 @@ import type {
 import { evaluateCondition } from './conditions';
 import type { SeededRng } from './dice';
 import { timeOfDay } from './time';
+import type { ChapterId } from '../state/saveManager';
 
 export interface OstrzeLocationMeta {
   id: string;
+  chapter: ChapterId;
   name: string;
   subtitle: string;
   danger: number;
@@ -21,6 +23,7 @@ export interface OstrzeLocationMeta {
 export const OSTRZE_LOCATIONS: readonly OstrzeLocationMeta[] = [
   {
     id: 'brzezina_dziedziniec',
+    chapter: 'prologue',
     name: 'Brzezina — Dziedziniec',
     subtitle: 'Szkoła Ostrzy na Pogórzu',
     danger: 1,
@@ -29,6 +32,7 @@ export const OSTRZE_LOCATIONS: readonly OstrzeLocationMeta[] = [
   },
   {
     id: 'trakt_zasadzka',
+    chapter: 'prologue',
     name: 'Leśny Trakt',
     subtitle: 'Droga przez lasy Pogórza',
     danger: 2,
@@ -37,6 +41,7 @@ export const OSTRZE_LOCATIONS: readonly OstrzeLocationMeta[] = [
   },
   {
     id: 'uroczysko_noc',
+    chapter: 'prologue',
     name: 'Uroczysko',
     subtitle: 'Polana na skraju boru',
     danger: 3,
@@ -45,6 +50,7 @@ export const OSTRZE_LOCATIONS: readonly OstrzeLocationMeta[] = [
   },
   {
     id: 'pobojowisko_swit',
+    chapter: 'prologue',
     name: 'Rozdroże i Pobojowisko',
     subtitle: 'Przedpola Wilczego Brodu',
     danger: 2,
@@ -53,6 +59,7 @@ export const OSTRZE_LOCATIONS: readonly OstrzeLocationMeta[] = [
   },
   {
     id: 'wilczy_brod',
+    chapter: 'chapter1',
     name: 'Strażnica Wilczy Bród',
     subtitle: 'Główna strażnica na Pogórzu',
     danger: 1,
@@ -61,6 +68,7 @@ export const OSTRZE_LOCATIONS: readonly OstrzeLocationMeta[] = [
   },
   {
     id: 'wilcza_nora',
+    chapter: 'chapter1',
     name: 'Wilcza Nora',
     subtitle: 'Wąwóz w górę strumienia',
     danger: 3,
@@ -69,6 +77,7 @@ export const OSTRZE_LOCATIONS: readonly OstrzeLocationMeta[] = [
   },
   {
     id: 'wilczy_las',
+    chapter: 'chapter1',
     name: 'Las Rubieży',
     subtitle: 'Puszcza wokół Wilczego Brodu',
     danger: 2,
@@ -77,6 +86,7 @@ export const OSTRZE_LOCATIONS: readonly OstrzeLocationMeta[] = [
   },
   {
     id: 'stary_mlyn',
+    chapter: 'chapter1',
     name: 'Stary Młyn nad Rzeką',
     subtitle: 'Młyn Ostapa przy brodzie',
     danger: 2,
@@ -85,6 +95,7 @@ export const OSTRZE_LOCATIONS: readonly OstrzeLocationMeta[] = [
   },
   {
     id: 'trakt_kupiecki',
+    chapter: 'chapter1',
     name: 'Trakt Kupiecki',
     subtitle: 'Gościniec ku przełęczy',
     danger: 2,
@@ -93,6 +104,7 @@ export const OSTRZE_LOCATIONS: readonly OstrzeLocationMeta[] = [
   },
   {
     id: 'lesniczowka',
+    chapter: 'chapter1',
     name: 'Leśniczówka na Skraju Puszczy',
     subtitle: 'Siedziba leśniczego',
     danger: 2,
@@ -101,6 +113,7 @@ export const OSTRZE_LOCATIONS: readonly OstrzeLocationMeta[] = [
   },
   {
     id: 'ruiny_straznicy',
+    chapter: 'chapter1',
     name: 'Ruiny Starej Strażnicy',
     subtitle: 'Zarośnięte gruzowisko na wzgórzu',
     danger: 3,
@@ -109,6 +122,7 @@ export const OSTRZE_LOCATIONS: readonly OstrzeLocationMeta[] = [
   },
   {
     id: 'kamienna_przelecz',
+    chapter: 'chapter1',
     name: 'Kamienna Przełęcz',
     subtitle: 'Górski przesmyk Pogórza',
     danger: 3,

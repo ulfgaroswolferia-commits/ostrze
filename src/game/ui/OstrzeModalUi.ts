@@ -80,6 +80,8 @@ export interface WelcomeScreenData {
   onOpenImportKey?: () => void;
 }
 
+let activeModalUi: OstrzeModalUi | null = null;
+
 export class OstrzeModalUi {
   private readonly root: HTMLElement;
   private readonly hubRoot: HTMLElement;
@@ -128,6 +130,7 @@ export class OstrzeModalUi {
   private creatorError: string | null = null;
 
   constructor(data: OriginGameData, state: OstrzeGameState, rng: SeededRng) {
+    activeModalUi?.destroy();
     this.data = data;
     this.state = state;
     this.rng = rng;
@@ -137,6 +140,7 @@ export class OstrzeModalUi {
     this.toastRoot = this.createOrReuseRoot('ostrze-toast-root', 'ostrze-toast-stack');
 
     this.draftAttrs = buildInitialCreatorAttrs(this.data);
+    activeModalUi = this;
 
     window.addEventListener(
       'keydown',
@@ -239,6 +243,9 @@ export class OstrzeModalUi {
     this.root.remove();
     this.hubRoot.remove();
     this.toastRoot.remove();
+    if (activeModalUi === this) {
+      activeModalUi = null;
+    }
   }
 
   public showWelcome(welcome: WelcomeScreenData): void {

@@ -80,6 +80,10 @@ export class PrologueDirector {
     this.engine.onPropInteract = (propId) => this.handlePropInteract(propId);
   }
 
+  public activateForDevTeleport(): void {
+    this.bindEngineHooks();
+  }
+
   private registerAllPrologueScenes(): void {
     this.engine.registerCustomScene(createBrzezinaYardScene());
     this.engine.registerCustomScene(createTraktZasadzkaScene());

@@ -1,4 +1,5 @@
 export interface PauseMenuOptions {
+  devMode?: boolean;
   hasSave: boolean;
   isMuted: boolean;
   onSave: () => void;
@@ -22,6 +23,7 @@ export function renderPauseMenuView(params: {
       <div class="ostrze-card" style="max-width:400px;text-align:center;">
         <h2 class="ostrze-title" style="margin-bottom:4px;">Menu Gry</h2>
         <p class="ostrze-subtitle" style="margin-bottom:16px;">Voided: na przekór gwiazdom</p>
+        ${pm.devMode ? `<p class="ostrze-subtitle" style="margin-bottom:16px;color:#f0c674;"><strong>DEV:</strong> Reset testu nie kasuje zapisu.${pm.hasSave ? ' „Wczytaj zapis” przywróci zapisaną postać i ostatnią lokację.' : ' Brak zapisu — użyj „Zapisz grę”, aby zachować postać i lokację przed resetem.'}</p>` : ''}
         <div style="display:flex;flex-direction:column;gap:8px;">
           <button type="button" class="ostrze-btn" id="ostrze-pm-resume">▶ Wznów grę [ESC]</button>
           <button type="button" class="ostrze-hub-btn" id="ostrze-pm-save">💾 Zapisz grę [Ctrl+S]</button>
@@ -52,7 +54,12 @@ export function renderPauseMenuView(params: {
     onRerender();
   });
   root.querySelector('#ostrze-pm-new')?.addEventListener('click', () => {
-    const ok = window.confirm('Czy na pewno chcesz zacząć nową grę? Twój obecny postęp zostanie skasowany.');
+    const confirmation = pm.devMode
+      ? pm.hasSave
+        ? 'Tryb DEV: rozpocząć od prologu testowego? Zapis postaci i lokacji pozostanie dostępny przez „Wczytaj zapis”.'
+        : 'Tryb DEV: rozpocząć od prologu testowego? Nie ma teraz zapisu do przywrócenia.'
+      : 'Czy na pewno chcesz zacząć nową grę? Twój obecny postęp zostanie skasowany.';
+    const ok = window.confirm(confirmation);
     if (!ok) return;
     onDismissForAction();
     pm.onNewGame();

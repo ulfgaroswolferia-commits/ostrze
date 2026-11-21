@@ -174,6 +174,12 @@ export class Chapter1Director {
     this.engine.onCombatEnded = (outcome) => this.handleCombatEnded(outcome);
   }
 
+  public activateForDevTeleport(): void {
+    this.activeCombatStage = 'none';
+    this.pendingTravel = null;
+    this.bindHubHooks();
+  }
+
   public handlePropInteract(propId: string): boolean {
     if (propId === 'wb_tablica') {
       this.openNoticeBoard();

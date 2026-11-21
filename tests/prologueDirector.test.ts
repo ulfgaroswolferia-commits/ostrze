@@ -5,6 +5,57 @@ import { createCharacter } from '../src/game/rules/character';
 import { PrologueDirector } from '../src/game/scenes/PrologueDirector';
 
 describe('Playable 2.5D PrologueDirector (NPC markers & non-skippable flow)', () => {
+  it.each([
+    ['miecz', 'victory'],
+    ['miecz', 'defeat'],
+    ['wlocznia', 'victory'],
+    ['wlocznia', 'defeat']
+  ] as const)(
+    'resolves sparing for %s with %s outcome and grants the class reward',
+    (classId, outcome) => {
+      const engine = new OstrzeEngineState();
+      const director = new PrologueDirector({ engine, seed: 2026 });
+      const state = director.state;
+    const classSkill = classId === 'miecz' ? 'sieczna' : 'drzewcowa';
+    createCharacter(
+      director.state,
+      {
+        name: 'Mściwój',
+        classId,
+        attributes: {
+          sila: 8,
+          zrecznosc: 7,
+          krzepa: 5,
+          bystrosc: 5,
+          rozum: 6,
+          oglada: 5,
+          fart: 5
+        },
+        tagged: [classSkill, 'wymowa', 'skradanie']
+      },
+      ORIGIN_DATA
+    );
+    const startingMoney = state.character!.money;
+
+    director.enterBrzezinaSparingPhase();
+    director.handleNpcInteract('npc_gnieworad');
+    director.handleNpcInteract('npc_radogost');
+    director.handleCombatEnded(outcome);
+
+    expect(director.phase).toBe('brzezina_kurier');
+    const resultFlag =
+      outcome === 'victory'
+        ? 'combat_demo_sparing_walka_wygrana'
+        : 'combat_demo_sparing_walka_porazka';
+    expect(state.flags[resultFlag]).toBe(true);
+    expect(state.character!.xp).toBe(160);
+    expect(state.character!.level).toBe(2);
+    expect(state.character!.money).toBe(startingMoney + 15);
+    expect(state.inventory.items.some((item) => item.id === 'kaptur_mysliwego')).toBe(true);
+    expect(state.vars[classId === 'miecz' ? 'dlug' : 'wola']).toBe(1);
+    }
+  );
+
   it('enforces NPC interactions with visible markers through every phase of the Prologue', () => {
     const engine = new OstrzeEngineState();
     const director = new PrologueDirector({ engine, seed: 2026 });

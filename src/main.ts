@@ -13,14 +13,14 @@ import { resolveQuickBeltSlots, useCombatBeltItem } from './game/rules/combatCon
 import { rollStealthCheck } from './game/rules/stealth';
 import { waitUntilHour } from './game/rules/time';
 import { syncWorldLighting } from './game/rules/worldCycle';
+import { OSTRZE_LOCATIONS } from './game/rules/travel';
 import { Chapter1Director } from './game/scenes/Chapter1Director';
 import { PrologueDirector, type ProloguePhase } from './game/scenes/PrologueDirector';
 import {
-  CHAPTER_DEV_SCENES,
+  clearOstrzeSave,
   exportSaveKey,
   hasOstrzeSave,
   importSaveKey,
-  isValidChapterId,
   loadOstrzeGame,
   saveOstrzeGame,
   type ChapterId,
@@ -303,6 +303,13 @@ async function bootstrapOstrze(): Promise<void> {
     prologue.startPrologue();
   };
 
+  const startNewGame = (): void => {
+    if (!isDevMode) {
+      clearOstrzeSave();
+    }
+    returnToPrologueStart();
+  };
+
   prologue.hasSave = hasOstrzeSave;
   prologue.onSaveRequested = () => performSave(false);
   prologue.onAutoSave = () => performSave(true);
@@ -342,22 +349,28 @@ async function bootstrapOstrze(): Promise<void> {
     prologue.state.flags.ukryte_insygnia = true;
   };
 
-  const switchToDevChapter = (chapterId: string): void => {
-    const nextChapter: ChapterId = isValidChapterId(chapterId) ? chapterId : 'prologue';
+  const devLocations = OSTRZE_LOCATIONS.map((location) => ({
+    id: location.id,
+    label: `${location.chapter === 'prologue' ? 'Prolog' : 'Akt I'} — ${location.name}`
+  }));
+
+  const switchToDevLocation = (locationId: string): void => {
+    const location = OSTRZE_LOCATIONS.find((candidate) => candidate.id === locationId);
+    if (!location) return;
     modalUi.closeAll();
-    if (nextChapter === 'chapter1') {
-      ensureDevTestCharacter();
-      activeChapter = 'chapter1';
-      chapter1.enterWilczyBrod();
-      modalUi.showToast('DEV: Przełączono na Akt I — Wilczy Bród.', 'info');
-    } else {
-      activeChapter = 'prologue';
-      if (!prologue.state.character) {
-        ensureDevTestCharacter();
-      }
-      prologue.enterBrzezinaSparingPhase();
-      modalUi.showToast('DEV: Przełączono na Prolog — Brzezina.', 'info');
-    }
+    if (!prologue.state.character) ensureDevTestCharacter();
+
+    engine.syncFromOstrzeState(prologue.state, prologue.data);
+    if (!engine.loadCustomScene(location.id)) return;
+    activeChapter = location.chapter;
+    prologue.state.world.location = location.id;
+    if (location.chapter === 'prologue') prologue.activateForDevTeleport();
+    else chapter1.activateForDevTeleport();
+    ostrzeAudio.setAmbience(location.ambience);
+    syncWorldLighting(prologue.state, prologue.data, engine);
+    if (location.chapter === 'prologue') prologue.refreshObjectiveTracker();
+    else chapter1.refreshHubPanel();
+    modalUi.showToast(`DEV: teleport do ${location.name}; postać i stan świata zachowane.`, 'info');
     refreshUi();
   };
 
@@ -374,21 +387,22 @@ async function bootstrapOstrze(): Promise<void> {
     if (modalUi.hasOpenModal() || modalUi.wasEscapeJustConsumed()) return;
     modalUi.showPauseMenu({
       hasSave: hasOstrzeSave(),
+      devMode: isDevMode,
       isMuted: CombatAudioEngine.getInstance().getMuted(),
       onSave: () => performSave(false),
       onLoad: performLoad,
       onOpenKey: () => openSaveKeyModal(),
       onToggleMute: toggleUnifiedAudio,
-      onNewGame: returnToPrologueStart,
+      onNewGame: startNewGame,
       onClosed: () => refreshUi()
     });
   };
 
   hud = new HudOverlay(hudRoot, engine, sceneView, {
     devMode: isDevMode,
-    devScenes: CHAPTER_DEV_SCENES,
-    getActiveDevSceneId: () => activeChapter,
-    onSelectDevScene: switchToDevChapter,
+    devScenes: devLocations,
+    getActiveDevSceneId: () => engine.activeCustomSceneId ?? activeChapter,
+    onSelectDevScene: switchToDevLocation,
     getHeroMeta: () => {
       const ch = prologue.state.character;
       if (!ch) return null;
@@ -425,7 +439,7 @@ async function bootstrapOstrze(): Promise<void> {
     onLoadGame: performLoad,
     hasSave: hasOstrzeSave,
     onOpenSaveKey: () => openSaveKeyModal(),
-    onNewGame: returnToPrologueStart,
+    onNewGame: startNewGame,
     onToggleAudio: (muted) => {
       ostrzeAudio.setMuted(muted);
     },
@@ -457,6 +471,7 @@ async function bootstrapOstrze(): Promise<void> {
         hasSave: Boolean(existingSave),
         savedSummary,
         onStartNew: (playerName) => {
+          clearOstrzeSave();
           modalUi.setDraftName(playerName);
           prologue.startPrologue();
         },

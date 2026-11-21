@@ -5,6 +5,7 @@ import { createCharacter, createEmptyOstrzeState } from '../src/game/rules/chara
 import { createRng } from '../src/game/rules/dice';
 import { Chapter1Director } from '../src/game/scenes/Chapter1Director';
 import { PrologueDirector } from '../src/game/scenes/PrologueDirector';
+import { OSTRZE_LOCATIONS } from '../src/game/rules/travel';
 import {
   CHAPTER_DEV_SCENES,
   clearOstrzeSave,
@@ -167,6 +168,51 @@ describe('Save/Load E2E, Portable Keys & Restore Stability', () => {
     ch1.restoreFromSave(loaded.sceneId);
     expect(engine.activeCustomSceneId).toBe('wilczy_brod');
     expect(ch1.hasBrzezinaMemoryEchoAvailable()).toBe(true);
+  });
+
+  it('round-trips and restores campaign state in every playable Prologue and Act I location', () => {
+    const engine = new OstrzeEngineState();
+    const prologue = new PrologueDirector({ engine, seed: 2026 });
+    const chapter1 = new Chapter1Director({ engine, state: prologue.state, rng: createRng(2026) });
+    const sourceState = createSampleState();
+    sourceState.time.minutes = 17 * 60 + 25;
+    sourceState.quests.wilcza_nora = 'active';
+    sourceState.inventory.items.push({ id: 'kamien_zmierzchu', qty: 1 });
+    sourceState.flags.teleport_regression_marker = true;
+
+    const expectedCharacter = JSON.stringify(sourceState.character);
+    const expectedInventory = JSON.stringify(sourceState.inventory);
+    const expectedFlags = JSON.stringify(sourceState.flags);
+    const expectedQuests = JSON.stringify(sourceState.quests);
+
+    for (const location of OSTRZE_LOCATIONS) {
+      sourceState.world.location = location.id;
+      const payload = importSaveKey(
+        exportSaveKey({ chapter: location.chapter, sceneId: location.id, state: sourceState })!
+      );
+      expect(payload, `save payload for ${location.id}`).not.toBeNull();
+      Object.assign(prologue.state, payload!.state);
+
+      if (location.chapter === 'prologue') {
+        const phaseByScene = {
+          brzezina_dziedziniec: 'brzezina_towarzysze',
+          trakt_zasadzka: 'trakt_ognisko',
+          uroczysko_noc: 'noc_istota',
+          pobojowisko_swit: 'pobojowisko'
+        } as const;
+        prologue.restoreFromSave(phaseByScene[location.id as keyof typeof phaseByScene], location.id);
+      } else {
+        chapter1.restoreFromSave(location.id);
+      }
+
+      expect(engine.activeCustomSceneId, `restored scene ${location.id}`).toBe(location.id);
+      expect(prologue.state.world.location).toBe(location.id);
+      expect(JSON.stringify(prologue.state.character)).toBe(expectedCharacter);
+      expect(JSON.stringify(prologue.state.inventory)).toBe(expectedInventory);
+      expect(JSON.stringify(prologue.state.flags)).toBe(expectedFlags);
+      expect(JSON.stringify(prologue.state.quests)).toBe(expectedQuests);
+      expect(prologue.state.time.minutes).toBe(17 * 60 + 25);
+    }
   });
 
   it('caches hasOstrzeSave() across save/clear cycles without re-parsing JSON on every HUD render', () => {
