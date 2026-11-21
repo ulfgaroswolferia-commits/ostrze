@@ -5,7 +5,7 @@ const port = '4173';
 const origin = `http://${host}:${port}`;
 const server = spawn(
   process.execPath,
-  ['node_modules/vite/bin/vite.js', '--host', host, '--port', port],
+  ['node_modules/vite/bin/vite.js', '--host', host, '--port', port, '--strictPort'],
   { cwd: process.cwd(), stdio: 'inherit', windowsHide: true }
 );
 const serverClosed = new Promise((resolve) => server.once('exit', resolve));

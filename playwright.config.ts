@@ -6,10 +6,10 @@ export default defineConfig({
     ? `${process.env.TEMP}/ostrze-playwright-results`
     : './.playwright-results',
   fullyParallel: false,
+  workers: 1,
   reporter: 'list',
   use: {
     ...devices['Desktop Chrome'],
-    channel: 'chrome',
     headless: true,
     baseURL: 'http://127.0.0.1:4173'
   }

@@ -506,6 +506,7 @@ export class OstrzeModalUi {
           this.hubCollapsed
             ? ''
             : `
+              <div class="ostrze-hub-meta">${this.escape(this.hubPanel.statusLine)}</div>
               <div class="ostrze-hub-quests">${this.escape(this.hubPanel.questsLine)}</div>
               ${btns ? `<div class="ostrze-hub-actions">${btns}</div>` : ''}
             `

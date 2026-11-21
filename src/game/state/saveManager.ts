@@ -1,6 +1,7 @@
 import type { OstrzeGameState } from '../data/originTypes';
 
 export const OSTRZE_SAVE_KEY = 'ostrze_25d_save_v1';
+export const OSTRZE_DEV_SAVE_KEY = `${OSTRZE_SAVE_KEY}_dev`;
 
 export const VALID_CHAPTER_IDS = ['prologue', 'chapter1'] as const;
 export type ChapterId = (typeof VALID_CHAPTER_IDS)[number];
@@ -23,8 +24,26 @@ export interface OstrzeSavePayload {
   state: OstrzeGameState;
 }
 
-let cachedSaveRaw: string | null | undefined;
-let cachedHasSave: boolean | null = null;
+const saveCache = new Map<string, { raw: string | null; hasSave: boolean }>();
+let storageEventWindow: Window | null = null;
+
+function rememberSave(key: string, raw: string | null, hasSave: boolean): void {
+  saveCache.set(key, { raw, hasSave });
+}
+
+function subscribeToStorageChanges(): void {
+  if (typeof window === 'undefined' || typeof window.addEventListener !== 'function' || storageEventWindow === window) {
+    return;
+  }
+  storageEventWindow = window;
+  window.addEventListener('storage', (event) => {
+    if (event.key === null) {
+      saveCache.clear();
+    } else {
+      saveCache.delete(event.key);
+    }
+  });
+}
 
 function getStorage(): Storage | null {
   try {
@@ -37,7 +56,11 @@ function getStorage(): Storage | null {
   return null;
 }
 
-export function saveOstrzeGame(payload: Omit<OstrzeSavePayload, 'version' | 'savedAt'>): boolean {
+export function saveOstrzeGame(
+  payload: Omit<OstrzeSavePayload, 'version' | 'savedAt'>,
+  key = OSTRZE_SAVE_KEY
+): boolean {
+  subscribeToStorageChanges();
   const storage = getStorage();
   if (!storage || !payload.state.character) return false;
   try {
@@ -50,9 +73,8 @@ export function saveOstrzeGame(payload: Omit<OstrzeSavePayload, 'version' | 'sav
       state: payload.state
     };
     const serialized = JSON.stringify(full);
-    storage.setItem(OSTRZE_SAVE_KEY, serialized);
-    cachedSaveRaw = serialized;
-    cachedHasSave = true;
+    storage.setItem(key, serialized);
+    rememberSave(key, serialized, true);
     return true;
   } catch {
     return false;
@@ -73,24 +95,56 @@ export function normalizeSavePayload(raw: unknown): OstrzeSavePayload | null {
     !parsed.sceneId ||
     !parsed.state ||
     typeof parsed.state !== 'object' ||
+    Array.isArray(parsed.state) ||
     !parsed.state.character ||
-    typeof parsed.state.character !== 'object'
+    typeof parsed.state.character !== 'object' ||
+    Array.isArray(parsed.state.character)
   ) {
     return null;
   }
 
   const st = parsed.state;
-  st.flags = st.flags && typeof st.flags === 'object' ? st.flags : {};
-  st.vars = st.vars && typeof st.vars === 'object' ? st.vars : {};
-  st.quests = st.quests && typeof st.quests === 'object' ? st.quests : {};
+  const ch = st.character;
+  if (!ch) return null;
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+  const isFiniteNumber = (value: unknown): value is number =>
+    typeof value === 'number' && Number.isFinite(value);
+  const attributeIds = ['sila', 'zrecznosc', 'krzepa', 'bystrosc', 'rozum', 'oglada', 'fart'] as const;
+  if (
+    typeof ch.name !== 'string' ||
+    !ch.name.trim() ||
+    (ch.classId !== 'miecz' && ch.classId !== 'wlocznia') ||
+    !isFiniteNumber(ch.level) || ch.level < 1 ||
+    !isFiniteNumber(ch.xp) ||
+    !isFiniteNumber(ch.hp) ||
+    !isFiniteNumber(ch.money) ||
+    !isRecord(ch.attributes) ||
+    !attributeIds.every((id) => isFiniteNumber(ch.attributes[id]))
+  ) {
+    return null;
+  }
+  if (!isRecord(ch.skillPoints)) ch.skillPoints = {};
+  if (!isRecord(ch.mastery)) ch.mastery = {};
+  if (!isFiniteNumber(ch.freeSkillPoints)) ch.freeSkillPoints = 0;
+  if (!isFiniteNumber(ch.freeAttributePoints)) ch.freeAttributePoints = 0;
+  if (!isFiniteNumber(ch.freePerkPicks)) ch.freePerkPicks = 0;
+  if (!isRecord(st.flags)) st.flags = {};
+  if (!isRecord(st.vars)) st.vars = {};
+  if (!isRecord(st.quests)) st.quests = {};
 
-  st.inventory = st.inventory && typeof st.inventory === 'object'
+  st.inventory = st.inventory && typeof st.inventory === 'object' && !Array.isArray(st.inventory)
     ? st.inventory
     : { items: [], equipped: {}, quickBelt: [null, null, null, null] };
   if (!Array.isArray(st.inventory.items)) st.inventory.items = [];
-  if (!st.inventory.equipped || typeof st.inventory.equipped !== 'object') {
+  else st.inventory.items = st.inventory.items.filter(
+    (item) => isRecord(item) && typeof item.id === 'string' && isFiniteNumber(item.qty) && item.qty > 0
+  );
+  if (!isRecord(st.inventory.equipped)) {
     st.inventory.equipped = {};
   }
+  if (!isFiniteNumber(st.time?.minutes)) return null;
+  if (!isFiniteNumber(st.rngState)) st.rngState = 1;
   if (!Array.isArray(st.inventory.quickBelt) || st.inventory.quickBelt.length < 4) {
     const existing = Array.isArray(st.inventory.quickBelt) ? st.inventory.quickBelt : [];
     st.inventory.quickBelt = [
@@ -101,7 +155,7 @@ export function normalizeSavePayload(raw: unknown): OstrzeSavePayload | null {
     ];
   }
 
-  st.world = st.world && typeof st.world === 'object'
+  st.world = st.world && typeof st.world === 'object' && !Array.isArray(st.world)
     ? st.world
     : {
         location: 'brzezina',
@@ -113,9 +167,9 @@ export function normalizeSavePayload(raw: unknown): OstrzeSavePayload | null {
   if (!Array.isArray(st.world.knownPlaces)) st.world.knownPlaces = ['brzezina'];
   if (!Array.isArray(st.world.failedChecks)) st.world.failedChecks = [];
   if (!Array.isArray(st.world.eventsSeen)) st.world.eventsSeen = [];
+  if (typeof st.world.location !== 'string' || !st.world.location) st.world.location = 'brzezina';
+  if (st.world.activePhenomenon === undefined) st.world.activePhenomenon = null;
 
-  const ch = st.character;
-  if (!ch) return null;
   if (!Array.isArray(ch.effects)) ch.effects = [];
   if (!Array.isArray(ch.perks)) ch.perks = [];
   if (!Array.isArray(ch.tagged)) ch.tagged = [];
@@ -130,72 +184,72 @@ export function normalizeSavePayload(raw: unknown): OstrzeSavePayload | null {
   };
 }
 
-export function loadOstrzeGame(): OstrzeSavePayload | null {
+export function loadOstrzeGame(key = OSTRZE_SAVE_KEY): OstrzeSavePayload | null {
+  subscribeToStorageChanges();
   const storage = getStorage();
   if (!storage) {
-    cachedSaveRaw = null;
-    cachedHasSave = false;
+    rememberSave(key, null, false);
     return null;
   }
   try {
-    const raw = storage.getItem(OSTRZE_SAVE_KEY);
+    const raw = storage.getItem(key);
     if (!raw) {
-      cachedSaveRaw = null;
-      cachedHasSave = false;
+      rememberSave(key, null, false);
       return null;
     }
     const normalized = normalizeSavePayload(JSON.parse(raw));
-    cachedSaveRaw = raw;
-    cachedHasSave = normalized !== null;
+    rememberSave(key, raw, normalized !== null);
     return normalized;
   } catch {
-    cachedSaveRaw = null;
-    cachedHasSave = false;
+    rememberSave(key, null, false);
     return null;
   }
 }
 
 export function hasOstrzeSave(): boolean {
-  if (cachedHasSave !== null) {
-    return cachedHasSave;
-  }
+  return hasOstrzeSaveForKey(OSTRZE_SAVE_KEY);
+}
+
+export function hasOstrzeSaveForKey(key: string): boolean {
+  subscribeToStorageChanges();
+  const cached = saveCache.get(key);
+  if (cached) return cached.hasSave;
+
   const storage = getStorage();
   if (!storage) {
-    cachedSaveRaw = null;
-    cachedHasSave = false;
+    rememberSave(key, null, false);
     return false;
   }
   try {
-    const raw = storage.getItem(OSTRZE_SAVE_KEY);
-    if (raw === cachedSaveRaw && cachedHasSave !== null) {
-      return cachedHasSave;
-    }
-    cachedSaveRaw = raw;
-    cachedHasSave = false;
+    const raw = storage.getItem(key);
+    let hasSave = false;
     if (raw) {
       try {
-        cachedHasSave = normalizeSavePayload(JSON.parse(raw)) !== null;
+        hasSave = normalizeSavePayload(JSON.parse(raw)) !== null;
       } catch {
-        cachedHasSave = false;
+        hasSave = false;
       }
     }
-    return cachedHasSave;
+    rememberSave(key, raw, hasSave);
+    return hasSave;
   } catch {
-    cachedSaveRaw = null;
-    cachedHasSave = false;
+    rememberSave(key, null, false);
     return false;
   }
 }
 
-export function clearOstrzeSave(): void {
-  cachedSaveRaw = null;
-  cachedHasSave = false;
+export function clearOstrzeSave(key = OSTRZE_SAVE_KEY): void {
+  subscribeToStorageChanges();
   const storage = getStorage();
-  if (!storage) return;
+  if (!storage) {
+    rememberSave(key, null, false);
+    return;
+  }
   try {
-    storage.removeItem(OSTRZE_SAVE_KEY);
+    storage.removeItem(key);
+    rememberSave(key, null, false);
   } catch {
-    // ignore storage errors
+    saveCache.delete(key);
   }
 }
 

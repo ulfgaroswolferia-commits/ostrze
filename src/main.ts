@@ -3,7 +3,6 @@ import './game/styles/ostrze.css';
 import { CombatAudioEngine } from '@ulf/audio/combatAudio';
 import { IsoSceneView } from '@ulf/renderer/isoSceneView';
 import { HudOverlay } from '@ulf/ui/hudOverlay';
-import { InspectorPanel } from '@ulf/ui/inspectorPanel';
 import { OstrzeEngineState } from './engine-bridge/OstrzeEngineState';
 import { ostrzeAudio } from './game/audio/ostrzeAudio';
 import { ORIGIN_DATA } from './game/data/originData';
@@ -14,15 +13,16 @@ import { rollStealthCheck } from './game/rules/stealth';
 import { waitUntilHour } from './game/rules/time';
 import { syncWorldLighting } from './game/rules/worldCycle';
 import { OSTRZE_LOCATIONS } from './game/rules/travel';
-import { Chapter1Director } from './game/scenes/Chapter1Director';
 import { PrologueDirector, type ProloguePhase } from './game/scenes/PrologueDirector';
 import {
   clearOstrzeSave,
   exportSaveKey,
   hasOstrzeSave,
+  hasOstrzeSaveForKey,
   importSaveKey,
   loadOstrzeGame,
   saveOstrzeGame,
+  OSTRZE_DEV_SAVE_KEY,
   type ChapterId,
   type OstrzeSavePayload
 } from './game/state/saveManager';
@@ -50,7 +50,7 @@ async function bootstrapOstrze(): Promise<void> {
   const engine = new OstrzeEngineState();
 
   let hud: HudOverlay | null = null;
-  let inspector: InspectorPanel | null = null;
+  let inspector: { render(): void } | null = null;
   const chronicleUx = new ChronicleUxController(hudRoot, engine);
   const combatTargetOverlay = new CombatTargetOverlay(engine, ORIGIN_DATA);
 
@@ -110,6 +110,7 @@ async function bootstrapOstrze(): Promise<void> {
   });
 
   if (isDevMode) {
+    const { InspectorPanel } = await import('@ulf/ui/inspectorPanel');
     inspector = new InspectorPanel(inspectorRoot, engine, sceneView, refreshUi);
   } else {
     inspectorRoot.innerHTML = '';
@@ -215,6 +216,7 @@ async function bootstrapOstrze(): Promise<void> {
     syncWorldLighting(prologue.state, prologue.data, engine);
   };
 
+  const { Chapter1Director } = await import('./game/scenes/Chapter1Director');
   const chapter1 = new Chapter1Director({
     engine,
     state: prologue.state,
@@ -226,6 +228,10 @@ async function bootstrapOstrze(): Promise<void> {
 
   let activeChapter: ChapterId = startChapter === '1' ? 'chapter1' : 'prologue';
 
+  const activeSaveKey = isDevMode ? OSTRZE_DEV_SAVE_KEY : undefined;
+  const hasAvailableSave = (): boolean =>
+    hasOstrzeSave() || (isDevMode && hasOstrzeSaveForKey(OSTRZE_DEV_SAVE_KEY));
+
   const performSave = (silent = false): void => {
     prologue.state.rngState = prologue.rng.getState();
     const ok = saveOstrzeGame({
@@ -233,7 +239,7 @@ async function bootstrapOstrze(): Promise<void> {
       sceneId: engine.activeCustomSceneId ?? (activeChapter === 'chapter1' ? 'wilczy_brod' : 'brzezina_dziedziniec'),
       prologueStep: activeChapter === 'prologue' ? prologue.phase : undefined,
       state: prologue.state
-    });
+    }, activeSaveKey);
     if (!silent) {
       modalUi.showToast(ok ? 'Gra zapisana.' : 'Nie udało się zapisać gry.', ok ? 'success' : 'info');
     }
@@ -257,7 +263,7 @@ async function bootstrapOstrze(): Promise<void> {
   };
 
   const performLoad = (): void => {
-    const loaded = loadOstrzeGame();
+    const loaded = loadOstrzeGame() ?? (isDevMode ? loadOstrzeGame(OSTRZE_DEV_SAVE_KEY) : null);
     if (!loaded) {
       modalUi.showToast('Brak prawidłowego zapisu gry.', 'info');
       return;
@@ -283,7 +289,7 @@ async function bootstrapOstrze(): Promise<void> {
           sceneId: parsed.sceneId,
           prologueStep: parsed.prologueStep,
           state: parsed.state
-        });
+        }, activeSaveKey);
         applyLoadedPayload(parsed);
         modalUi.showToast('Wczytano grę z klucza rozgrywki.', 'success');
         return true;
@@ -304,20 +310,18 @@ async function bootstrapOstrze(): Promise<void> {
   };
 
   const startNewGame = (): void => {
-    if (!isDevMode) {
-      clearOstrzeSave();
-    }
+    clearOstrzeSave(isDevMode ? OSTRZE_DEV_SAVE_KEY : undefined);
     returnToPrologueStart();
   };
 
-  prologue.hasSave = hasOstrzeSave;
+  prologue.hasSave = hasAvailableSave;
   prologue.onSaveRequested = () => performSave(false);
   prologue.onAutoSave = () => performSave(true);
   prologue.onLoadRequested = performLoad;
   prologue.onKeyRequested = () => openSaveKeyModal();
   prologue.onDefeatToPrologue = returnToPrologueStart;
 
-  chapter1.hasSave = hasOstrzeSave;
+  chapter1.hasSave = hasAvailableSave;
   chapter1.onSaveRequested = () => performSave(false);
   chapter1.onAutoSave = () => performSave(true);
   chapter1.onLoadRequested = performLoad;
@@ -386,7 +390,7 @@ async function bootstrapOstrze(): Promise<void> {
   const openPauseMenu = (): void => {
     if (modalUi.hasOpenModal() || modalUi.wasEscapeJustConsumed()) return;
     modalUi.showPauseMenu({
-      hasSave: hasOstrzeSave(),
+      hasSave: hasAvailableSave(),
       devMode: isDevMode,
       isMuted: CombatAudioEngine.getInstance().getMuted(),
       onSave: () => performSave(false),
@@ -437,7 +441,7 @@ async function bootstrapOstrze(): Promise<void> {
     onOpenCamp: openCampfirePanel,
     onSaveGame: () => performSave(false),
     onLoadGame: performLoad,
-    hasSave: hasOstrzeSave,
+    hasSave: hasAvailableSave,
     onOpenSaveKey: () => openSaveKeyModal(),
     onNewGame: startNewGame,
     onToggleAudio: (muted) => {

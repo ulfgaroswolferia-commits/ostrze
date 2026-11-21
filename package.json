@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:browser": "node scripts/test-browser.mjs",
+    "test:browser:install": "playwright install chromium",
     "commit:all": "node scripts/commit-sync.mjs"
   },
   "dependencies": {

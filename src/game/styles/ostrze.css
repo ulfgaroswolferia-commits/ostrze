@@ -396,7 +396,8 @@
 .ostrze-hub-bar {
   position: fixed;
   top: 60px;
-  right: 16px;
+  left: 16px;
+  right: auto;
   z-index: 900;
   width: min(300px, calc(100vw - 32px));
   background: rgba(14, 16, 22, 0.9);

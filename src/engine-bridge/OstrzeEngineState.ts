@@ -1,10 +1,18 @@
 import { registerCustomCharacterBaker } from '@ulf/assets/characterBakery';
 import { FovGridState } from '@ulf/core/fov';
+import { deltaToDirection8 } from '@ulf/core/pathfinding';
 import { IsometricWorldMap, MapId } from '@ulf/core/worldMap';
 import { registerPropVisualTransform } from '@ulf/renderer/isoSceneView';
 import { DIALOGUE_TREES, DialogueNode } from '@ulf/rpg/dialogueSystem';
 import { ActorEntity, CrpgGameState, LogSeverity } from '@ulf/rpg/gameLoop';
-import { bakeWolfCharacterBuffers, isWolfRecipe } from '../game/assets/beastSprites';
+import {
+  bakeBoarCharacterBuffers,
+  bakeDogCharacterBuffers,
+  bakeWolfCharacterBuffers,
+  isBoarRecipe,
+  isDogRecipe,
+  isWolfRecipe
+} from '../game/assets/beastSprites';
 import { getPropVisualTransform } from '../game/assets/buildingScaling';
 import type { OriginGameData, OstrzeGameState } from '../game/data/originTypes';
 import { ComputedStats, getStats } from '../game/rules/stats';
@@ -14,6 +22,16 @@ let ostrzeEngineExtensionsRegistered = false;
 export function ensureOstrzeEngineExtensionsRegistered(): void {
   if (ostrzeEngineExtensionsRegistered) return;
   ostrzeEngineExtensionsRegistered = true;
+  registerCustomCharacterBaker({
+    matches: (recipe) => isDogRecipe(recipe),
+    computeHash: (recipe) => `dog_${recipe.id}`,
+    bake: (recipe) => bakeDogCharacterBuffers(recipe)
+  });
+  registerCustomCharacterBaker({
+    matches: (recipe) => isBoarRecipe(recipe),
+    computeHash: (recipe) => `boar_${recipe.id}`,
+    bake: (recipe) => bakeBoarCharacterBuffers(recipe)
+  });
   registerCustomCharacterBaker({
     matches: (recipe) => isWolfRecipe(recipe),
     computeHash: (recipe) => `wolf|${recipe.id}|${recipe.name}`,
@@ -284,6 +302,14 @@ export class OstrzeEngineState extends CrpgGameState {
             : undefined
         });
       }
+    }
+
+    for (const npc of this.npcs) {
+      if (!npc.dialogueId) continue;
+      npc.direction = deltaToDirection8(
+        this.player.tileX - npc.tileX,
+        this.player.tileY - npc.tileY
+      );
     }
 
     if (scene.introLog) {

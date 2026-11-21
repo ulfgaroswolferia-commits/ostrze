@@ -101,5 +101,15 @@ export function getPropVisualTransform(
     };
   }
 
+  if (prop.kind === 'training_dummy') {
+    return {
+      scaleX: 1.18,
+      scaleY: 1.18,
+      centerOnFootprint: false,
+      offsetY: 0,
+      aoScale: 1
+    };
+  }
+
   return IDENTITY_TRANSFORM;
 }

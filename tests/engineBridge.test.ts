@@ -6,6 +6,7 @@ import {
   computeReachableTilesBfs,
   computeTileTransitions
 } from '@ulf/assets/terrainBlending';
+import { deltaToDirection8 } from '@ulf/core/pathfinding';
 import { resolvePropVisualTransform } from '@ulf/renderer/isoSceneView';
 import { describe, expect, it } from 'vitest';
 import { OstrzeEngineState } from '../src/engine-bridge/OstrzeEngineState';
@@ -156,6 +157,7 @@ describe('OstrzeEngineState bridge', () => {
     const brzezina = scenes.find((s) => s.id === 'brzezina_dziedziniec')!;
     const brzezinaPropIds = new Set(brzezina.map.props.map((p) => p.id));
     expect(brzezinaPropIds.has('brzezina_dwor_szkoly')).toBe(true);
+    expect(brzezinaPropIds.has('brzezina_sztandar_szkoly')).toBe(true);
     expect(brzezinaPropIds.has('brzezina_baszta_szkoly')).toBe(true);
     expect(brzezinaPropIds.has('brzezina_dormitorium_1')).toBe(true);
     expect(brzezinaPropIds.has('brzezina_dormitorium_2')).toBe(true);
@@ -176,6 +178,8 @@ describe('OstrzeEngineState bridge', () => {
     const lesniczowka = createLesniczowkaScene();
 
     const school = brzezina.map.props.find((p) => p.id === 'brzezina_dwor_szkoly')!;
+    const schoolBanner = brzezina.map.props.find((p) => p.id === 'brzezina_sztandar_szkoly')!;
+    const trainingDummy = brzezina.map.props.find((p) => p.id === 'brzezina_kukla_1')!;
     const schoolTower = brzezina.map.props.find((p) => p.id === 'brzezina_baszta_szkoly')!;
     const dorm1 = brzezina.map.props.find((p) => p.id === 'brzezina_dormitorium_1')!;
     const inn = wilczyBrod.map.props.find((p) => p.id === 'wb_karczma')!;
@@ -183,13 +187,31 @@ describe('OstrzeEngineState bridge', () => {
     const smithy = wilczyBrod.map.props.find((p) => p.id === 'wb_kuznia')!;
     const peasantCottage = wilczyBrod.map.props.find((p) => p.id === 'wb_chata_osadnikow_1')!;
     const watermill = staryMlyn.map.props.find((p) => p.id === 'mlyn_budynek')!;
+    const watermillWheel = staryMlyn.map.props.find((p) => p.id === 'mlyn_kolo_wodne');
+    const forest = createWilczyLasScene({ withHunt: true });
+    const forester = createLesniczowkaScene();
+    const ruins = createRuinyStraznicyScene();
+    const dog = forester.actors?.find((actor) => actor.id === 'npc_pies_burek')!;
+    const boar = forest.actors?.find((actor) => actor.id === 'enemy_las_dzik')!;
     const shed = lesniczowka.map.props.find((p) => p.id === 'lesniczowka_szopa')!;
 
     // Grand institutions & public halls use Row 3 (variants 12..15) manor sprites, never tiny Row 0 shacks
     expect(school.variant).toBeGreaterThanOrEqual(12);
+    expect(schoolTower.y).toBe(3);
     expect(inn.variant).toBeGreaterThanOrEqual(12);
     expect(barracks.variant).toBeGreaterThanOrEqual(12);
     expect(watermill.variant).toBeGreaterThanOrEqual(12);
+    expect(watermillWheel?.kind).toBe('watermill_wheel');
+    expect(watermillWheel?.name).toBe('Koło Młyńskie');
+    expect(watermillWheel?.blocksMovement).toBe(false);
+    expect(staryMlyn.map.props.some((p) => p.id === 'mlyn_wnetrze_krysztal' || p.kind === 'arcane_crystal')).toBe(false);
+    expect(staryMlyn.actors?.some((actor) => actor.id === 'npc_mlyn_wnetrze')).toBe(false);
+    expect(forest.actors?.some((actor) => ['npc_las_polana', 'npc_las_slady'].includes(actor.id))).toBe(false);
+    expect(ruins.actors?.some((actor) => ['npc_ruiny_mur', 'npc_ruiny_kruk'].includes(actor.id))).toBe(false);
+    expect(ruins.map.props.some((prop) => prop.id === 'ruiny_kruk' && prop.kind === 'perched_crow')).toBe(true);
+    const scouts = createTraktKupieckiScene().actors?.find((actor) => actor.id === 'npc_trakt_zwiadowcy');
+    expect(scouts?.recipe.name).toBe('Zwiadowca przy ognisku');
+    expect(scouts?.recipe.title).toBe('Jeden z jeźdźców w szarym płaszczu');
     // Smithy uses a medium stone-chimney building, never a Row 0 shed
     expect(smithy.variant).toBeGreaterThanOrEqual(4);
     // Shed genuinely uses a compact Row 0 shed sprite
@@ -202,21 +224,40 @@ describe('OstrzeEngineState bridge', () => {
     const cottageScale = getPropVisualTransform(peasantCottage).scaleX;
     const shedScale = getPropVisualTransform(shed).scaleX;
     const towerScale = getPropVisualTransform(schoolTower).scaleX;
+    const dummyScale = getPropVisualTransform(trainingDummy).scaleX;
 
     expect(schoolScale).toBeGreaterThan(innScale);
     expect(innScale).toBeGreaterThan(dormScale);
     expect(dormScale).toBeGreaterThan(cottageScale);
     expect(cottageScale).toBeGreaterThan(shedScale);
     expect(towerScale).toBeGreaterThan(cottageScale);
+    expect(dummyScale).toBeGreaterThan(1);
+    expect(schoolBanner.kind).toBe('school_banner');
+    expect(schoolBanner.blocksMovement).toBe(false);
 
     // Verify official engine hooks (registerPropVisualTransform & registerCustomCharacterBaker) are active
     new OstrzeEngineState();
     expect(resolvePropVisualTransform(school).scaleX).toBe(schoolScale);
+    expect(computeCharacterRecipeHash(dog.recipe)).toContain('dog_');
+    expect(computeCharacterRecipeHash(boar.recipe)).toContain('boar_');
     const wolfScene = createWilczaNoraScene();
     const wolfActor = wolfScene.actors!.find((a) => a.id === 'enemy_wilk_1')!;
     expect(computeCharacterRecipeHash(wolfActor.recipe)).toBe(
       `wolf|${wolfActor.recipe.id}|${wolfActor.recipe.name}`
     );
     expect(bakeCharacterBuffers(wolfActor.recipe).recipeHash).toContain('wolf_');
+  });
+
+  it('turns dialogue NPCs toward the player when a custom scene loads', () => {
+    const game = new OstrzeEngineState();
+    const scene = createBrzezinaYardScene();
+    game.registerCustomScene(scene);
+    expect(game.loadCustomScene(scene.id)).toBe(true);
+
+    for (const npc of game.npcs.filter((actor) => actor.dialogueId)) {
+      expect(npc.direction).toBe(
+        deltaToDirection8(game.player.tileX - npc.tileX, game.player.tileY - npc.tileY)
+      );
+    }
   });
 });

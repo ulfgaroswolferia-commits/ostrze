@@ -254,7 +254,8 @@ export function createWilczyBrodScene(): CustomSceneConfig {
         heightZ: 2,
         blocksMovement: false,
         blocksSight: false,
-        interactive: true
+        interactive: true,
+        linkedLightId: 'light_mlyn_glow'
       },
       {
         id: 'wb_kuznia',
@@ -1304,28 +1305,6 @@ export function createWilczyLasScene(opts?: { withHunt?: boolean }): CustomScene
 
   const actors: ActorEntity[] = [
     makeChapterNpc({
-      id: 'npc_las_polana',
-      seed: 701,
-      name: 'Polana Ziół',
-      title: 'Zioła dla karczmarza Wrzoska',
-      x: 9,
-      y: 10,
-      z: tiles[10][9].z,
-      torso: 'torso_linen_tunic',
-      head: 'helm_ranger_cowl'
-    }),
-    makeChapterNpc({
-      id: 'npc_las_slady',
-      seed: 702,
-      name: 'Ślady za Polaną',
-      title: 'Odciski owczych racic i ciężkich butów',
-      x: 14,
-      y: 8,
-      z: tiles[8][14].z,
-      torso: 'torso_przeszywanica',
-      cloak: 'cloak_ranger_quiver'
-    }),
-    makeChapterNpc({
       id: 'npc_las_drwal',
       seed: 703,
       name: 'Drwal z Lasu Rubieży',
@@ -1509,7 +1488,7 @@ export function createStaryMlynScene(opts?: { isNight?: boolean }): CustomSceneC
         name: 'Stary Młyn Wodny',
         kind: 'slavic_cottage',
         variant: 15,
-        x: 11,
+        x: 13,
         y: 6,
         z: 0,
         sizeX: 3,
@@ -1520,19 +1499,18 @@ export function createStaryMlynScene(opts?: { isNight?: boolean }): CustomSceneC
         interactive: true
       },
       {
-        id: 'mlyn_wnetrze_krysztal',
-        name: 'Koło Młyńskie i Wnętrze Młyna',
-        kind: 'arcane_crystal',
-        x: 14,
+        id: 'mlyn_kolo_wodne',
+        name: 'Koło Młyńskie',
+        kind: 'watermill_wheel',
+        x: 16,
         y: 8,
         z: 0,
         sizeX: 1,
         sizeY: 1,
-        heightZ: 1,
-        blocksMovement: true,
+        heightZ: 2,
+        blocksMovement: false,
         blocksSight: false,
-        interactive: true,
-        linkedLightId: 'light_mlyn_glow'
+        interactive: true
       },
       {
         id: 'mlyn_beczki',
@@ -1588,17 +1566,6 @@ export function createStaryMlynScene(opts?: { isNight?: boolean }): CustomSceneC
       y: 9,
       z: tiles[9][10].z,
       torso: 'torso_slavic_giezlo'
-    }),
-    makeChapterNpc({
-      id: 'npc_mlyn_wnetrze',
-      seed: 712,
-      name: 'Wnętrze Młyna',
-      title: 'Zbadaj młyn pod kołem zębatym',
-      x: 13,
-      y: 9,
-      z: tiles[9][13].z,
-      torso: 'torso_archmage_robes',
-      head: 'helm_arcane_circlet'
     }),
     makeChapterNpc({
       id: 'npc_zona_mlynarza',
@@ -1857,8 +1824,8 @@ export function createTraktKupieckiScene(opts?: { withHunt?: boolean }): CustomS
     makeChapterNpc({
       id: 'npc_trakt_zwiadowcy',
       seed: 721,
-      name: 'Ognisko Zwiadowców',
-      title: 'Dwóch jeźdźców w szarych płaszczach',
+      name: 'Zwiadowca przy ognisku',
+      title: 'Jeden z jeźdźców w szarym płaszczu',
       x: 16,
       y: 9,
       z: tiles[9][16].z,
@@ -2137,7 +2104,7 @@ export function createLesniczowkaScene(opts?: { withHunt?: boolean }): CustomSce
     makeChapterNpc({
       id: 'npc_pies_burek',
       seed: 733,
-      name: 'Pies Burek (Wilk)',
+      name: 'Pies Burek',
       title: 'Wielki Pies Leśniczego',
       x: 8,
       y: 8,
@@ -2426,17 +2393,6 @@ export function createRuinyStraznicyScene(opts?: { withHunt?: boolean }): Custom
       torso: 'torso_slavic_giezlo'
     }),
     makeChapterNpc({
-      id: 'npc_ruiny_mur',
-      seed: 742,
-      name: 'Mur ze Znakiem Strażnicy',
-      title: 'Starożytne Drzwi w Ruinach',
-      x: 14,
-      y: 8,
-      z: tiles[8][14].z,
-      torso: 'torso_aethel_plate',
-      head: 'helm_arcane_circlet'
-    }),
-    makeChapterNpc({
       id: 'npc_czcibor',
       seed: 743,
       name: 'Wartownik Czcibor',
@@ -2448,17 +2404,6 @@ export function createRuinyStraznicyScene(opts?: { withHunt?: boolean }): Custom
       torso: 'torso_warden_brigandine',
       mainHand: 'weapon_astral_staff'
     }),
-    makeChapterNpc({
-      id: 'npc_ruiny_kruk',
-      seed: 744,
-      name: 'Kruk między kamieniami',
-      title: 'Czarny Ptak na Murze',
-      x: 16,
-      y: 13,
-      z: tiles[13][16].z,
-      head: 'helm_shadow_hood',
-      torso: 'torso_archmage_robes'
-    })
   ];
 
   if (opts?.withHunt) {
@@ -2631,6 +2576,17 @@ export function createRuinyStraznicyScene(opts?: { withHunt?: boolean }): Custom
         x: 8,
         y: 15,
         heightZ: 1
+      },
+      {
+        id: 'ruiny_kruk',
+        name: 'Kruk na rumowisku',
+        kind: 'perched_crow',
+        x: 16,
+        y: 13,
+        heightZ: 1,
+        blocksMovement: false,
+        blocksSight: false,
+        interactive: true
       }
     ]
   });

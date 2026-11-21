@@ -477,7 +477,7 @@ export function createBrzezinaYardScene(opts?: {
         kind: 'watchtower',
         variant: 0,
         x: 6,
-        y: 2,
+        y: 3,
         sizeX: 2,
         sizeY: 2,
         heightZ: 4,
@@ -518,6 +518,16 @@ export function createBrzezinaYardScene(opts?: {
         linkedLightId: 'light_brzezina_school_r'
       },
       // 2. Dormitorium dla Uczniów (Zachodnie Skrzydło)
+      {
+        id: 'brzezina_sztandar_szkoly',
+        name: 'Sztandar Szkoły Ostrzy',
+        kind: 'school_banner',
+        x: 12,
+        y: 6,
+        heightZ: 3,
+        blocksMovement: false,
+        blocksSight: false
+      },
       {
         id: 'brzezina_dormitorium_1',
         name: 'Dormitorium Adeptów (Skrzydło Północne)',

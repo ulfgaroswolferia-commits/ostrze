@@ -229,7 +229,7 @@ export class Chapter1Director {
       this.handleNpcInteract('npc_las_slady');
       return true;
     }
-    if (propId === 'mlyn_budynek' || propId === 'mlyn_wnetrze_krysztal') {
+    if (propId === 'mlyn_budynek' || propId === 'mlyn_kolo_wodne') {
       this.handleNpcInteract('npc_mlyn_wnetrze');
       return true;
     }
@@ -251,6 +251,10 @@ export class Chapter1Director {
     }
     if (propId === 'ruiny_mur_znak') {
       this.handleNpcInteract('npc_ruiny_mur');
+      return true;
+    }
+    if (propId === 'ruiny_kruk') {
+      this.handleNpcInteract('npc_ruiny_kruk');
       return true;
     }
     return false;
@@ -951,21 +955,12 @@ export class Chapter1Director {
     }
 
     if (loc === 'wilczy_las') {
-      if (!this.state.flags.ziola_zebrane) {
-        this.engine.setNpcMarker('npc_las_polana', '❗ Polana Ziół');
-      }
-      if (!this.state.flags.borek_slady) {
-        this.engine.setNpcMarker('npc_las_slady', '❗ Ślady Borka');
-      }
       this.engine.setNpcMarker('npc_las_drwal', '💬 Drwal');
       return;
     }
 
     if (loc === 'stary_mlyn') {
       this.engine.setNpcMarker('npc_ostap', this.hasItem('worek_zboza') && !this.state.flags.ostap_zboze ? '❗ Ostap' : '💬 Ostap');
-      if (!this.state.flags.odlamek_zebrany) {
-        this.engine.setNpcMarker('npc_mlyn_wnetrze', '❗ Wnętrze Młyna');
-      }
       this.engine.setNpcMarker('npc_zona_mlynarza', '💬');
       return;
     }
@@ -990,11 +985,7 @@ export class Chapter1Director {
       if (!this.state.flags.borek_znaleziony) {
         this.engine.setNpcMarker('npc_borek_ruiny', '❗ Pasterz Borek');
       }
-      if (this.hasItem('amulet_strazniczy') && !this.state.flags.amulet_pasuje) {
-        this.engine.setNpcMarker('npc_ruiny_mur', '❗ Mur ze Znakiem');
-      }
       this.engine.setNpcMarker('npc_czcibor', '💬 Czcibor');
-      this.engine.setNpcMarker('npc_ruiny_kruk', '🐦‍⬛');
     }
   }
 

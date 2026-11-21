@@ -14,6 +14,18 @@ export function isWolfRecipe(recipe: { id?: string; name?: string; title?: strin
   );
 }
 
+export function isDogRecipe(recipe: { id?: string; name?: string; title?: string }): boolean {
+  const id = (recipe.id ?? '').toLowerCase();
+  const name = (recipe.name ?? '').toLowerCase();
+  return id.startsWith('npc_pies_burek') || name.includes('burek');
+}
+
+export function isBoarRecipe(recipe: { id?: string; name?: string; title?: string }): boolean {
+  const id = (recipe.id ?? '').toLowerCase();
+  const name = (recipe.name ?? '').toLowerCase();
+  return id.startsWith('enemy_las_dzik') || name.includes('dzik');
+}
+
 function setPixel(
   albedo: Uint8ClampedArray,
   normalMat: Uint8ClampedArray,
@@ -399,4 +411,110 @@ export function bakeWolfCharacterBuffers(recipe: CharacterVisualRecipe): BakedCh
     albedoRGBA,
     normalMaterialRGBA
   };
+}
+
+function recolorCanineFur(buffers: BakedCharacterBuffers, redScale: number, greenScale: number, blueScale: number): void {
+  for (let i = 0; i < buffers.albedoRGBA.length; i += 4) {
+    if (buffers.albedoRGBA[i + 3] < 200) continue;
+    const red = buffers.albedoRGBA[i];
+    const green = buffers.albedoRGBA[i + 1];
+    const blue = buffers.albedoRGBA[i + 2];
+    if (red > blue * 1.35 || green > blue * 1.3) continue;
+    const luminance = red * 0.299 + green * 0.587 + blue * 0.114;
+    buffers.albedoRGBA[i] = Math.min(255, Math.round(luminance * redScale));
+    buffers.albedoRGBA[i + 1] = Math.min(255, Math.round(luminance * greenScale));
+    buffers.albedoRGBA[i + 2] = Math.min(255, Math.round(luminance * blueScale));
+  }
+}
+
+export function bakeDogCharacterBuffers(recipe: CharacterVisualRecipe): BakedCharacterBuffers {
+  const buffers = bakeWolfCharacterBuffers(recipe);
+  recolorCanineFur(buffers, 1.38, 1.02, 0.68);
+
+  for (let dir = 0; dir < buffers.directions; dir++) {
+    const angle = (dir / buffers.directions) * Math.PI * 2;
+    const fx = Math.sin(angle);
+    const fy = -Math.cos(angle) * 0.58;
+    for (let frame = 0; frame < buffers.framesPerDirection; frame++) {
+      const ox = frame * buffers.frameWidth;
+      const oy = dir * buffers.frameHeight;
+      const cx = ox + 32;
+      const groundY = oy + 78;
+      const shoulderX = cx + fx * 7.5;
+      const shoulderY = groundY - 14 + fy * 5.5;
+      const neckX = shoulderX + fx * 1.5;
+      const neckY = shoulderY + fy * 1.2;
+      fillSegment(
+        buffers.albedoRGBA,
+        buffers.normalMaterialRGBA,
+        buffers.sheetWidth,
+        buffers.sheetHeight,
+        neckX - fy * 4,
+        neckY + fx * 4,
+        neckX + fy * 4,
+        neckY - fx * 4,
+        1.6,
+        122,
+        38,
+        40
+      );
+    }
+  }
+
+  return { ...buffers, recipeHash: `dog_${recipe.id}` };
+}
+
+export function bakeBoarCharacterBuffers(recipe: CharacterVisualRecipe): BakedCharacterBuffers {
+  const buffers = bakeWolfCharacterBuffers(recipe);
+  recolorCanineFur(buffers, 1.2, 0.72, 0.48);
+
+  for (let dir = 0; dir < buffers.directions; dir++) {
+    const angle = (dir / buffers.directions) * Math.PI * 2;
+    const fx = Math.sin(angle);
+    const fy = -Math.cos(angle) * 0.58;
+    const perpX = -fy * 0.75;
+    const perpY = fx * 0.35;
+    for (let frame = 0; frame < buffers.framesPerDirection; frame++) {
+      const ox = frame * buffers.frameWidth;
+      const oy = dir * buffers.frameHeight;
+      const cx = ox + 32;
+      const groundY = oy + 78;
+      const shoulderX = cx + fx * 7.5;
+      const shoulderY = groundY - 14 + fy * 5.5;
+      const headX = shoulderX + fx * 6.5;
+      const headY = shoulderY + fy * 4.5 - 5.5;
+
+      fillEllipse(
+        buffers.albedoRGBA,
+        buffers.normalMaterialRGBA,
+        buffers.sheetWidth,
+        buffers.sheetHeight,
+        headX + fx * 5,
+        headY + fy * 3,
+        5.4,
+        4.4,
+        116,
+        66,
+        42
+      );
+      for (const side of [-1, 1]) {
+        fillSegment(
+          buffers.albedoRGBA,
+          buffers.normalMaterialRGBA,
+          buffers.sheetWidth,
+          buffers.sheetHeight,
+          headX + fx * 1.5 + perpX * side * 3,
+          headY + fy * 1.5 + perpY * side * 3,
+          headX + fx * 7 + perpX * side * 4.5,
+          headY + fy * 4 + perpY * side * 4.5,
+          1.6,
+          228,
+          216,
+          180
+        );
+      }
+    }
+  }
+
+  return { ...buffers, recipeHash: `boar_${recipe.id}` };
 }

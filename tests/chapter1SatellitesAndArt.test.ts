@@ -128,7 +128,7 @@ describe('Act 1 Satellite Interactive Exploration Scenes & Panoramic .pix Art', 
     // Stary Młyn za dnia -> narrative with artId 'stary_mlyn'
     ch1.enterStaryMlyn();
     state.time.minutes = 12 * 60;
-    ch1.handleNpcInteract('npc_mlyn_wnetrze');
+    engine.togglePropInteraction('mlyn_kolo_wodne');
     expect(shownNarratives.some((n) => n.artId === 'stary_mlyn')).toBe(true);
 
     // Stary Młyn nocą -> satelita_mlyn_noca
