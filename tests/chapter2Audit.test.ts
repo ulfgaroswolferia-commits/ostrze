@@ -10,6 +10,8 @@ import {
   createGluszecScene,
   createKamieniolomScene,
   createKapliczkaRozstajeScene,
+  createSpalonaOsadaScene,
+  createStaraKopalniaScene,
   createStaryTraktScene,
   createWzgorzeWartowniczeScene
 } from '../src/game/maps/chapter2Maps';
@@ -175,5 +177,31 @@ describe('Chapter 2 Phase 1 Audit (Gluszec, Bor Klusownikow, Stary Trakt & Visua
     expect(state.flags.oblawa_pokonana).toBe(true);
     expect(state.flags.akt3a_koniec).toBe(true);
     expect(director.chapter2Completed).toBe(true);
+  });
+
+  it('verifies Phase 3 exploration scenes: Spalona Osada & Stara Kopalnia (utopiec + wraith boss, star-iron vein)', () => {
+    const spalona = createSpalonaOsadaScene({ withHunt: true });
+    const chwalislaw = (spalona.actors ?? []).find((a) => a.id === 'npc_pogorzelec_chwalislaw')!;
+    expect(resolveCharacterArchetypeTag(chwalislaw.recipe)).toBe('peasant_man');
+
+    const kopalnia = createStaraKopalniaScene({ withHunt: true });
+    const zmoraBoss = (kopalnia.actors ?? []).find((a) => a.id === 'enemy_kopalnia_zmora_boss')!;
+    expect(resolveCharacterArchetypeTag(zmoraBoss.recipe)).toBe('wraith');
+    expect(zmoraBoss.combat?.difficulty).toBe('very_hard');
+    expect(zmoraBoss.recipe.equipment.mainHand).toBeNull();
+    expect(zmoraBoss.recipe.equipment.head).toBeNull();
+
+    const { state, director } = createAct2Fixture();
+    director.enterSpalonaOsada(false);
+    director.handlePropInteract('spalona_piwnica');
+    expect(state.flags.spalona_piwnica_zbadana).toBe(true);
+
+    director.enterStaraKopalnia(false);
+    director.handlePropInteract('kopalnia_zyla_zelaza');
+    expect(state.flags.zyla_gwiezdnego_zelaza_wydobyta).toBe(true);
+
+    director.enterStaraKopalnia(true);
+    director.handleCombatEnded('victory');
+    expect(state.flags.stara_kopalnia_oczyszczona).toBe(true);
   });
 });

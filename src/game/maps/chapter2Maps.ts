@@ -1579,3 +1579,360 @@ export function createWzgorzeWartowniczeScene(opts?: { withHunt?: boolean }): Cu
     fogOfWarEnabled: false
   };
 }
+
+/**
+ * Akt II — Eksploracja 1: Spalona Osada (24x24)
+ */
+export function createSpalonaOsadaScene(opts?: { withHunt?: boolean }): CustomSceneConfig {
+  const width = 24;
+  const height = 24;
+  const tiles = buildGrid(width, height, (x, y) => {
+    const isBorder = x === 0 || y === 0 || x === width - 1 || y === height - 1;
+    const isExit = x >= 11 && x <= 12 && y === height - 1;
+    const isRuins = Math.hypot(x - 12, y - 10) <= 5.2 || (x >= 11 && x <= 12 && y >= 10);
+    if (isBorder) {
+      return { z: 1, terrain: 'forest_soil', walkable: isExit };
+    }
+    return {
+      z: 0,
+      terrain: isRuins ? 'dirt_path' : 'forest_soil',
+      walkable: true
+    };
+  });
+
+  const map: IsometricWorldMap = {
+    id: 'forest_clearing' as MapId,
+    name: 'Spalona Osada',
+    subtitle: 'Akt II: Zgliszcza, ocalała piwnica i pogorzelec Chwalisław',
+    width,
+    height,
+    maxElevation: 2,
+    tiles,
+    props: [
+      {
+        id: 'spalona_zgliszcza',
+        name: 'Zgliszcza z maruderami',
+        kind: 'campfire',
+        x: 12,
+        y: 8,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true,
+        linkedLightId: 'light_spalona_ember'
+      },
+      {
+        id: 'spalona_piwnica',
+        name: 'Ocalała piwnica pod zgliszczami',
+        kind: 'dungeon_crate',
+        x: 8,
+        y: 11,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true
+      },
+      {
+        id: 'spalona_drogowskaz',
+        name: '🚪 Powrót do Głuszca',
+        kind: 'exit_path',
+        x: 11,
+        y: 21,
+        z: 0,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: false,
+        blocksSight: false,
+        interactive: true
+      }
+    ],
+    lights: [
+      {
+        id: 'light_spalona_ember',
+        x: 12,
+        y: 8,
+        z: 0.7,
+        color: { r: 255, g: 120, b: 55 },
+        intensity: 1.25,
+        radius: 6,
+        flickerSpeed: 3.4,
+        enabled: true
+      }
+    ]
+  };
+
+  const actors: ActorEntity[] = [
+    makeChapter2Npc({
+      id: 'npc_pogorzelec_chwalislaw',
+      seed: 2801,
+      name: 'Pogorzelec Chwalisław (Kmieć)',
+      title: 'Ocalały ze spalonej osady',
+      x: 14,
+      y: 14,
+      z: 0,
+      direction: 5,
+      torso: 'torso_przeszywanica',
+      dialogueId: 'npc_pogorzelec_chwalislaw'
+    })
+  ];
+
+  if (opts?.withHunt) {
+    actors.push(
+      makeChapter2Npc({
+        id: 'enemy_spalona_maruder_1',
+        seed: 2811,
+        name: 'Maruder ze Zgliszczy',
+        title: 'Szabrownik',
+        x: 10,
+        y: 7,
+        z: 0,
+        direction: 4,
+        torso: 'torso_warden_brigandine',
+        head: 'helm_shadow_hood',
+        mainHand: 'weapon_slavic_axe',
+        hostile: true,
+        hp: 28,
+        ap: 6,
+        xpReward: 42
+      }),
+      makeChapter2Npc({
+        id: 'enemy_spalona_maruder_2',
+        seed: 2812,
+        name: 'Maruder z Mieczem',
+        title: 'Szabrownik',
+        x: 14,
+        y: 7,
+        z: 0,
+        direction: 4,
+        torso: 'torso_warden_brigandine',
+        head: 'helm_shadow_hood',
+        mainHand: 'weapon_iron_longsword',
+        hostile: true,
+        hp: 28,
+        ap: 6,
+        xpReward: 42
+      }),
+      makeChapter2Npc({
+        id: 'enemy_spalona_lucznik',
+        seed: 2813,
+        name: 'Kłusownik Łucznik',
+        title: 'Strzelec szabrowników',
+        x: 12,
+        y: 5,
+        z: 0,
+        direction: 4,
+        torso: 'torso_przeszywanica',
+        head: 'helm_shadow_hood',
+        mainHand: 'weapon_hunting_bow',
+        hostile: true,
+        hp: 24,
+        ap: 6,
+        xpReward: 42
+      })
+    );
+  }
+
+  applyWorldDressing(map, {
+    seed: 20269,
+    spawnX: 11,
+    spawnY: 19,
+    actors,
+    reservedPoints: [
+      { x: 11, y: 21, radius: 1 },
+      { x: 12, y: 21, radius: 1 },
+      { x: 12, y: 8, radius: 4 }
+    ],
+    forestSides: ['W', 'N', 'E'],
+    beltDepth: 2
+  });
+
+  return {
+    id: 'spalona_osada',
+    map,
+    spawnX: 11,
+    spawnY: 19,
+    actors,
+    ambientLightIntensity: 0.65,
+    fogOfWarEnabled: false
+  };
+}
+
+/**
+ * Akt II — Eksploracja 2: Stara Kopalnia (24x24)
+ */
+export function createStaraKopalniaScene(opts?: { withHunt?: boolean }): CustomSceneConfig {
+  const width = 24;
+  const height = 24;
+  const tiles = buildGrid(width, height, (x, y) => {
+    const isBorder = x === 0 || y === 0 || x === width - 1 || y === height - 1;
+    const isExit = x >= 11 && x <= 12 && y === height - 1;
+    const isShaft = Math.hypot(x - 12, y - 9) <= 5.0 || (x >= 11 && x <= 12 && y >= 9);
+    if (isBorder) {
+      return { z: 1, terrain: 'forest_soil', walkable: isExit };
+    }
+    return {
+      z: 0,
+      terrain: isShaft ? 'dirt_path' : 'forest_soil',
+      walkable: true
+    };
+  });
+
+  const map: IsometricWorldMap = {
+    id: 'forest_clearing' as MapId,
+    name: 'Stara Kopalnia',
+    subtitle: 'Akt II: Zalana sztolnia i żyła gwiezdnego żelaza',
+    width,
+    height,
+    maxElevation: 2,
+    tiles,
+    props: [
+      {
+        id: 'kopalnia_zyla_zelaza',
+        name: 'Żyła gwiezdnego żelaza',
+        kind: 'dungeon_crate',
+        x: 15,
+        y: 8,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true,
+        linkedLightId: 'light_kopalnia_stariron'
+      },
+      {
+        id: 'kopalnia_zalana_sztolnia',
+        name: 'Zalana sztolnia (głębia kopalni)',
+        kind: 'campfire',
+        x: 11,
+        y: 7,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true
+      },
+      {
+        id: 'kopalnia_drogowskaz',
+        name: '🚪 Powrót do Głuszca',
+        kind: 'exit_path',
+        x: 11,
+        y: 21,
+        z: 0,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: false,
+        blocksSight: false,
+        interactive: true
+      }
+    ],
+    lights: [
+      {
+        id: 'light_kopalnia_stariron',
+        x: 15,
+        y: 8,
+        z: 0.9,
+        color: { r: 120, g: 210, b: 255 },
+        intensity: 1.4,
+        radius: 6,
+        flickerSpeed: 2.2,
+        enabled: true
+      }
+    ]
+  };
+
+  const actors: ActorEntity[] = [
+    makeChapter2Npc({
+      id: 'npc_pustelnik_rudy',
+      seed: 2901,
+      name: 'Pustelnik Rudy (Pielgrzym)',
+      title: 'Stary górnik spod kopalni',
+      x: 9,
+      y: 15,
+      z: 0,
+      direction: 2,
+      torso: 'torso_przeszywanica',
+      cloak: 'cloak_forest',
+      dialogueId: 'npc_pustelnik_rudy'
+    })
+  ];
+
+  if (opts?.withHunt) {
+    actors.push(
+      makeUtopiecActor({
+        id: 'enemy_kopalnia_utopiec_1',
+        seed: 2911,
+        name: 'Utopiec ze Sztolni',
+        x: 9,
+        y: 8,
+        z: 0,
+        hp: 28,
+        xpReward: 45
+      }),
+      makeUtopiecActor({
+        id: 'enemy_kopalnia_utopiec_2',
+        seed: 2912,
+        name: 'Utopiec ze Sztolni',
+        x: 14,
+        y: 8,
+        z: 0,
+        hp: 28,
+        xpReward: 45
+      }),
+      makeChapter2Npc({
+        id: 'enemy_kopalnia_zmora_boss',
+        seed: 2913,
+        name: 'Zmora z Kopalni',
+        title: 'Cień przy żyle gwiezdnego żelaza',
+        x: 12,
+        y: 6,
+        z: 0,
+        direction: 4,
+        head: null,
+        torso: 'torso_przeszywanica',
+        mainHand: null,
+        offHand: null,
+        hostile: true,
+        difficulty: 'very_hard',
+        hp: 52,
+        ap: 6,
+        xpReward: 110
+      })
+    );
+  }
+
+  applyWorldDressing(map, {
+    seed: 20270,
+    spawnX: 11,
+    spawnY: 19,
+    actors,
+    reservedPoints: [
+      { x: 11, y: 21, radius: 1 },
+      { x: 12, y: 21, radius: 1 },
+      { x: 12, y: 8, radius: 4 }
+    ],
+    forestSides: ['W', 'N', 'E'],
+    beltDepth: 2
+  });
+
+  return {
+    id: 'stara_kopalnia',
+    map,
+    spawnX: 11,
+    spawnY: 19,
+    actors,
+    ambientLightIntensity: 0.56,
+    fogOfWarEnabled: false
+  };
+}

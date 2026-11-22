@@ -9,6 +9,8 @@ import {
   createGluszecScene,
   createKamieniolomScene,
   createKapliczkaRozstajeScene,
+  createSpalonaOsadaScene,
+  createStaraKopalniaScene,
   createStaryTraktScene,
   createWzgorzeWartowniczeScene
 } from '../maps/chapter2Maps';
@@ -26,7 +28,9 @@ export type Chapter2CombatStage =
   | 'stary_trakt_hunt'
   | 'kamieniolom_hunt'
   | 'bagna_szarej_wody_hunt'
-  | 'wzgorze_oblawa';
+  | 'wzgorze_oblawa'
+  | 'spalona_osada_hunt'
+  | 'stara_kopalnia_hunt';
 
 const CHAPTER2_SCENES = new Set([
   'gluszec',
@@ -35,7 +39,9 @@ const CHAPTER2_SCENES = new Set([
   'kapliczka_rozstaje',
   'kamieniolom',
   'bagna_szarej_wody',
-  'wzgorze_wartownicze'
+  'wzgorze_wartownicze',
+  'spalona_osada',
+  'stara_kopalnia'
 ]);
 
 const CHAPTER2_QUEST_IDS = new Set([
@@ -102,6 +108,8 @@ export class Chapter2Director {
     this.engine.registerCustomScene(createKamieniolomScene({ withHunt: false }));
     this.engine.registerCustomScene(createBagnaSzarejWodyScene({ withHunt: false }));
     this.engine.registerCustomScene(createWzgorzeWartowniczeScene({ withHunt: false }));
+    this.engine.registerCustomScene(createSpalonaOsadaScene({ withHunt: false }));
+    this.engine.registerCustomScene(createStaraKopalniaScene({ withHunt: false }));
   }
 
   private bindHooks(): void {
@@ -331,6 +339,58 @@ export class Chapter2Director {
     }
   }
 
+  public enterSpalonaOsada(withHunt = false): void {
+    this.bindHooks();
+    this.activeCombatStage = 'none';
+    if (!withHunt && this.state.world.location !== 'spalona_osada') {
+      advanceMinutes(this.state, 140, this.data);
+    }
+    this.state.world.location = 'spalona_osada';
+    markOstrzeLocationVisited(this.state, 'spalona_osada');
+    this.engine.registerCustomScene(createSpalonaOsadaScene({ withHunt }));
+    this.engine.loadCustomScene('spalona_osada');
+    ostrzeAudio.setAmbience('creepy_forest');
+    this.syncHeroTo25D();
+    this.refreshHubPanel();
+    if (withHunt) {
+      this.activeCombatStage = 'spalona_osada_hunt';
+      this.engine.addLog('🔥 Szabrownicy i łucznik bronią łupów wśród zgliszczy!', 'combat');
+      this.engine.startCombatWithEnemy('enemy_spalona_maruder_1');
+      this.onUiRefresh?.();
+    } else {
+      this.engine.addLog(
+        '🏚️ Spalona Osada — porozmawiaj z Chwalisławem (💬), przeszukaj piwnicę lub oczyść zgliszcza.',
+        'important'
+      );
+    }
+  }
+
+  public enterStaraKopalnia(withHunt = false): void {
+    this.bindHooks();
+    this.activeCombatStage = 'none';
+    if (!withHunt && this.state.world.location !== 'stara_kopalnia') {
+      advanceMinutes(this.state, 150, this.data);
+    }
+    this.state.world.location = 'stara_kopalnia';
+    markOstrzeLocationVisited(this.state, 'stara_kopalnia');
+    this.engine.registerCustomScene(createStaraKopalniaScene({ withHunt }));
+    this.engine.loadCustomScene('stara_kopalnia');
+    ostrzeAudio.setAmbience('creepy_forest');
+    this.syncHeroTo25D();
+    this.refreshHubPanel();
+    if (withHunt) {
+      this.activeCombatStage = 'stara_kopalnia_hunt';
+      this.engine.addLog('👻 Z zalanej sztolni wyłaniają się Utopce i Zmora z Kopalni!', 'combat');
+      this.engine.startCombatWithEnemy('enemy_kopalnia_zmora_boss');
+      this.onUiRefresh?.();
+    } else {
+      this.engine.addLog(
+        '⛏️ Stara Kopalnia — porozmawiaj z Pustelnikiem Rudym (💬) lub zbadaj żyłę gwiezdnego żelaza.',
+        'important'
+      );
+    }
+  }
+
   public finishChapter2(viaOblawa = false): void {
     this.chapter2Completed = true;
     this.state.flags.akt3a_koniec = true;
@@ -391,9 +451,57 @@ export class Chapter2Director {
       propId === 'kapliczka_drogowskaz' ||
       propId === 'kamieniolom_drogowskaz' ||
       propId === 'bagna_drogowskaz' ||
-      propId === 'wzgorze_drogowskaz'
+      propId === 'wzgorze_drogowskaz' ||
+      propId === 'spalona_drogowskaz' ||
+      propId === 'kopalnia_drogowskaz'
     ) {
       this.returnToGluszec();
+      return true;
+    }
+    if (propId === 'spalona_zgliszcza') {
+      if (this.state.flags.spalona_osada_oczyszczona) {
+        this.engine.addLog('🔥 Zgliszcza zostały już oczyszczone z szabrowników.', 'info');
+      } else {
+        this.enterSpalonaOsada(true);
+      }
+      return true;
+    }
+    if (propId === 'spalona_piwnica') {
+      if (!this.state.flags.spalona_piwnica_zbadana) {
+        this.state.flags.spalona_piwnica_zbadana = true;
+        if (this.state.character) this.state.character.money += 25;
+        this.addItemStack('flasza_oleju', 1);
+        this.engine.addLog('📦 Ocalała piwnica: +25 gr oraz Flasza oleju!', 'important');
+        this.syncHeroTo25D();
+        this.onAutoSave?.();
+      } else {
+        this.engine.addLog('📦 Piwnica pod zgliszczami jest już pusta.', 'info');
+      }
+      return true;
+    }
+    if (propId === 'kopalnia_zyla_zelaza') {
+      if (!this.state.flags.zyla_gwiezdnego_zelaza_wydobyta) {
+        this.state.flags.zyla_gwiezdnego_zelaza_wydobyta = true;
+        const xp = grantXp(this.state, 70, this.data);
+        this.addItemStack('odlamek_szkla', 1);
+        this.engine.addLog(
+          `✨ Wydobyto okruch z żyły gwiezdnego żelaza (+70 XP, Poz. ${xp.newLevel})!`,
+          'important'
+        );
+        this.syncHeroTo25D();
+        this.refreshHubPanel();
+        this.onAutoSave?.();
+      } else {
+        this.engine.addLog('⛏️ Żyła gwiezdnego żelaza została już wyeksploatowana.', 'info');
+      }
+      return true;
+    }
+    if (propId === 'kopalnia_zalana_sztolnia') {
+      if (this.state.flags.stara_kopalnia_oczyszczona) {
+        this.engine.addLog('⛏️ W zalanej sztolni zapanowała cisza.', 'info');
+      } else {
+        this.enterStaraKopalnia(true);
+      }
       return true;
     }
     if (propId === 'kapliczka_oltarz') {
@@ -567,6 +675,20 @@ export class Chapter2Director {
       this.runDialogue('kontrola');
       return true;
     }
+    if (npcId === 'npc_pogorzelec_chwalislaw') {
+      this.engine.addLog(
+        'Pogorzelec Chwalisław: „Przyszli nocą, spalili dachy i zabrali konie. W piwnicy pod chatą jeszcze coś zostało — weź, jeśli przepędzisz szabrowników.”',
+        'info'
+      );
+      return true;
+    }
+    if (npcId === 'npc_pustelnik_rudy') {
+      this.engine.addLog(
+        'Pustelnik Rudy: „Ta niebieska żyła w skale nie jest ze zwykłego żelaza. Spadła z nieba dawno temu... i przyciąga zmory ze sztolni.”',
+        'info'
+      );
+      return true;
+    }
     return false;
   }
 
@@ -708,6 +830,20 @@ export class Chapter2Director {
           subtitle: 'Punkt zwiadowczy i finał Cesarskiej Obławy.',
           travelMinutes: 115,
           isCurrent: currentLoc === 'wzgorze_wartownicze'
+        },
+        {
+          id: 'spalona_osada',
+          name: '🏚️ Spalona Osada',
+          subtitle: 'Zgliszcza, ocalała piwnica i obóz szabrowników.',
+          travelMinutes: 140,
+          isCurrent: currentLoc === 'spalona_osada'
+        },
+        {
+          id: 'stara_kopalnia',
+          name: '⛏️ Stara Kopalnia',
+          subtitle: 'Zalana sztolnia i żyła gwiezdnego żelaza.',
+          travelMinutes: 150,
+          isCurrent: currentLoc === 'stara_kopalnia'
         }
       ],
       (destId) => {
@@ -718,6 +854,8 @@ export class Chapter2Director {
         else if (destId === 'kamieniolom') this.enterKamieniolom(false);
         else if (destId === 'bagna_szarej_wody') this.enterBagnaSzarejWody(false);
         else if (destId === 'wzgorze_wartownicze') this.enterWzgorzeWartownicze(false);
+        else if (destId === 'spalona_osada') this.enterSpalonaOsada(false);
+        else if (destId === 'stara_kopalnia') this.enterStaraKopalnia(false);
       }
     );
   }
@@ -807,6 +945,24 @@ export class Chapter2Director {
         this.onAutoSave?.();
         this.finishChapter2(true);
         return;
+      } else if (stage === 'spalona_osada_hunt') {
+        this.state.flags.spalona_osada_oczyszczona = true;
+        this.state.character.money += 45;
+        const xp = grantXp(this.state, 90, this.data);
+        this.engine.addLog(
+          `🏆 Spalona Osada oczyszczona z szabrowników! +45 gr, +90 XP (Poz. ${xp.newLevel}).`,
+          'important'
+        );
+        this.ui?.showToast('Spalona Osada oczyszczona (+45 gr, +90 XP)', 'success');
+      } else if (stage === 'stara_kopalnia_hunt') {
+        this.state.flags.stara_kopalnia_oczyszczona = true;
+        this.state.character.money += 55;
+        const xp = grantXp(this.state, 120, this.data);
+        this.engine.addLog(
+          `🏆 Zmora i utopce w Starej Kopalni pokonane! +55 gr, +120 XP (Poz. ${xp.newLevel}).`,
+          'important'
+        );
+        this.ui?.showToast('Stara Kopalnia oczyszczona (+55 gr, +120 XP)', 'success');
       }
     }
 
@@ -841,7 +997,9 @@ export class Chapter2Director {
       kapliczka_rozstaje: 'Kapliczka na Rozstajach (Akt II)',
       kamieniolom: 'Kamieniołom (Akt II)',
       bagna_szarej_wody: 'Bagna Szarej Wody (Akt II)',
-      wzgorze_wartownicze: 'Wzgórze Wartownicze (Akt II)'
+      wzgorze_wartownicze: 'Wzgórze Wartownicze (Akt II)',
+      spalona_osada: 'Spalona Osada (Akt II)',
+      stara_kopalnia: 'Stara Kopalnia (Akt II)'
     };
 
     this.ui.setHubPanel({
@@ -882,6 +1040,10 @@ export class Chapter2Director {
       this.engine.setNpcMarker('npc_zielarka_bagna', '🌿 Zielarka');
     } else if (loc === 'wzgorze_wartownicze') {
       this.engine.setNpcMarker('npc_pasterz_wzgorze', '❗ Pasterz');
+    } else if (loc === 'spalona_osada') {
+      this.engine.setNpcMarker('npc_pogorzelec_chwalislaw', '💬 Chwalisław');
+    } else if (loc === 'stara_kopalnia') {
+      this.engine.setNpcMarker('npc_pustelnik_rudy', '💬 Pustelnik Rudy');
     }
   }
 
@@ -902,8 +1064,12 @@ export class Chapter2Director {
       this.engine.registerCustomScene(createKamieniolomScene({ withHunt: false }));
     } else if (targetScene === 'bagna_szarej_wody') {
       this.engine.registerCustomScene(createBagnaSzarejWodyScene({ withHunt: false }));
-    } else {
+    } else if (targetScene === 'wzgorze_wartownicze') {
       this.engine.registerCustomScene(createWzgorzeWartowniczeScene({ withHunt: false }));
+    } else if (targetScene === 'spalona_osada') {
+      this.engine.registerCustomScene(createSpalonaOsadaScene({ withHunt: false }));
+    } else {
+      this.engine.registerCustomScene(createStaraKopalniaScene({ withHunt: false }));
     }
     this.engine.loadCustomScene(targetScene);
     ostrzeAudio.setAmbience(
@@ -911,7 +1077,10 @@ export class Chapter2Director {
         ? 'town'
         : targetScene === 'kapliczka_rozstaje' || targetScene === 'wzgorze_wartownicze'
           ? 'dawn'
-          : targetScene === 'kamieniolom' || targetScene === 'bagna_szarej_wody'
+          : targetScene === 'kamieniolom' ||
+              targetScene === 'bagna_szarej_wody' ||
+              targetScene === 'spalona_osada' ||
+              targetScene === 'stara_kopalnia'
             ? 'creepy_forest'
             : 'forest'
     );

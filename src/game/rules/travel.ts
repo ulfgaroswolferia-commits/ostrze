@@ -191,6 +191,24 @@ export const OSTRZE_LOCATIONS: readonly OstrzeLocationMeta[] = [
     danger: 4,
     ambience: 'dawn',
     travelMinutes: 115
+  },
+  {
+    id: 'spalona_osada',
+    chapter: 'chapter2',
+    name: 'Spalona Osada',
+    subtitle: 'Zgliszcza po pożodze, ocalała piwnica i maruderzy',
+    danger: 3,
+    ambience: 'creepy_forest',
+    travelMinutes: 140
+  },
+  {
+    id: 'stara_kopalnia',
+    chapter: 'chapter2',
+    name: 'Stara Kopalnia',
+    subtitle: 'Zalana sztolnia i żyła gwiezdnego żelaza',
+    danger: 4,
+    ambience: 'creepy_forest',
+    travelMinutes: 150
   }
 ];
 
