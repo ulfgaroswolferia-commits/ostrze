@@ -5,9 +5,13 @@ import { isWolfRecipe } from '../src/game/assets/beastSprites';
 import { CHAPTER2_DIALOGUES } from '../src/game/data/chapter2Data';
 import { ORIGIN_DATA } from '../src/game/data/originData';
 import {
+  createBagnaSzarejWodyScene,
   createBorKlusownikowScene,
   createGluszecScene,
-  createStaryTraktScene
+  createKamieniolomScene,
+  createKapliczkaRozstajeScene,
+  createStaryTraktScene,
+  createWzgorzeWartowniczeScene
 } from '../src/game/maps/chapter2Maps';
 import { createCharacter, createEmptyOstrzeState, grantXp } from '../src/game/rules/character';
 import { resolveEnemyArchetype } from '../src/game/rules/combatAi';
@@ -134,5 +138,42 @@ describe('Chapter 2 Phase 1 Audit (Gluszec, Bor Klusownikow, Stary Trakt & Visua
     director.enterStaryTrakt(true);
     director.handleCombatEnded('defeat');
     expect(defeated).toBe(true);
+  });
+
+  it('verifies Phase 2 scenes: utopiec monster sprites, standing NPCs, Oblawa boss visuals, and Act II finale', () => {
+    const bagna = createBagnaSzarejWodyScene({ withHunt: true });
+    const utopce = (bagna.actors ?? []).filter((a) => a.combat?.isHostile);
+    expect(utopce.length).toBe(3);
+    for (const u of utopce) {
+      expect(resolveCharacterArchetypeTag(u.recipe)).toBe('utopiec');
+      expect(u.recipe.equipment.mainHand).toBeNull();
+      expect(u.recipe.equipment.head).toBeNull();
+    }
+
+    const kapliczka = createKapliczkaRozstajeScene();
+    const halina = (kapliczka.actors ?? []).find((a) => a.id === 'npc_halina_kapliczka')!;
+    expect(resolveCharacterArchetypeTag(halina.recipe)).toBe('peasant_woman');
+
+    const kamieniolom = createKamieniolomScene({ withHunt: false });
+    const dozorca = (kamieniolom.actors ?? []).find((a) => a.id === 'npc_dozorca_wincenty')!;
+    expect(resolveCharacterArchetypeTag(dozorca.recipe)).toBe('knight');
+
+    const wzgorze = createWzgorzeWartowniczeScene({ withHunt: true });
+    const oblawaBoss = (wzgorze.actors ?? []).find((a) => a.id === 'enemy_oblawa_dowodca')!;
+    expect(oblawaBoss.combat?.difficulty).toBe('very_hard');
+    expect(oblawaBoss.recipe.equipment.torso).toBe('torso_slavic_lamellar');
+    expect(oblawaBoss.recipe.equipment.head).toBe('helm_szyszak');
+    expect(oblawaBoss.recipe.equipment.offHand).toBe('offhand_slavic_shield');
+
+    const { state, director } = createAct2Fixture();
+    director.enterBagnaSzarejWody(false);
+    director.handlePropInteract('bagna_trzcinowisko');
+    expect(state.quests.szara_trzcina).toBe('completed');
+
+    director.enterWzgorzeWartownicze(true);
+    director.handleCombatEnded('victory');
+    expect(state.flags.oblawa_pokonana).toBe(true);
+    expect(state.flags.akt3a_koniec).toBe(true);
+    expect(director.chapter2Completed).toBe(true);
   });
 });

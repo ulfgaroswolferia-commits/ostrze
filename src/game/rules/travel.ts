@@ -155,6 +155,42 @@ export const OSTRZE_LOCATIONS: readonly OstrzeLocationMeta[] = [
     danger: 3,
     ambience: 'forest',
     travelMinutes: 120
+  },
+  {
+    id: 'kapliczka_rozstaje',
+    chapter: 'chapter2',
+    name: 'Kapliczka na Rozstajach',
+    subtitle: 'Stara kapliczka, pustelnik i Siostra Halina',
+    danger: 1,
+    ambience: 'dawn',
+    travelMinutes: 75
+  },
+  {
+    id: 'kamieniolom',
+    chapter: 'chapter2',
+    name: 'Kamieniołom',
+    subtitle: 'Głęboka sztolnia, dozorca i ranny górnik',
+    danger: 3,
+    ambience: 'creepy_forest',
+    travelMinutes: 110
+  },
+  {
+    id: 'bagna_szarej_wody',
+    chapter: 'chapter2',
+    name: 'Bagna Szarej Wody',
+    subtitle: 'Zbutwiała grobla, trzcinowisko i topiel z utopcami',
+    danger: 4,
+    ambience: 'creepy_forest',
+    travelMinutes: 130
+  },
+  {
+    id: 'wzgorze_wartownicze',
+    chapter: 'chapter2',
+    name: 'Wzgórze Wartownicze',
+    subtitle: 'Punkt obserwacyjny i szlak cesarskiej obławy',
+    danger: 4,
+    ambience: 'dawn',
+    travelMinutes: 115
   }
 ];
 

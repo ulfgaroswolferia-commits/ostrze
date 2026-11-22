@@ -4,9 +4,13 @@ import { registerChapter2Dialogues } from '../data/chapter2Data';
 import { ORIGIN_DATA } from '../data/originData';
 import type { OriginGameData, OstrzeGameState } from '../data/originTypes';
 import {
+  createBagnaSzarejWodyScene,
   createBorKlusownikowScene,
   createGluszecScene,
-  createStaryTraktScene
+  createKamieniolomScene,
+  createKapliczkaRozstajeScene,
+  createStaryTraktScene,
+  createWzgorzeWartowniczeScene
 } from '../maps/chapter2Maps';
 import { grantXp } from '../rules/character';
 import type { SeededRng } from '../rules/dice';
@@ -19,16 +23,35 @@ import type { OstrzeModalUi } from '../ui/OstrzeModalUi';
 export type Chapter2CombatStage =
   | 'none'
   | 'bor_klusownikow_hunt'
-  | 'stary_trakt_hunt';
+  | 'stary_trakt_hunt'
+  | 'kamieniolom_hunt'
+  | 'bagna_szarej_wody_hunt'
+  | 'wzgorze_oblawa';
 
-const CHAPTER2_PHASE1_SCENES = new Set(['gluszec', 'bor_klusownikow', 'stary_trakt']);
+const CHAPTER2_SCENES = new Set([
+  'gluszec',
+  'bor_klusownikow',
+  'stary_trakt',
+  'kapliczka_rozstaje',
+  'kamieniolom',
+  'bagna_szarej_wody',
+  'wzgorze_wartownicze'
+]);
 
 const CHAPTER2_QUEST_IDS = new Set([
   'przyjecie_w_osadzie',
   'klusownik_i_gajowy',
   'zaginiona_karawana',
   'wdowa_po_straznik',
-  'najemnik_w_karczmie'
+  'najemnik_w_karczmie',
+  'dlug_mlynarza',
+  'listy_z_tamtej_strony',
+  'kto_sprzedal_ocalalego',
+  'zwiad_na_wzgorzu',
+  'falszywe_papiery',
+  'rannego_nie_zostawia_sie',
+  'szara_trzcina',
+  'co_widziala_ragnoslawa'
 ]);
 
 export class Chapter2Director {
@@ -75,6 +98,10 @@ export class Chapter2Director {
     this.engine.registerCustomScene(createGluszecScene());
     this.engine.registerCustomScene(createBorKlusownikowScene({ withHunt: false }));
     this.engine.registerCustomScene(createStaryTraktScene({ withHunt: false }));
+    this.engine.registerCustomScene(createKapliczkaRozstajeScene());
+    this.engine.registerCustomScene(createKamieniolomScene({ withHunt: false }));
+    this.engine.registerCustomScene(createBagnaSzarejWodyScene({ withHunt: false }));
+    this.engine.registerCustomScene(createWzgorzeWartowniczeScene({ withHunt: false }));
   }
 
   private bindHooks(): void {
@@ -204,6 +231,135 @@ export class Chapter2Director {
     }
   }
 
+  public enterKapliczkaRozstaje(): void {
+    this.bindHooks();
+    this.activeCombatStage = 'none';
+    if (this.state.world.location !== 'kapliczka_rozstaje') {
+      advanceMinutes(this.state, 75, this.data);
+    }
+    this.state.world.location = 'kapliczka_rozstaje';
+    markOstrzeLocationVisited(this.state, 'kapliczka_rozstaje');
+    this.engine.registerCustomScene(createKapliczkaRozstajeScene());
+    this.engine.loadCustomScene('kapliczka_rozstaje');
+    ostrzeAudio.setAmbience('dawn');
+    this.syncHeroTo25D();
+    this.refreshHubPanel();
+    this.engine.addLog(
+      '⛪ Kapliczka na Rozstajach — porozmawiaj z Siostrą Haliną (❗) lub Pustelnikiem (💬).',
+      'important'
+    );
+  }
+
+  public enterKamieniolom(withHunt = false): void {
+    this.bindHooks();
+    this.activeCombatStage = 'none';
+    if (!withHunt && this.state.world.location !== 'kamieniolom') {
+      advanceMinutes(this.state, 110, this.data);
+    }
+    this.state.world.location = 'kamieniolom';
+    markOstrzeLocationVisited(this.state, 'kamieniolom');
+    this.engine.registerCustomScene(createKamieniolomScene({ withHunt }));
+    this.engine.loadCustomScene('kamieniolom');
+    ostrzeAudio.setAmbience('creepy_forest');
+    this.syncHeroTo25D();
+    this.refreshHubPanel();
+    if (withHunt) {
+      this.activeCombatStage = 'kamieniolom_hunt';
+      this.engine.addLog('⛏️ Maruderzy i łucznik w sztolni Kamieniołomu!', 'combat');
+      this.engine.startCombatWithEnemy('enemy_kamieniolom_maruder_1');
+      this.onUiRefresh?.();
+    } else {
+      this.engine.addLog(
+        '⛏️ Kamieniołom — porozmawiaj z Dozorcą Wincentym (❗) i Rannym Górnikiem (❗) lub wejdź w głąb sztolni.',
+        'important'
+      );
+    }
+  }
+
+  public enterBagnaSzarejWody(withHunt = false): void {
+    this.bindHooks();
+    this.activeCombatStage = 'none';
+    if (!withHunt && this.state.world.location !== 'bagna_szarej_wody') {
+      advanceMinutes(this.state, 130, this.data);
+    }
+    this.state.world.location = 'bagna_szarej_wody';
+    markOstrzeLocationVisited(this.state, 'bagna_szarej_wody');
+    this.engine.registerCustomScene(createBagnaSzarejWodyScene({ withHunt }));
+    this.engine.loadCustomScene('bagna_szarej_wody');
+    ostrzeAudio.setAmbience('creepy_forest');
+    this.syncHeroTo25D();
+    this.refreshHubPanel();
+    if (withHunt) {
+      this.activeCombatStage = 'bagna_szarej_wody_hunt';
+      this.engine.addLog('🌊 Z topieli wyłaniają się Utopce i Pradawny Topielec!', 'combat');
+      this.engine.startCombatWithEnemy('enemy_bagna_utopiec_boss');
+      this.onUiRefresh?.();
+    } else {
+      this.engine.addLog(
+        '🌿 Bagna Szarej Wody — zbierz Szarą Trzcinę na grobli lub oczyść topiel z utopców.',
+        'important'
+      );
+    }
+  }
+
+  public enterWzgorzeWartownicze(withHunt = false): void {
+    this.bindHooks();
+    this.activeCombatStage = 'none';
+    if (!withHunt && this.state.world.location !== 'wzgorze_wartownicze') {
+      advanceMinutes(this.state, 115, this.data);
+    }
+    this.state.world.location = 'wzgorze_wartownicze';
+    markOstrzeLocationVisited(this.state, 'wzgorze_wartownicze');
+    this.engine.registerCustomScene(createWzgorzeWartowniczeScene({ withHunt }));
+    this.engine.loadCustomScene('wzgorze_wartownicze');
+    ostrzeAudio.setAmbience('dawn');
+    this.syncHeroTo25D();
+    this.refreshHubPanel();
+    if (withHunt) {
+      this.activeCombatStage = 'wzgorze_oblawa';
+      this.engine.addLog(
+        '⚔️ Cesarska Obława na Wzgórzu Wartowniczym! Dowódca Obławy i zwiadowcy odcinają odwrót!',
+        'combat'
+      );
+      this.engine.startCombatWithEnemy('enemy_oblawa_dowodca');
+      this.onUiRefresh?.();
+    } else {
+      this.engine.addLog(
+        '🗼 Wzgórze Wartownicze — porozmawiaj ze Starym Pasterzem (❗) lub podejdź do wieży, by skonfrontować się z Obławą.',
+        'important'
+      );
+    }
+  }
+
+  public finishChapter2(viaOblawa = false): void {
+    this.chapter2Completed = true;
+    this.state.flags.akt3a_koniec = true;
+    const sceneId = viaOblawa ? 'akt3a_koniec_oblawa' : 'akt3a_koniec_scena';
+    const scene = this.data.story.scenes.find((s) => s.id === sceneId);
+    const ch = this.state.character;
+    const summary = [
+      typeof scene?.text === 'string' && scene.text.trim()
+        ? scene.text
+        : 'Głuszec zostaje za plecami. Przed tobą Szklane Wzgórza i Obserwatorium, gdzie ślady spadłych gwiazd zbiegają się w jedno.',
+      '',
+      '--- KONIEC AKTU II (OSADA GŁUSZEC) ---',
+      `Bohater: ${ch?.name ?? 'Adept'} (Poz. ${ch?.level ?? 1}, ${ch?.xp ?? 0} XP, ${ch?.money ?? 0} gr)`,
+      `Osie moralne: Wola = ${this.state.vars.wola ?? 0}, Dług = ${this.state.vars.dlug ?? 0}`
+    ].join('\n');
+
+    this.ui?.showNarrative({
+      title: viaOblawa ? 'Przerwanie Obławy — Koniec Aktu II' : 'Za Głuszcem — Koniec Aktu II',
+      subtitle: 'Zapowiedź Aktu III: Obserwatorium na Szklanym Wzgórzu',
+      artId: 'gluszec',
+      text: summary,
+      buttonLabel: 'Zostań w okolicach Głuszca',
+      onContinue: () => {
+        this.engine.addLog('🏁 Akt II ukończony! Otwarto szlak na Szklane Wzgórza (Akt III).', 'important');
+        this.refreshHubPanel();
+      }
+    });
+  }
+
   public handlePropInteract(propId: string): boolean {
     if (propId === 'gluszec_tablica') {
       this.openNoticeBoard();
@@ -229,8 +385,73 @@ export class Chapter2Director {
       this.openTravelModal();
       return true;
     }
-    if (propId === 'bor_drogowskaz' || propId === 'stary_trakt_drogowskaz') {
+    if (
+      propId === 'bor_drogowskaz' ||
+      propId === 'stary_trakt_drogowskaz' ||
+      propId === 'kapliczka_drogowskaz' ||
+      propId === 'kamieniolom_drogowskaz' ||
+      propId === 'bagna_drogowskaz' ||
+      propId === 'wzgorze_drogowskaz'
+    ) {
       this.returnToGluszec();
+      return true;
+    }
+    if (propId === 'kapliczka_oltarz') {
+      this.engine.addLog('⛪ Stara przydrożna kapliczka na rozstajach. Cicho tu i spokojnie.', 'info');
+      return true;
+    }
+    if (propId === 'kapliczka_skrzynka') {
+      if (!this.state.flags.kapliczka_skrzynka_zbadana) {
+        this.state.flags.kapliczka_skrzynka_zbadana = true;
+        this.addItemStack('opatrunek', 1);
+        this.engine.addLog('📦 W skrzynce przy kapliczce znalazłeś czysty Opatrunek.', 'important');
+        this.syncHeroTo25D();
+        this.onAutoSave?.();
+      } else {
+        this.engine.addLog('📦 Skrzynka przy kapliczce jest już pusta.', 'info');
+      }
+      return true;
+    }
+    if (propId === 'kamieniolom_sztolnia') {
+      if (this.state.flags.kamieniolom_oczyszczony) {
+        this.engine.addLog('⛏️ Sztolnia kamieniołomu jest już bezpieczna.', 'info');
+      } else {
+        this.enterKamieniolom(true);
+      }
+      return true;
+    }
+    if (propId === 'bagna_trzcinowisko') {
+      if (!this.state.flags.szara_trzcina_zebrana) {
+        this.state.flags.szara_trzcina_zebrana = true;
+        this.state.quests.szara_trzcina = 'completed';
+        this.addItemStack('napar_ziol', 1);
+        const xp = grantXp(this.state, 55, this.data);
+        this.engine.addLog(
+          `🌿 Zebrałeś Szarą Trzcinę na moczarach! (+1 Napar z ziół, +55 XP, Poz. ${xp.newLevel}).`,
+          'important'
+        );
+        this.syncHeroTo25D();
+        this.refreshHubPanel();
+        this.onAutoSave?.();
+      } else {
+        this.engine.addLog('🌿 Szara trzcina została już zebrana.', 'info');
+      }
+      return true;
+    }
+    if (propId === 'bagna_topiel') {
+      if (this.state.flags.bagna_utopce_pokonane) {
+        this.engine.addLog('🌊 Topiel ucichła — utopce zostały rozbite.', 'info');
+      } else {
+        this.enterBagnaSzarejWody(true);
+      }
+      return true;
+    }
+    if (propId === 'wzgorze_wieza') {
+      if (this.state.flags.oblawa_pokonana) {
+        this.finishChapter2(true);
+      } else {
+        this.enterWzgorzeWartownicze(true);
+      }
       return true;
     }
     if (propId === 'bor_ognisko_obozu') {
@@ -320,6 +541,30 @@ export class Chapter2Director {
     }
     if (npcId === 'npc_furman_sieciech') {
       this.runDialogue('furman');
+      return true;
+    }
+    if (npcId === 'npc_halina_kapliczka') {
+      this.runDialogue('halina');
+      return true;
+    }
+    if (npcId === 'npc_pustelnik_rozstaje') {
+      this.runDialogue('pisarz');
+      return true;
+    }
+    if (npcId === 'npc_dozorca_wincenty') {
+      this.runDialogue('dozorca');
+      return true;
+    }
+    if (npcId === 'npc_ranny_gornik') {
+      this.runDialogue('ranny');
+      return true;
+    }
+    if (npcId === 'npc_zielarka_bagna') {
+      this.runDialogue('znachorka');
+      return true;
+    }
+    if (npcId === 'npc_pasterz_wzgorze') {
+      this.runDialogue('kontrola');
       return true;
     }
     return false;
@@ -435,12 +680,44 @@ export class Chapter2Director {
           subtitle: 'Furman Sieciech, rozbity wóz karawany i wataha wilków.',
           travelMinutes: 120,
           isCurrent: currentLoc === 'stary_trakt'
+        },
+        {
+          id: 'kapliczka_rozstaje',
+          name: '⛪ Kapliczka na Rozstajach',
+          subtitle: 'Siostra Halina, Pustelnik i stare rozdroże.',
+          travelMinutes: 75,
+          isCurrent: currentLoc === 'kapliczka_rozstaje'
+        },
+        {
+          id: 'kamieniolom',
+          name: '⛏️ Kamieniołom',
+          subtitle: 'Dozorca Wincenty, ranny górnik i sztolnia maruderów.',
+          travelMinutes: 110,
+          isCurrent: currentLoc === 'kamieniolom'
+        },
+        {
+          id: 'bagna_szarej_wody',
+          name: '🌿 Bagna Szarej Wody',
+          subtitle: 'Szara trzcina i topiel opanowana przez utopce.',
+          travelMinutes: 130,
+          isCurrent: currentLoc === 'bagna_szarej_wody'
+        },
+        {
+          id: 'wzgorze_wartownicze',
+          name: '🗼 Wzgórze Wartownicze',
+          subtitle: 'Punkt zwiadowczy i finał Cesarskiej Obławy.',
+          travelMinutes: 115,
+          isCurrent: currentLoc === 'wzgorze_wartownicze'
         }
       ],
       (destId) => {
         if (destId === 'gluszec') this.returnToGluszec();
         else if (destId === 'bor_klusownikow') this.enterBorKlusownikow(false);
         else if (destId === 'stary_trakt') this.enterStaryTrakt(false);
+        else if (destId === 'kapliczka_rozstaje') this.enterKapliczkaRozstaje();
+        else if (destId === 'kamieniolom') this.enterKamieniolom(false);
+        else if (destId === 'bagna_szarej_wody') this.enterBagnaSzarejWody(false);
+        else if (destId === 'wzgorze_wartownicze') this.enterWzgorzeWartownicze(false);
       }
     );
   }
@@ -498,6 +775,38 @@ export class Chapter2Director {
           'important'
         );
         this.ui?.showToast('Wataha pokonana (+35 gr, +75 XP)', 'success');
+      } else if (stage === 'kamieniolom_hunt') {
+        this.state.flags.kamieniolom_oczyszczony = true;
+        this.state.quests.rannego_nie_zostawia_sie = 'completed';
+        this.state.character.money += 40;
+        const xp = grantXp(this.state, 80, this.data);
+        this.engine.addLog(
+          `🏆 Sztolnia Kamieniołomu oczyszczona! +40 gr, +80 XP (Poz. ${xp.newLevel}).`,
+          'important'
+        );
+        this.ui?.showToast('Kamieniołom oczyszczony (+40 gr, +80 XP)', 'success');
+      } else if (stage === 'bagna_szarej_wody_hunt') {
+        this.state.flags.bagna_utopce_pokonane = true;
+        this.state.character.money += 50;
+        const xp = grantXp(this.state, 110, this.data);
+        this.engine.addLog(
+          `🏆 Pradawny Topielec i utopce rozbite! +50 gr, +110 XP (Poz. ${xp.newLevel}).`,
+          'important'
+        );
+        this.ui?.showToast('Topiel oczyszczona (+50 gr, +110 XP)', 'success');
+      } else if (stage === 'wzgorze_oblawa') {
+        this.state.flags.oblawa_pokonana = true;
+        this.state.quests.zwiad_na_wzgorzu = 'completed';
+        this.state.character.money += 60;
+        const xp = grantXp(this.state, 140, this.data);
+        this.engine.addLog(
+          `🏆 Przerwałeś Cesarską Obławę na Wzgórzu Wartowniczym! +60 gr, +140 XP (Poz. ${xp.newLevel}).`,
+          'important'
+        );
+        this.syncHeroTo25D();
+        this.onAutoSave?.();
+        this.finishChapter2(true);
+        return;
       }
     }
 
@@ -510,7 +819,7 @@ export class Chapter2Director {
     this.refreshChapter2Markers();
     if (!this.ui) return;
     const loc = this.state.world.location;
-    if (!CHAPTER2_PHASE1_SCENES.has(loc)) {
+    if (!CHAPTER2_SCENES.has(loc)) {
       this.ui.setHubPanel(null);
       return;
     }
@@ -528,7 +837,11 @@ export class Chapter2Director {
     const titles: Record<string, string> = {
       gluszec: 'Osada Głuszec (Akt II)',
       bor_klusownikow: 'Bór Kłusowników (Akt II)',
-      stary_trakt: 'Stary Trakt (Akt II)'
+      stary_trakt: 'Stary Trakt (Akt II)',
+      kapliczka_rozstaje: 'Kapliczka na Rozstajach (Akt II)',
+      kamieniolom: 'Kamieniołom (Akt II)',
+      bagna_szarej_wody: 'Bagna Szarej Wody (Akt II)',
+      wzgorze_wartownicze: 'Wzgórze Wartownicze (Akt II)'
     };
 
     this.ui.setHubPanel({
@@ -559,23 +872,49 @@ export class Chapter2Director {
       this.engine.setNpcMarker('npc_stach_bor', '❗ Stach');
     } else if (loc === 'stary_trakt') {
       this.engine.setNpcMarker('npc_furman_sieciech', '❗ Furman');
+    } else if (loc === 'kapliczka_rozstaje') {
+      this.engine.setNpcMarker('npc_halina_kapliczka', '❗ Siostra Halina');
+      this.engine.setNpcMarker('npc_pustelnik_rozstaje', '💬 Pustelnik');
+    } else if (loc === 'kamieniolom') {
+      this.engine.setNpcMarker('npc_dozorca_wincenty', '❗ Dozorca');
+      this.engine.setNpcMarker('npc_ranny_gornik', '❗ Ranny Górnik');
+    } else if (loc === 'bagna_szarej_wody') {
+      this.engine.setNpcMarker('npc_zielarka_bagna', '🌿 Zielarka');
+    } else if (loc === 'wzgorze_wartownicze') {
+      this.engine.setNpcMarker('npc_pasterz_wzgorze', '❗ Pasterz');
     }
   }
 
   public restoreFromSave(sceneId: string): void {
     this.bindHooks();
     this.activeCombatStage = 'none';
-    const targetScene = CHAPTER2_PHASE1_SCENES.has(sceneId) ? sceneId : 'gluszec';
+    const targetScene = CHAPTER2_SCENES.has(sceneId) ? sceneId : 'gluszec';
     this.state.world.location = targetScene;
     if (targetScene === 'gluszec') {
       this.engine.registerCustomScene(createGluszecScene());
     } else if (targetScene === 'bor_klusownikow') {
       this.engine.registerCustomScene(createBorKlusownikowScene({ withHunt: false }));
-    } else {
+    } else if (targetScene === 'stary_trakt') {
       this.engine.registerCustomScene(createStaryTraktScene({ withHunt: false }));
+    } else if (targetScene === 'kapliczka_rozstaje') {
+      this.engine.registerCustomScene(createKapliczkaRozstajeScene());
+    } else if (targetScene === 'kamieniolom') {
+      this.engine.registerCustomScene(createKamieniolomScene({ withHunt: false }));
+    } else if (targetScene === 'bagna_szarej_wody') {
+      this.engine.registerCustomScene(createBagnaSzarejWodyScene({ withHunt: false }));
+    } else {
+      this.engine.registerCustomScene(createWzgorzeWartowniczeScene({ withHunt: false }));
     }
     this.engine.loadCustomScene(targetScene);
-    ostrzeAudio.setAmbience(targetScene === 'gluszec' ? 'town' : 'forest');
+    ostrzeAudio.setAmbience(
+      targetScene === 'gluszec'
+        ? 'town'
+        : targetScene === 'kapliczka_rozstaje' || targetScene === 'wzgorze_wartownicze'
+          ? 'dawn'
+          : targetScene === 'kamieniolom' || targetScene === 'bagna_szarej_wody'
+            ? 'creepy_forest'
+            : 'forest'
+    );
     this.syncHeroTo25D();
     this.refreshHubPanel();
   }

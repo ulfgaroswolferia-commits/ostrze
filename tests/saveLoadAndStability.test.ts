@@ -188,7 +188,7 @@ describe('Save/Load E2E, Portable Keys & Restore Stability', () => {
     const expectedFlags = JSON.stringify(sourceState.flags);
     const expectedQuests = JSON.stringify(sourceState.quests);
 
-    expect(OSTRZE_LOCATIONS.length).toBe(15);
+    expect(OSTRZE_LOCATIONS.length).toBe(19);
     for (const location of OSTRZE_LOCATIONS) {
       sourceState.world.location = location.id;
       const payload = importSaveKey(

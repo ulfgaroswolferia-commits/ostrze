@@ -900,3 +900,682 @@ export function createStaryTraktScene(opts?: { withHunt?: boolean }): CustomScen
     fogOfWarEnabled: false
   };
 }
+
+/**
+ * Dedicated swamp monster builder — guarantees `utopiec` monster sprite with ZERO human gear.
+ */
+function makeUtopiecActor(opts: {
+  id: string;
+  seed: number;
+  name: string;
+  x: number;
+  y: number;
+  z: number;
+  hp?: number;
+  xpReward?: number;
+  difficulty?: 'easy' | 'normal' | 'very_hard';
+}): ActorEntity {
+  const recipe = generateRandomCharacterRecipe(opts.seed, opts.id);
+  recipe.id = opts.id;
+  recipe.name = opts.name;
+  recipe.title = 'Potwór z Bagien Szarej Wody';
+  recipe.equipment = {
+    head: null,
+    torso: 'torso_przeszywanica',
+    cloak: null,
+    legs: 'legs_leather_boots',
+    mainHand: null,
+    offHand: null
+  };
+  const hp = opts.hp ?? 28;
+  return {
+    id: opts.id,
+    recipe,
+    x: opts.x + 0.5,
+    y: opts.y + 0.5,
+    z: opts.z,
+    tileX: opts.x,
+    tileY: opts.y,
+    direction: 4,
+    isMoving: false,
+    animFrame: 0,
+    animTimer: 0,
+    path: [],
+    combat: {
+      hp,
+      maxHp: hp,
+      ap: 6,
+      maxAp: 6,
+      proficiencies: createDefaultProficiencies(),
+      isHostile: true,
+      isAlive: true,
+      xpReward: opts.xpReward ?? 45,
+      lootTable: [],
+      difficulty: opts.difficulty ?? 'normal',
+      aggroRadius: 14,
+      dazedHeadTurns: 0,
+      crippledLegsTurns: 0,
+      defending: false
+    }
+  };
+}
+
+/**
+ * Akt II — Satelita 3: Kapliczka na Rozstajach (24x24)
+ */
+export function createKapliczkaRozstajeScene(): CustomSceneConfig {
+  const width = 24;
+  const height = 24;
+  const tiles = buildGrid(width, height, (x, y) => {
+    const isBorder = x === 0 || y === 0 || x === width - 1 || y === height - 1;
+    const isExit = x >= 11 && x <= 12 && y === height - 1;
+    const isCross = (x >= 11 && x <= 12) || (y >= 11 && y <= 12 && x >= 4 && x <= 19);
+    if (isBorder) {
+      return { z: 1, terrain: 'forest_soil', walkable: isExit };
+    }
+    return {
+      z: 0,
+      terrain: isCross ? 'dirt_path' : 'forest_grass',
+      walkable: true
+    };
+  });
+
+  const map: IsometricWorldMap = {
+    id: 'forest_clearing' as MapId,
+    name: 'Kapliczka na Rozstajach',
+    subtitle: 'Akt II: Cicha kapliczka, Siostra Halina i Pustelnik',
+    width,
+    height,
+    maxElevation: 2,
+    tiles,
+    props: [
+      {
+        id: 'kapliczka_oltarz',
+        name: 'Kapliczka na Rozstajach',
+        kind: 'travel_signpost',
+        x: 11,
+        y: 8,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true
+      },
+      {
+        id: 'kapliczka_skrzynka',
+        name: 'Skrzynka ofiarna przy kapliczce',
+        kind: 'dungeon_crate',
+        x: 13,
+        y: 8,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true
+      },
+      {
+        id: 'kapliczka_drogowskaz',
+        name: '🚪 Powrót do Głuszca',
+        kind: 'exit_path',
+        x: 11,
+        y: 21,
+        z: 0,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: false,
+        blocksSight: false,
+        interactive: true
+      }
+    ],
+    lights: []
+  };
+
+  const actors: ActorEntity[] = [
+    makeChapter2Npc({
+      id: 'npc_halina_kapliczka',
+      seed: 2401,
+      name: 'Siostra Halina (Zielarka)',
+      title: 'Opiekunka kapliczki',
+      x: 10,
+      y: 10,
+      z: 0,
+      direction: 3,
+      torso: 'torso_przeszywanica',
+      dialogueId: 'halina'
+    }),
+    makeChapter2Npc({
+      id: 'npc_pustelnik_rozstaje',
+      seed: 2402,
+      name: 'Pustelnik (Pielgrzym)',
+      title: 'Wędrowiec spod kapliczki',
+      x: 14,
+      y: 10,
+      z: 0,
+      direction: 5,
+      torso: 'torso_przeszywanica',
+      cloak: 'cloak_forest',
+      dialogueId: 'pisarz'
+    })
+  ];
+
+  applyWorldDressing(map, {
+    seed: 20265,
+    spawnX: 11,
+    spawnY: 19,
+    actors,
+    reservedPoints: [
+      { x: 11, y: 21, radius: 1 },
+      { x: 12, y: 21, radius: 1 },
+      { x: 12, y: 9, radius: 3 }
+    ],
+    forestSides: ['W', 'N', 'E'],
+    beltDepth: 2
+  });
+
+  return {
+    id: 'kapliczka_rozstaje',
+    map,
+    spawnX: 11,
+    spawnY: 19,
+    actors,
+    ambientLightIntensity: 0.82,
+    fogOfWarEnabled: false
+  };
+}
+
+/**
+ * Akt II — Satelita 4: Kamieniołom (24x24)
+ */
+export function createKamieniolomScene(opts?: { withHunt?: boolean }): CustomSceneConfig {
+  const width = 24;
+  const height = 24;
+  const tiles = buildGrid(width, height, (x, y) => {
+    const isBorder = x === 0 || y === 0 || x === width - 1 || y === height - 1;
+    const isExit = x >= 11 && x <= 12 && y === height - 1;
+    const isPit = Math.hypot(x - 12, y - 10) <= 5.5;
+    const isRoad = x >= 11 && x <= 12 && y >= 10;
+    if (isBorder) {
+      return { z: 1, terrain: 'forest_soil', walkable: isExit };
+    }
+    return {
+      z: 0,
+      terrain: isPit || isRoad ? 'dirt_path' : 'forest_soil',
+      walkable: true
+    };
+  });
+
+  const map: IsometricWorldMap = {
+    id: 'forest_clearing' as MapId,
+    name: 'Kamieniołom',
+    subtitle: 'Akt II: Sztolnia, Dozorca Wincenty i ranny górnik',
+    width,
+    height,
+    maxElevation: 2,
+    tiles,
+    props: [
+      {
+        id: 'kamieniolom_sztolnia',
+        name: 'Wejście do sztolni (ognisko górników)',
+        kind: 'campfire',
+        x: 12,
+        y: 6,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true,
+        linkedLightId: 'light_kamieniolom_fire'
+      },
+      {
+        id: 'kamieniolom_drogowskaz',
+        name: '🚪 Powrót do Głuszca',
+        kind: 'exit_path',
+        x: 11,
+        y: 21,
+        z: 0,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: false,
+        blocksSight: false,
+        interactive: true
+      }
+    ],
+    lights: [
+      {
+        id: 'light_kamieniolom_fire',
+        x: 12,
+        y: 6,
+        z: 0.7,
+        color: { r: 255, g: 165, b: 80 },
+        intensity: 1.35,
+        radius: 6,
+        flickerSpeed: 3.9,
+        enabled: true
+      }
+    ]
+  };
+
+  const actors: ActorEntity[] = [
+    makeChapter2Npc({
+      id: 'npc_dozorca_wincenty',
+      seed: 2501,
+      name: 'Dozorca Wincenty (Strażnik)',
+      title: 'Dozorca kamieniołomu',
+      x: 9,
+      y: 13,
+      z: 0,
+      direction: 2,
+      torso: 'torso_warden_brigandine',
+      dialogueId: 'dozorca'
+    }),
+    makeChapter2Npc({
+      id: 'npc_ranny_gornik',
+      seed: 2502,
+      name: 'Ranny Górnik (Kmieć)',
+      title: 'Ocalały ze sztolni',
+      x: 14,
+      y: 9,
+      z: 0,
+      direction: 5,
+      torso: 'torso_przeszywanica',
+      dialogueId: 'ranny'
+    })
+  ];
+
+  if (opts?.withHunt) {
+    actors.push(
+      makeChapter2Npc({
+        id: 'enemy_kamieniolom_maruder_1',
+        seed: 2511,
+        name: 'Maruder ze Sztolni',
+        title: 'Grabieżca kamieniołomu',
+        x: 10,
+        y: 7,
+        z: 0,
+        direction: 4,
+        torso: 'torso_warden_brigandine',
+        head: 'helm_shadow_hood',
+        mainHand: 'weapon_slavic_axe',
+        hostile: true,
+        hp: 26,
+        ap: 6,
+        xpReward: 40
+      }),
+      makeChapter2Npc({
+        id: 'enemy_kamieniolom_lucznik',
+        seed: 2512,
+        name: 'Kłusownik Łucznik',
+        title: 'Strzelec na skalnej półce',
+        x: 14,
+        y: 6,
+        z: 0,
+        direction: 4,
+        torso: 'torso_przeszywanica',
+        head: 'helm_shadow_hood',
+        mainHand: 'weapon_hunting_bow',
+        hostile: true,
+        hp: 22,
+        ap: 6,
+        xpReward: 40
+      })
+    );
+  }
+
+  applyWorldDressing(map, {
+    seed: 20266,
+    spawnX: 11,
+    spawnY: 19,
+    actors,
+    reservedPoints: [
+      { x: 11, y: 21, radius: 1 },
+      { x: 12, y: 21, radius: 1 },
+      { x: 12, y: 8, radius: 4 }
+    ],
+    forestSides: ['W', 'N', 'E'],
+    beltDepth: 2
+  });
+
+  return {
+    id: 'kamieniolom',
+    map,
+    spawnX: 11,
+    spawnY: 19,
+    actors,
+    ambientLightIntensity: 0.68,
+    fogOfWarEnabled: false
+  };
+}
+
+/**
+ * Akt II — Satelita 5: Bagna Szarej Wody (24x24)
+ */
+export function createBagnaSzarejWodyScene(opts?: { withHunt?: boolean }): CustomSceneConfig {
+  const width = 24;
+  const height = 24;
+  const tiles = buildGrid(width, height, (x, y) => {
+    const isBorder = x === 0 || y === 0 || x === width - 1 || y === height - 1;
+    const isExit = x >= 11 && x <= 12 && y === height - 1;
+    const isCauseway = x >= 10 && x <= 13;
+    if (isBorder) {
+      return { z: 1, terrain: 'forest_soil', walkable: isExit };
+    }
+    return {
+      z: 0,
+      terrain: isCauseway ? 'dirt_path' : 'forest_soil',
+      walkable: true
+    };
+  });
+
+  const map: IsometricWorldMap = {
+    id: 'forest_clearing' as MapId,
+    name: 'Bagna Szarej Wody',
+    subtitle: 'Akt II: Zbutwiała grobla, szara trzcina i topiel z utopcami',
+    width,
+    height,
+    maxElevation: 2,
+    tiles,
+    props: [
+      {
+        id: 'bagna_trzcinowisko',
+        name: 'Trzcinowisko (Szara trzcina)',
+        kind: 'wildflower_patch',
+        x: 8,
+        y: 12,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: false,
+        blocksSight: false,
+        interactive: true
+      },
+      {
+        id: 'bagna_topiel',
+        name: 'Topiel (legowisko utopców)',
+        kind: 'campfire',
+        x: 12,
+        y: 7,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true,
+        linkedLightId: 'light_bagna_wisp'
+      },
+      {
+        id: 'bagna_drogowskaz',
+        name: '🚪 Powrót do Głuszca',
+        kind: 'exit_path',
+        x: 11,
+        y: 21,
+        z: 0,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: false,
+        blocksSight: false,
+        interactive: true
+      }
+    ],
+    lights: [
+      {
+        id: 'light_bagna_wisp',
+        x: 12,
+        y: 7,
+        z: 0.8,
+        color: { r: 110, g: 225, b: 195 },
+        intensity: 1.25,
+        radius: 5.5,
+        flickerSpeed: 2.6,
+        enabled: true
+      }
+    ]
+  };
+
+  const actors: ActorEntity[] = [
+    makeChapter2Npc({
+      id: 'npc_zielarka_bagna',
+      seed: 2601,
+      name: 'Bagienna Zielarka',
+      title: 'Szałas na skraju moczarów',
+      x: 9,
+      y: 16,
+      z: 0,
+      direction: 2,
+      torso: 'torso_przeszywanica',
+      dialogueId: 'znachorka'
+    })
+  ];
+
+  if (opts?.withHunt) {
+    actors.push(
+      makeUtopiecActor({
+        id: 'enemy_bagna_utopiec_1',
+        seed: 2611,
+        name: 'Utopiec z Topieli',
+        x: 9,
+        y: 8,
+        z: 0,
+        hp: 26,
+        xpReward: 40
+      }),
+      makeUtopiecActor({
+        id: 'enemy_bagna_utopiec_2',
+        seed: 2612,
+        name: 'Utopiec z Topieli',
+        x: 14,
+        y: 8,
+        z: 0,
+        hp: 26,
+        xpReward: 40
+      }),
+      makeUtopiecActor({
+        id: 'enemy_bagna_utopiec_boss',
+        seed: 2613,
+        name: 'Pradawny Topielec',
+        x: 12,
+        y: 6,
+        z: 0,
+        hp: 46,
+        xpReward: 75,
+        difficulty: 'very_hard'
+      })
+    );
+  }
+
+  applyWorldDressing(map, {
+    seed: 20267,
+    spawnX: 11,
+    spawnY: 19,
+    actors,
+    reservedPoints: [
+      { x: 11, y: 21, radius: 1 },
+      { x: 12, y: 21, radius: 1 },
+      { x: 12, y: 8, radius: 4 }
+    ],
+    forestSides: ['W', 'N', 'E'],
+    beltDepth: 2
+  });
+
+  return {
+    id: 'bagna_szarej_wody',
+    map,
+    spawnX: 11,
+    spawnY: 19,
+    actors,
+    ambientLightIntensity: 0.6,
+    fogOfWarEnabled: false
+  };
+}
+
+/**
+ * Akt II — Satelita 6 & Finał Obławy: Wzgórze Wartownicze (24x24)
+ */
+export function createWzgorzeWartowniczeScene(opts?: { withHunt?: boolean }): CustomSceneConfig {
+  const width = 24;
+  const height = 24;
+  const tiles = buildGrid(width, height, (x, y) => {
+    const isBorder = x === 0 || y === 0 || x === width - 1 || y === height - 1;
+    const isExit = x >= 11 && x <= 12 && y === height - 1;
+    const isRidge = Math.hypot(x - 12, y - 9) <= 4.5;
+    const isPath = x >= 11 && x <= 12 && y >= 9;
+    if (isBorder) {
+      return { z: 1, terrain: 'forest_soil', walkable: isExit };
+    }
+    return {
+      z: 0,
+      terrain: isRidge || isPath ? 'dirt_path' : 'forest_grass',
+      walkable: true
+    };
+  });
+
+  const map: IsometricWorldMap = {
+    id: 'forest_clearing' as MapId,
+    name: 'Wzgórze Wartownicze',
+    subtitle: 'Akt II: Punkt zwiadowczy i finał Cesarskiej Obławy',
+    width,
+    height,
+    maxElevation: 2,
+    tiles,
+    props: [
+      {
+        id: 'wzgorze_wieza',
+        name: 'Stara wieża wartownicza (Finał Obławy)',
+        kind: 'watchtower',
+        x: 11,
+        y: 4,
+        z: 0,
+        sizeX: 2,
+        sizeY: 2,
+        heightZ: 4,
+        blocksMovement: true,
+        blocksSight: true,
+        interactive: true
+      },
+      {
+        id: 'wzgorze_drogowskaz',
+        name: '🚪 Powrót do Głuszca',
+        kind: 'exit_path',
+        x: 11,
+        y: 21,
+        z: 0,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: false,
+        blocksSight: false,
+        interactive: true
+      }
+    ],
+    lights: []
+  };
+
+  const actors: ActorEntity[] = [
+    makeChapter2Npc({
+      id: 'npc_pasterz_wzgorze',
+      seed: 2701,
+      name: 'Stary Pasterz (Kmieć)',
+      title: 'Świadek ze wzgórza',
+      x: 9,
+      y: 15,
+      z: 0,
+      direction: 2,
+      torso: 'torso_przeszywanica',
+      dialogueId: 'kontrola'
+    })
+  ];
+
+  if (opts?.withHunt) {
+    actors.push(
+      makeChapter2Npc({
+        id: 'enemy_oblawa_zwiadowca_1',
+        seed: 2711,
+        name: 'Cesarski Zwiadowca Łucznik',
+        title: 'Obława Cesarska',
+        x: 9,
+        y: 8,
+        z: 0,
+        direction: 4,
+        torso: 'torso_warden_brigandine',
+        head: 'helm_shadow_hood',
+        mainHand: 'weapon_hunting_bow',
+        hostile: true,
+        hp: 26,
+        ap: 6,
+        xpReward: 45
+      }),
+      makeChapter2Npc({
+        id: 'enemy_oblawa_zwiadowca_2',
+        seed: 2712,
+        name: 'Cesarski Strażnik Obławy',
+        title: 'Obława Cesarska',
+        x: 14,
+        y: 8,
+        z: 0,
+        direction: 4,
+        torso: 'torso_warden_brigandine',
+        head: 'helm_szyszak',
+        mainHand: 'weapon_iron_longsword',
+        offHand: 'offhand_slavic_shield',
+        hostile: true,
+        hp: 32,
+        ap: 6,
+        xpReward: 50
+      }),
+      makeChapter2Npc({
+        id: 'enemy_oblawa_dowodca',
+        seed: 2713,
+        name: 'Herszt Dowódca Obławy',
+        title: 'Oficer Cesarskiej Obławy',
+        x: 12,
+        y: 7,
+        z: 0,
+        direction: 4,
+        torso: 'torso_slavic_lamellar',
+        head: 'helm_szyszak',
+        cloak: 'cloak_crimson',
+        mainHand: 'weapon_slavic_axe',
+        offHand: 'offhand_slavic_shield',
+        hostile: true,
+        difficulty: 'very_hard',
+        hp: 62,
+        ap: 7,
+        xpReward: 120
+      })
+    );
+  }
+
+  applyWorldDressing(map, {
+    seed: 20268,
+    spawnX: 11,
+    spawnY: 19,
+    actors,
+    reservedPoints: [
+      { x: 11, y: 21, radius: 1 },
+      { x: 12, y: 21, radius: 1 },
+      { x: 12, y: 8, radius: 4 }
+    ],
+    forestSides: ['W', 'N', 'E'],
+    beltDepth: 2
+  });
+
+  return {
+    id: 'wzgorze_wartownicze',
+    map,
+    spawnX: 11,
+    spawnY: 19,
+    actors,
+    ambientLightIntensity: 0.8,
+    fogOfWarEnabled: false
+  };
+}
