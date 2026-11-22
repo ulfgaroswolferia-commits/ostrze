@@ -14,6 +14,10 @@ import {
 } from '../src/game/rules/combatAi';
 import { useCombatBeltItem } from '../src/game/rules/combatConsumables';
 import {
+  getEnemyDamageMultiplier,
+  resolvePlayerWeaponDamageType
+} from '../src/game/rules/combatEnemyMeta';
+import {
   createCombatStatusSessionState,
   getPlayerStatusHitPenaltyPct,
   markPlayerStatusCured,
@@ -232,5 +236,48 @@ describe('Tactical Enemy AI & Combat Statuses', () => {
     });
     expect(res.used).toBe(true);
     expect(state.character!.effects.some((e) => e.id === 'krwawienie')).toBe(false);
+  });
+
+  it('applies enemy damageTaken resistance and weakness multipliers for weapons and fire throwables', () => {
+    const { engine, state } = setupHero();
+    state.inventory.equipped.bron = 'miecz_krotki';
+    state.inventory.items.push({ id: 'flasza_oleju', qty: 2 });
+
+    expect(resolvePlayerWeaponDamageType(state, ORIGIN_DATA)).toBe('sieczne');
+    expect(getEnemyDamageMultiplier('upior_nocy', 'sieczne', ORIGIN_DATA)).toBe(0.1);
+    expect(getEnemyDamageMultiplier('upior_zwiadowca', 'sieczne', ORIGIN_DATA)).toBe(0.5);
+    expect(getEnemyDamageMultiplier('upior_nocy', 'ogien', ORIGIN_DATA)).toBe(2);
+    expect(getEnemyDamageMultiplier('bandyta', 'sieczne', ORIGIN_DATA)).toBe(1);
+
+    engine.registerCustomScene(createKamiennaPrzeleczScene());
+    engine.loadCustomScene('kamienna_przelecz');
+    engine.syncFromOstrzeState(state, ORIGIN_DATA);
+
+    // Turn first hostile into Upiór nocy adjacent to player to test live multiplier scaling
+    const enemy = engine.npcs.find((n) => n.combat?.isHostile)!;
+    enemy.id = 'upior_nocy_test';
+    enemy.recipe.name = 'Upiór nocy';
+    enemy.combat!.hp = 150;
+    enemy.combat!.maxHp = 150;
+    enemy.tileX = engine.player.tileX + 1;
+    enemy.tileY = engine.player.tileY;
+
+    engine.startCombatWithEnemy(enemy.id);
+    const out = engine.performPlayerCombatAttack(enemy.id, 'quick', () => 0.2);
+    expect(out?.hit).toBe(true);
+    expect(engine.combatLogs.some((l) => l.includes('Odporność'))).toBe(true);
+
+    // Oil flask deals 2x fire damage to Upiór nocy
+    const hpBeforeOil = enemy.combat!.hp;
+    const oilRes = useCombatBeltItem({
+      state,
+      data: ORIGIN_DATA,
+      rng: createRng(7),
+      engine,
+      slotIndex: 3
+    });
+    expect(oilRes.used).toBe(true);
+    expect(oilRes.message).toContain('Podatność');
+    expect(hpBeforeOil - enemy.combat!.hp).toBeGreaterThanOrEqual(12); // min 6 * 2 = 12
   });
 });

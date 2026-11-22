@@ -2,6 +2,7 @@ import type { CombatBeltCategory, CombatQuickBeltSlot } from '@ulf/rpg/gameLoop'
 import type { OstrzeEngineState } from '../../engine-bridge/OstrzeEngineState';
 import type { ItemDef, OriginGameData, OstrzeGameState } from '../data/originTypes';
 import type { SeededRng } from './dice';
+import { getDamageTypeLabel, getEnemyDamageMultiplier, resolveEnemyOriginId } from './combatEnemyMeta';
 import { getStats } from './stats';
 
 export const COMBAT_BELT_AP_COST = 2;
@@ -352,12 +353,15 @@ export function useCombatBeltItem(params: {
   }
 
   let dmg = 0;
+  let dmgType: string | null = null;
   let statusNote = '';
   if (item.id === 'flasza_oleju') {
     dmg = rng.int(6, 11);
+    dmgType = 'ogien';
     statusNote = ' (ogień)';
   } else if (item.id === 'garnek_huku') {
     dmg = rng.int(3, 6);
+    dmgType = 'obuchowe';
     target.combat.dazedHeadTurns = Math.max(target.combat.dazedHeadTurns, 1);
     statusNote = ' + OGŁUSZENIE (-3 AP)';
   } else if (item.id === 'garniec_wapno') {
@@ -370,6 +374,19 @@ export function useCombatBeltItem(params: {
     statusNote = ' + OKALECZENIE (rój)';
   } else {
     dmg = rng.int(3, 6);
+  }
+
+  if (dmgType) {
+    const originId = resolveEnemyOriginId(target.id, target.recipe.name);
+    const mult = getEnemyDamageMultiplier(originId, dmgType, data);
+    if (mult !== 1) {
+      dmg = Math.max(1, Math.round(dmg * mult));
+      const label = getDamageTypeLabel(dmgType);
+      statusNote +=
+        mult > 1
+          ? ` 🔥 Podatność na ${label} (×${mult})`
+          : ` 🛡️ Odporność na ${label} (×${mult})`;
+    }
   }
 
   target.combat.hp = Math.max(0, target.combat.hp - dmg);

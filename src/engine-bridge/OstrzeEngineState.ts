@@ -34,7 +34,12 @@ import {
   shouldCautiousEnemyHoldForGuard,
   TACTICAL_BUDGETS
 } from '../game/rules/combatAi';
-import { resolveEnemyOriginId } from '../game/rules/combatEnemyMeta';
+import {
+  getDamageTypeLabel,
+  getEnemyDamageMultiplier,
+  resolveEnemyOriginId,
+  resolvePlayerWeaponDamageType
+} from '../game/rules/combatEnemyMeta';
 import {
   createCombatStatusSessionState,
   getPlayerStatusHitPenaltyPct,
@@ -97,6 +102,7 @@ export class OstrzeEngineState extends CrpgGameState {
   private activeOstrzeState: OstrzeGameState | null = null;
   private combatAiSession = createCombatAiSessionState();
   private combatStatusSession = createCombatStatusSessionState();
+  private pendingPlayerAttackMultiplier = 1;
 
   constructor() {
     ensureOstrzeEngineExtensionsRegistered();
@@ -421,13 +427,18 @@ export class OstrzeEngineState extends CrpgGameState {
         this.activeOstrzeState,
         this.combatStatusSession
       );
-      if (hitPenalty <= 0) {
+      const mult = this.pendingPlayerAttackMultiplier;
+      if (hitPenalty <= 0 && mult === 1) {
         return base;
       }
+      const scaledMin = Math.max(1, Math.round(base.derived.minDamage * mult));
+      const scaledMax = Math.max(scaledMin, Math.round(base.derived.maxDamage * mult));
       return {
         ...base,
         derived: {
           ...base.derived,
+          minDamage: scaledMin,
+          maxDamage: scaledMax,
           activeProficiency: Math.max(10, base.derived.activeProficiency - hitPenalty)
         }
       };
@@ -797,6 +808,56 @@ export class OstrzeEngineState extends CrpgGameState {
         this.handlePlayerDefeated();
       }
     }
+  }
+
+  public override performPlayerCombatAttack(
+    targetId: string,
+    mode?: CombatAttackMode,
+    rng?: () => number
+  ) {
+    if (!this.activeCustomSceneId) {
+      return super.performPlayerCombatAttack(targetId, mode, rng);
+    }
+
+    const enemy = this.npcs.find((n) => n.id === targetId);
+    const originId = enemy ? resolveEnemyOriginId(enemy.id, enemy.recipe.name) : null;
+    const damageType = resolvePlayerWeaponDamageType(this.activeOstrzeState, ORIGIN_DATA);
+    const mult = getEnemyDamageMultiplier(originId, damageType, ORIGIN_DATA);
+
+    this.pendingPlayerAttackMultiplier = mult;
+    let outcome;
+    try {
+      outcome = super.performPlayerCombatAttack(targetId, mode, rng);
+    } finally {
+      this.pendingPlayerAttackMultiplier = 1;
+    }
+
+    if (outcome?.hit && enemy && mult !== 1) {
+      const label = getDamageTypeLabel(damageType);
+      if (mult < 1) {
+        const pct = Math.round((1 - mult) * 100);
+        this.addCombatLog(`🛡️ Odporność ${enemy.recipe.name} na ${label} (-${pct}% obr.).`);
+        this.pushFloatingCombatText(
+          enemy.x,
+          enemy.y,
+          enemy.z + 2.15,
+          `🛡️ ODPORNOŚĆ (${label})`,
+          0x90caf9
+        );
+      } else {
+        const pct = Math.round((mult - 1) * 100);
+        this.addCombatLog(`🔥 Podatność ${enemy.recipe.name} na ${label} (+${pct}% obr.)!`);
+        this.pushFloatingCombatText(
+          enemy.x,
+          enemy.y,
+          enemy.z + 2.15,
+          `🔥 PODATNOŚĆ (+${pct}%)!`,
+          0xffab40
+        );
+      }
+    }
+
+    return outcome;
   }
 
   public override loadMap(mapId: MapId): void {

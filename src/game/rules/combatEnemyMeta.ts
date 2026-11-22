@@ -1,5 +1,5 @@
 import { hasPixArt } from '../assets/pixArt';
-import type { OriginGameData } from '../data/originTypes';
+import type { OriginGameData, OstrzeGameState } from '../data/originTypes';
 
 export interface EnemyResistanceTag {
   damageType: string;
@@ -13,9 +13,48 @@ const DAMAGE_TYPE_LABELS: Record<string, string> = {
   klute: 'kłute',
   obuchowe: 'obuchowe',
   ogien: 'ogień',
+  palne: 'ogień',
   magia: 'magia',
-  proch: 'proch'
+  proch: 'proch',
+  gwiezdne: 'gwiezdne'
 };
+
+export function getDamageTypeLabel(damageType: string): string {
+  return DAMAGE_TYPE_LABELS[damageType] ?? damageType;
+}
+
+/**
+ * Resolves the active weapon's canonical Ostrze damage type for the player.
+ */
+export function resolvePlayerWeaponDamageType(
+  state: OstrzeGameState | null,
+  data: OriginGameData
+): string {
+  const bronId = state?.inventory?.equipped?.bron;
+  if (bronId) {
+    const item = data.items.find((i) => i.id === bronId);
+    if (item?.damageType) {
+      return item.damageType === 'palne' ? 'ogien' : item.damageType;
+    }
+  }
+  return state?.character?.classId === 'wlocznia' ? 'klute' : 'sieczne';
+}
+
+/**
+ * Returns the enemy's `damageTaken` multiplier for a given damage type (default 1.0).
+ */
+export function getEnemyDamageMultiplier(
+  originEnemyId: string | null,
+  damageType: string,
+  data: OriginGameData
+): number {
+  if (!originEnemyId) return 1;
+  const def = data.enemies.find((e) => e.id === originEnemyId);
+  if (!def?.damageTaken) return 1;
+  const normalized = damageType === 'palne' ? 'ogien' : damageType === 'ciete' ? 'sieczne' : damageType;
+  const mult = def.damageTaken[normalized] ?? def.damageTaken[damageType];
+  return typeof mult === 'number' && Number.isFinite(mult) && mult > 0 ? mult : 1;
+}
 
 /**
  * Resolves the canonical enemy ID from origin/data/enemies.json for a 2.5D actor.
