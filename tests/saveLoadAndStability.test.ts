@@ -4,6 +4,7 @@ import { ORIGIN_DATA } from '../src/game/data/originData';
 import { createCharacter, createEmptyOstrzeState } from '../src/game/rules/character';
 import { createRng } from '../src/game/rules/dice';
 import { Chapter1Director } from '../src/game/scenes/Chapter1Director';
+import { Chapter2Director } from '../src/game/scenes/Chapter2Director';
 import { PrologueDirector } from '../src/game/scenes/PrologueDirector';
 import { OSTRZE_LOCATIONS } from '../src/game/rules/travel';
 import {
@@ -117,10 +118,11 @@ describe('Save/Load E2E, Portable Keys & Restore Stability', () => {
     expect(normalized!.state.world.eventsSeen).toEqual([]);
     expect(normalized!.state.character?.effects).toEqual([]);
 
-    expect(VALID_CHAPTER_IDS).toEqual(['prologue', 'chapter1']);
+    expect(VALID_CHAPTER_IDS).toEqual(['prologue', 'chapter1', 'chapter2']);
     expect(CHAPTER_DEV_SCENES.map((s) => s.id)).toEqual([...VALID_CHAPTER_IDS]);
     expect(isValidChapterId('prologue')).toBe(true);
     expect(isValidChapterId('chapter1')).toBe(true);
+    expect(isValidChapterId('chapter2')).toBe(true);
     expect(isValidChapterId('unknown_chapter')).toBe(false);
     expect(normalizeSavePayload({ ...legacyRaw, chapter: 'unknown_chapter' })).toBeNull();
   });
@@ -174,6 +176,7 @@ describe('Save/Load E2E, Portable Keys & Restore Stability', () => {
     const engine = new OstrzeEngineState();
     const prologue = new PrologueDirector({ engine, seed: 2026 });
     const chapter1 = new Chapter1Director({ engine, state: prologue.state, rng: createRng(2026) });
+    const chapter2 = new Chapter2Director({ engine, state: prologue.state, rng: createRng(2026) });
     const sourceState = createSampleState();
     sourceState.time.minutes = 17 * 60 + 25;
     sourceState.quests.wilcza_nora = 'active';
@@ -185,7 +188,7 @@ describe('Save/Load E2E, Portable Keys & Restore Stability', () => {
     const expectedFlags = JSON.stringify(sourceState.flags);
     const expectedQuests = JSON.stringify(sourceState.quests);
 
-    expect(OSTRZE_LOCATIONS.length).toBe(12);
+    expect(OSTRZE_LOCATIONS.length).toBe(15);
     for (const location of OSTRZE_LOCATIONS) {
       sourceState.world.location = location.id;
       const payload = importSaveKey(
@@ -202,6 +205,8 @@ describe('Save/Load E2E, Portable Keys & Restore Stability', () => {
           pobojowisko_swit: 'pobojowisko'
         } as const;
         prologue.restoreFromSave(phaseByScene[location.id as keyof typeof phaseByScene], location.id);
+      } else if (location.chapter === 'chapter2') {
+        chapter2.restoreFromSave(location.id);
       } else {
         chapter1.restoreFromSave(location.id);
       }

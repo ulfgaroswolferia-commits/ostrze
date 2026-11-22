@@ -3,12 +3,13 @@ import type { OstrzeGameState } from '../data/originTypes';
 export const OSTRZE_SAVE_KEY = 'ostrze_25d_save_v1';
 export const OSTRZE_DEV_SAVE_KEY = `${OSTRZE_SAVE_KEY}_dev`;
 
-export const VALID_CHAPTER_IDS = ['prologue', 'chapter1'] as const;
+export const VALID_CHAPTER_IDS = ['prologue', 'chapter1', 'chapter2'] as const;
 export type ChapterId = (typeof VALID_CHAPTER_IDS)[number];
 
 export const CHAPTER_DEV_SCENES: ReadonlyArray<{ id: ChapterId; label: string }> = [
   { id: 'prologue', label: 'Prolog — Brzezina' },
-  { id: 'chapter1', label: 'Akt I — Wilczy Bród' }
+  { id: 'chapter1', label: 'Akt I — Wilczy Bród' },
+  { id: 'chapter2', label: 'Akt II — Głuszec' }
 ];
 
 export function isValidChapterId(value: unknown): value is ChapterId {

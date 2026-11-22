@@ -37,12 +37,14 @@ function makeChapterNpc(opts: {
   mainHand?: string | null;
   offHand?: string | null;
   hostile?: boolean;
+  difficulty?: 'easy' | 'normal' | 'very_hard';
   hp?: number;
   ap?: number;
   xpReward?: number;
   dialogueId?: string;
 }): ActorEntity {
   const recipe = generateRandomCharacterRecipe(opts.seed, opts.id);
+  recipe.id = opts.id;
   recipe.name = opts.name;
   recipe.title = opts.title;
   recipe.equipment = {
@@ -83,7 +85,7 @@ function makeChapterNpc(opts: {
       isAlive: true,
       xpReward: opts.xpReward ?? 35,
       lootTable: [],
-      difficulty: 'normal',
+      difficulty: opts.difficulty ?? 'normal',
       aggroRadius: 14,
       dazedHeadTurns: 0,
       crippledLegsTurns: 0,
@@ -1076,28 +1078,32 @@ export function createKamiennaPrzeleczScene(): CustomSceneConfig {
     makeChapterNpc({
       id: 'enemy_przelecz_bandyta_1',
       seed: 601,
-      name: 'Zbir spod Mostku',
-      title: 'Napastnik w masce z worka',
+      name: 'Ataman Zbójów spod Mostku',
+      title: 'Dowódca zasadzki na przełęczy',
       x: 11,
       y: 8,
       z: tiles[8][11].z,
-      head: 'helm_shadow_hood',
-      mainHand: 'weapon_sunblade_longsword',
+      head: 'helm_szyszak',
+      torso: 'torso_slavic_lamellar',
+      cloak: 'cloak_crimson',
+      mainHand: 'weapon_slavic_axe',
+      offHand: 'offhand_slavic_shield',
       hostile: true,
-      hp: 28,
+      hp: 34,
       ap: 6,
-      xpReward: 40
+      xpReward: 48
     }),
     makeChapterNpc({
       id: 'enemy_przelecz_bandyta_2',
       seed: 602,
-      name: 'Zbir z Widłami',
+      name: 'Zbir z Toporem',
       title: 'Napastnik w masce z worka',
       x: 13,
       y: 8,
       z: tiles[8][13].z,
       head: 'helm_shadow_hood',
-      mainHand: 'weapon_astral_staff',
+      torso: 'torso_warden_brigandine',
+      mainHand: 'weapon_slavic_axe',
       hostile: true,
       hp: 28,
       ap: 6,
@@ -1328,9 +1334,10 @@ export function createWilczyLasScene(opts?: { withHunt?: boolean }): CustomScene
         x: 10,
         y: 6,
         z: tiles[6][10].z,
-        head: 'helm_druid_antlers',
-        torso: 'torso_warden_brigandine',
-        mainHand: 'weapon_Executioner_axe',
+        head: null,
+        torso: 'torso_przeszywanica',
+        mainHand: null,
+        offHand: null,
         hostile: true,
         hp: 30,
         ap: 6,
@@ -1344,9 +1351,10 @@ export function createWilczyLasScene(opts?: { withHunt?: boolean }): CustomScene
         x: 8,
         y: 6,
         z: tiles[6][8].z,
-        head: 'helm_druid_antlers',
+        head: null,
         torso: 'torso_przeszywanica',
-        mainHand: 'weapon_slavic_axe',
+        mainHand: null,
+        offHand: null,
         hostile: true,
         hp: 20,
         ap: 7,
@@ -1360,9 +1368,10 @@ export function createWilczyLasScene(opts?: { withHunt?: boolean }): CustomScene
         x: 12,
         y: 6,
         z: tiles[6][12].z,
-        head: 'helm_druid_antlers',
+        head: null,
         torso: 'torso_przeszywanica',
-        mainHand: 'weapon_slavic_axe',
+        mainHand: null,
+        offHand: null,
         hostile: true,
         hp: 20,
         ap: 7,
@@ -2427,15 +2436,18 @@ export function createRuinyStraznicyScene(opts?: { withHunt?: boolean }): Custom
       makeChapterNpc({
         id: 'enemy_ruiny_rabus_2',
         seed: 746,
-        name: 'Zbójca z Toporem',
-        title: 'Szajka spod Muru',
+        name: 'Herszt Zbójców z Ruin',
+        title: 'Dowódca szajki spod Muru',
         x: 12,
         y: 6,
         z: tiles[6][12].z,
-        head: 'helm_ranger_cowl',
-        torso: 'torso_przeszywanica',
-        mainHand: 'weapon_Executioner_axe',
+        head: 'helm_szyszak',
+        torso: 'torso_slavic_lamellar',
+        cloak: 'cloak_crimson',
+        mainHand: 'weapon_slavic_axe',
+        offHand: 'offhand_slavic_shield',
         hostile: true,
+        difficulty: 'very_hard',
         hp: 28,
         ap: 6,
         xpReward: 35

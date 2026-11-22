@@ -81,6 +81,7 @@ export class Chapter1Director {
   public onAutoSave?: () => void;
   public onKeyRequested?: () => void;
   public onDefeatToPrologue?: () => void;
+  public onChapter1Completed?: () => void;
   public hasSave?: () => boolean;
 
   constructor(opts: {
@@ -1476,10 +1477,14 @@ export class Chapter1Director {
       subtitle: 'Droga do Głuszca (Rozdział II)',
       artId: 'gluszec',
       text: summary,
-      buttonLabel: 'Zostań w świecie 2.5D',
+      buttonLabel: this.onChapter1Completed ? 'Ruszaj do Głuszca (Akt II)' : 'Zostań w świecie 2.5D',
       onContinue: () => {
-        this.engine.addLog('🏁 Rozdział I ukończony! Otwarto drogę za Kamienną Przełęcz.', 'important');
-        this.refreshHubPanel();
+        this.engine.addLog('🏁 Rozdział I ukończony! Wkraczasz w Okolice Głuszca (Akt II).', 'important');
+        if (this.onChapter1Completed) {
+          this.onChapter1Completed();
+        } else {
+          this.refreshHubPanel();
+        }
       }
     });
   }
@@ -1773,12 +1778,14 @@ export class Chapter1Director {
         const recipe = generateRandomCharacterRecipe(900 + idx * 17, actorId);
         recipe.name = enemyDef?.name ?? spec.id;
         recipe.title = 'Zasadzka na trakcie';
+        const isBeast = spec.id === 'wilk' || spec.id === 'dzik' || spec.id === 'zmija_lesna';
+        recipe.id = actorId;
         recipe.equipment = {
-          head: spec.id === 'wilk' || spec.id === 'dzik' || spec.id === 'zmija_lesna' ? 'helm_druid_antlers' : 'helm_shadow_hood',
+          head: isBeast ? null : 'helm_shadow_hood',
           torso: 'torso_przeszywanica',
           cloak: null,
           legs: 'legs_leather_boots',
-          mainHand: spec.id === 'wilk' || spec.id === 'dzik' ? 'weapon_slavic_axe' : 'weapon_iron_longsword',
+          mainHand: isBeast ? null : 'weapon_iron_longsword',
           offHand: null
         };
         const hp = enemyDef?.hp ?? 18;

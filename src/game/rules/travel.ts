@@ -128,6 +128,33 @@ export const OSTRZE_LOCATIONS: readonly OstrzeLocationMeta[] = [
     danger: 3,
     ambience: 'dawn',
     travelMinutes: 110
+  },
+  {
+    id: 'gluszec',
+    chapter: 'chapter2',
+    name: 'Osada Głuszec',
+    subtitle: 'Leśna osada za Kamienną Przełęczą',
+    danger: 1,
+    ambience: 'town',
+    travelMinutes: 90
+  },
+  {
+    id: 'bor_klusownikow',
+    chapter: 'chapter2',
+    name: 'Bór Kłusowników',
+    subtitle: 'Gęsty bór pełen sideł i obozów maruderów',
+    danger: 3,
+    ambience: 'forest',
+    travelMinutes: 105
+  },
+  {
+    id: 'stary_trakt',
+    chapter: 'chapter2',
+    name: 'Stary Trakt',
+    subtitle: 'Zarośnięty gościniec i wąwóz zaginionej karawany',
+    danger: 3,
+    ambience: 'forest',
+    travelMinutes: 120
   }
 ];
 

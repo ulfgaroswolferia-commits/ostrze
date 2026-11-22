@@ -174,6 +174,8 @@ async function bootstrapOstrze(): Promise<void> {
           chapter1.enterStaryMlyn();
         } else if (activeChapter === 'chapter1') {
           chapter1.refreshHubPanel();
+        } else if (activeChapter === 'chapter2') {
+          chapter2?.refreshHubPanel();
         } else {
           prologue.refreshObjectiveTracker();
         }
@@ -226,7 +228,30 @@ async function bootstrapOstrze(): Promise<void> {
     onUiRefresh: refreshUi
   });
 
-  let activeChapter: ChapterId = startChapter === '1' ? 'chapter1' : 'prologue';
+  type Chapter2DirectorType = import('./game/scenes/Chapter2Director').Chapter2Director;
+  let chapter2: Chapter2DirectorType | null = null;
+  const ensureChapter2 = async (): Promise<Chapter2DirectorType> => {
+    if (chapter2) return chapter2;
+    const { Chapter2Director } = await import('./game/scenes/Chapter2Director');
+    chapter2 = new Chapter2Director({
+      engine,
+      state: prologue.state,
+      rng: prologue.rng,
+      ui: modalUi,
+      data: prologue.data,
+      onUiRefresh: refreshUi
+    });
+    chapter2.hasSave = hasAvailableSave;
+    chapter2.onSaveRequested = () => performSave(false);
+    chapter2.onAutoSave = () => performSave(true);
+    chapter2.onLoadRequested = performLoad;
+    chapter2.onKeyRequested = () => openSaveKeyModal();
+    chapter2.onDefeatToPrologue = returnToPrologueStart;
+    return chapter2;
+  };
+
+  let activeChapter: ChapterId =
+    startChapter === '2' ? 'chapter2' : startChapter === '1' ? 'chapter1' : 'prologue';
 
   const activeSaveKey = isDevMode ? OSTRZE_DEV_SAVE_KEY : undefined;
   const hasAvailableSave = (): boolean =>
@@ -234,9 +259,15 @@ async function bootstrapOstrze(): Promise<void> {
 
   const performSave = (silent = false): void => {
     prologue.state.rngState = prologue.rng.getState();
+    const fallbackScene =
+      activeChapter === 'chapter2'
+        ? 'gluszec'
+        : activeChapter === 'chapter1'
+          ? 'wilczy_brod'
+          : 'brzezina_dziedziniec';
     const ok = saveOstrzeGame({
       chapter: activeChapter,
-      sceneId: engine.activeCustomSceneId ?? (activeChapter === 'chapter1' ? 'wilczy_brod' : 'brzezina_dziedziniec'),
+      sceneId: engine.activeCustomSceneId ?? fallbackScene,
       prologueStep: activeChapter === 'prologue' ? prologue.phase : undefined,
       state: prologue.state
     }, activeSaveKey);
@@ -245,6 +276,8 @@ async function bootstrapOstrze(): Promise<void> {
     }
     if (activeChapter === 'prologue') {
       prologue.refreshObjectiveTracker();
+    } else if (activeChapter === 'chapter2') {
+      chapter2?.refreshHubPanel();
     } else {
       chapter1.refreshHubPanel();
     }
@@ -255,7 +288,12 @@ async function bootstrapOstrze(): Promise<void> {
     Object.assign(prologue.state, clonedState);
     prologue.rng.setState(clonedState.rngState);
     activeChapter = loaded.chapter;
-    if (loaded.chapter === 'chapter1') {
+    if (loaded.chapter === 'chapter2') {
+      void ensureChapter2().then((ch2) => {
+        ch2.restoreFromSave(loaded.sceneId);
+        refreshUi();
+      });
+    } else if (loaded.chapter === 'chapter1') {
       chapter1.restoreFromSave(loaded.sceneId);
     } else {
       prologue.restoreFromSave((loaded.prologueStep as ProloguePhase) ?? 'brzezina_gnieworad', loaded.sceneId);
@@ -355,7 +393,7 @@ async function bootstrapOstrze(): Promise<void> {
 
   const devLocations = OSTRZE_LOCATIONS.map((location) => ({
     id: location.id,
-    label: `${location.chapter === 'prologue' ? 'Prolog' : 'Akt I'} — ${location.name}`
+    label: `${location.chapter === 'prologue' ? 'Prolog' : location.chapter === 'chapter2' ? 'Akt II' : 'Akt I'} — ${location.name}`
   }));
 
   const switchToDevLocation = (locationId: string): void => {
@@ -364,18 +402,28 @@ async function bootstrapOstrze(): Promise<void> {
     modalUi.closeAll();
     if (!prologue.state.character) ensureDevTestCharacter();
 
-    engine.syncFromOstrzeState(prologue.state, prologue.data);
-    if (!engine.loadCustomScene(location.id)) return;
-    activeChapter = location.chapter;
-    prologue.state.world.location = location.id;
-    if (location.chapter === 'prologue') prologue.activateForDevTeleport();
-    else chapter1.activateForDevTeleport();
-    ostrzeAudio.setAmbience(location.ambience);
-    syncWorldLighting(prologue.state, prologue.data, engine);
-    if (location.chapter === 'prologue') prologue.refreshObjectiveTracker();
-    else chapter1.refreshHubPanel();
-    modalUi.showToast(`DEV: teleport do ${location.name}; postać i stan świata zachowane.`, 'info');
-    refreshUi();
+    const finishTeleport = (ch2?: Chapter2DirectorType): void => {
+      engine.syncFromOstrzeState(prologue.state, prologue.data);
+      if (!engine.loadCustomScene(location.id)) return;
+      activeChapter = location.chapter;
+      prologue.state.world.location = location.id;
+      if (location.chapter === 'prologue') prologue.activateForDevTeleport();
+      else if (location.chapter === 'chapter2') ch2?.activateForDevTeleport();
+      else chapter1.activateForDevTeleport();
+      ostrzeAudio.setAmbience(location.ambience);
+      syncWorldLighting(prologue.state, prologue.data, engine);
+      if (location.chapter === 'prologue') prologue.refreshObjectiveTracker();
+      else if (location.chapter === 'chapter2') ch2?.refreshHubPanel();
+      else chapter1.refreshHubPanel();
+      modalUi.showToast(`DEV: teleport do ${location.name}; postać i stan świata zachowane.`, 'info');
+      refreshUi();
+    };
+
+    if (location.chapter === 'chapter2') {
+      void ensureChapter2().then((ch2) => finishTeleport(ch2));
+    } else {
+      finishTeleport();
+    }
   };
 
   const toggleUnifiedAudio = (): boolean => {
@@ -431,6 +479,8 @@ async function bootstrapOstrze(): Promise<void> {
         engine.syncFromOstrzeState(prologue.state, prologue.data);
         if (activeChapter === 'prologue') {
           prologue.refreshObjectiveTracker();
+        } else if (activeChapter === 'chapter2') {
+          chapter2?.refreshHubPanel();
         } else {
           chapter1.refreshHubPanel();
         }
@@ -456,9 +506,22 @@ async function bootstrapOstrze(): Promise<void> {
     performSave(true);
   };
 
+  chapter1.onChapter1Completed = () => {
+    void ensureChapter2().then((ch2) => {
+      activeChapter = 'chapter2';
+      ch2.enterGluszec();
+      performSave(true);
+      refreshUi();
+    });
+  };
+
   if (isDevMode) {
     engine.loadCustomScene('brzezina_dziedziniec');
     engine.addLog('Tryb deweloperski (?dev=1): załadowano scenę Brzezina — Dziedziniec.', 'info');
+  } else if (startChapter === '2') {
+    ensureDevTestCharacter();
+    const ch2 = await ensureChapter2();
+    ch2.enterGluszec();
   } else if (startChapter === '1') {
     ensureDevTestCharacter();
     chapter1.enterWilczyBrod();
