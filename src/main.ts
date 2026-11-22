@@ -7,6 +7,7 @@ import { OstrzeEngineState } from './engine-bridge/OstrzeEngineState';
 import { ostrzeAudio } from './game/audio/ostrzeAudio';
 import { ORIGIN_DATA } from './game/data/originData';
 import { createCharacter, createEmptyOstrzeState, grantXp, xpRequiredForLevel } from './game/rules/character';
+import { checkNewAchievementUnlocks } from './game/rules/achievements';
 import { forageWorldProp, performCampRecipe } from './game/rules/campCrafting';
 import { resolveQuickBeltSlots, useCombatBeltItem } from './game/rules/combatConsumables';
 import { rollStealthCheck } from './game/rules/stealth';
@@ -588,6 +589,14 @@ async function bootstrapOstrze(): Promise<void> {
         'Wskazówka: naciśnij [M] dla mapy świata, [J] dla Dziennika lub [F1] dla Pomocy.',
         'info'
       );
+    }
+
+    if (prologue.state.character && !isDevMode && !modalUi.hasOpenModal()) {
+      const unlocked = checkNewAchievementUnlocks(prologue.state, prologue.data);
+      for (const ach of unlocked) {
+        modalUi.showToast(`🏆 Dokonanie: ${ach.title}!`, 'gold');
+        ostrzeAudio.playQuestEvent('complete');
+      }
     }
   };
 

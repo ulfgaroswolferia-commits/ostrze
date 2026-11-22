@@ -6,6 +6,10 @@ import type {
   SkillId
 } from '../../data/originTypes';
 import {
+  evaluateAchievements,
+  evaluateCampaignProgress
+} from '../../rules/achievements';
+import {
   getAvailablePerks,
   pickPerk,
   spendAttributePoint,
@@ -18,9 +22,10 @@ import {
 } from '../../rules/combatConsumables';
 import type { SeededRng } from '../../rules/dice';
 import { getStats } from '../../rules/stats';
+import { getOstrzeLocationMeta } from '../../rules/travel';
 import { escapeHtml } from '../escapeHtml';
 
-export type CharacterSheetTab = 'stats' | 'gear' | 'journal';
+export type CharacterSheetTab = 'stats' | 'gear' | 'journal' | 'chronicle';
 
 export function renderCharacterSheetView(params: {
   root: HTMLElement;
@@ -326,6 +331,31 @@ export function renderCharacterSheetView(params: {
     })
     .join('');
 
+  const progress = evaluateCampaignProgress(state, data);
+  const achievements = evaluateAchievements(state, data);
+  const readableKnownPlaces = Array.from(
+    new Set(
+      state.world.knownPlaces.map((id) => {
+        const normalized = id === 'brzezina' ? 'brzezina_dziedziniec' : id;
+        return getOstrzeLocationMeta(normalized)?.name ?? id;
+      })
+    )
+  );
+
+  const achievementsGridHtml = achievements
+    .map(
+      (ach) => `
+        <div class="ostrze-ach-card ${ach.unlocked ? 'is-unlocked' : ''}">
+          <div class="ostrze-ach-icon">${ach.icon}</div>
+          <div class="ostrze-ach-body">
+            <div class="ostrze-ach-title">${escapeHtml(ach.title)} ${ach.unlocked ? '✓' : ''}</div>
+            <div class="ostrze-ach-desc">${escapeHtml(ach.description)}</div>
+          </div>
+        </div>
+      `
+    )
+    .join('');
+
   const tabContentHtml =
     activeTab === 'stats'
       ? `
@@ -385,7 +415,8 @@ export function renderCharacterSheetView(params: {
             </div>
           </div>
         `
-        : `
+        : activeTab === 'journal'
+          ? `
           <div class="ostrze-creator-grid">
             <div class="ostrze-panel">
               <h3>Aktywne zadania (${activeQuests.length})</h3>
@@ -399,8 +430,41 @@ export function renderCharacterSheetView(params: {
                 keepsakesHtml ||
                 '<div class="ostrze-subtitle" style="margin-bottom:0">Nie niesiesz jeszcze żadnych osobistych pamiątek po towarzyszach.</div>'
               }
-              <h3 style="margin-top:14px">Poznane lokacje (${state.world.knownPlaces.length})</h3>
-              <div class="ostrze-shop-desc">${escapeHtml(state.world.knownPlaces.join(', ') || 'Brzezina')}</div>
+              <h3 style="margin-top:14px">Poznane lokacje (${readableKnownPlaces.length} / ${progress.totalLocations})</h3>
+              <div class="ostrze-shop-desc">${escapeHtml(readableKnownPlaces.join(', ') || 'Brzezina — Dziedziniec')}</div>
+            </div>
+          </div>
+        `
+          : `
+          <div class="ostrze-creator-grid" data-cs-chronicle="true">
+            <div class="ostrze-panel">
+              <h3>Postęp kampanii</h3>
+              <div class="ostrze-chronicle-bars">
+                <div class="ostrze-progress-item">
+                  <div class="ostrze-row"><span>Prolog — Brzezina</span><strong>${progress.prologuePct}%</strong></div>
+                  <div class="ostrze-progress-track"><div class="ostrze-progress-fill" style="width:${progress.prologuePct}%"></div></div>
+                </div>
+                <div class="ostrze-progress-item">
+                  <div class="ostrze-row"><span>Akt I — Pogórze</span><strong>${progress.act1Pct}%</strong></div>
+                  <div class="ostrze-progress-track"><div class="ostrze-progress-fill" style="width:${progress.act1Pct}%"></div></div>
+                </div>
+                <div class="ostrze-progress-item">
+                  <div class="ostrze-row"><span>Akt II — Głusz</span><strong>${progress.act2Pct}%</strong></div>
+                  <div class="ostrze-progress-track"><div class="ostrze-progress-fill" style="width:${progress.act2Pct}%"></div></div>
+                </div>
+              </div>
+              <h3 style="margin-top:14px">Statystyki wyprawy</h3>
+              <div class="ostrze-row"><span>Dzień wyprawy</span><strong>Dzień ${progress.daysElapsed}</strong></div>
+              <div class="ostrze-row"><span>Atmosfera i pora</span><strong>${escapeHtml(progress.atmosphereLabel)}</strong></div>
+              <div class="ostrze-row"><span>Odkryte lokacje</span><strong>${progress.visitedCount} / ${progress.totalLocations}</strong></div>
+              <div class="ostrze-row"><span>Zadania (ukończone / aktywne)</span><strong>${progress.completedQuests} / ${progress.activeQuests}</strong></div>
+              <div class="ostrze-row"><span>Doświadczenie / Talenty</span><strong>${progress.totalXp} XP · ${progress.perksCount}</strong></div>
+            </div>
+            <div class="ostrze-panel">
+              <h3>Dokonania (${progress.unlockedAchievements} / ${progress.totalAchievements})</h3>
+              <div class="ostrze-ach-grid">
+                ${achievementsGridHtml}
+              </div>
             </div>
           </div>
         `;
@@ -438,6 +502,9 @@ export function renderCharacterSheetView(params: {
           </button>
           <button class="ostrze-cs-tab ${activeTab === 'journal' ? 'is-active' : ''}" data-cs-tab="journal">
             Dziennik i Pamiątki
+          </button>
+          <button class="ostrze-cs-tab ${activeTab === 'chronicle' ? 'is-active' : ''}" data-cs-tab="chronicle">
+            🏆 Kronika (${progress.unlockedAchievements}/${progress.totalAchievements})
           </button>
         </div>
 

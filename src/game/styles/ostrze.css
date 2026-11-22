@@ -2279,3 +2279,78 @@ body:has(.combat-mode-active) .ostrze-toast-stack {
     font-size: 0.8rem;
   }
 }
+
+/* ==========================================================================
+   Character Sheet — Chronicle & Achievements Tab
+   ========================================================================== */
+
+.ostrze-chronicle-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ostrze-progress-track {
+  width: 100%;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.ostrze-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #b68a44 0%, #f5c66c 100%);
+  transition: width 0.25s ease;
+}
+
+.ostrze-ach-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.ostrze-ach-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 5px;
+  background: rgba(14, 16, 22, 0.55);
+  border: 1px solid #2f333e;
+  opacity: 0.62;
+}
+
+.ostrze-ach-card.is-unlocked {
+  opacity: 1;
+  background: rgba(229, 184, 105, 0.1);
+  border-color: #9c793e;
+}
+
+.ostrze-ach-icon {
+  font-size: 1.2rem;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+.ostrze-ach-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #f3dca8;
+}
+
+.ostrze-ach-card:not(.is-unlocked) .ostrze-ach-title {
+  color: #a8a093;
+}
+
+.ostrze-ach-desc {
+  font-size: 0.76rem;
+  color: #bdb5a6;
+  margin-top: 2px;
+  line-height: 1.35;
+}
