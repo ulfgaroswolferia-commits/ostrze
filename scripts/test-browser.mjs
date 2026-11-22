@@ -29,7 +29,7 @@ try {
   await waitForServer();
   const result = spawn(
     process.execPath,
-    ['node_modules/@playwright/test/cli.js', 'test'],
+    ['node_modules/@playwright/test/cli.js', 'test', ...process.argv.slice(2)],
     { cwd: process.cwd(), stdio: 'inherit', windowsHide: true }
   );
   const exitCode = await new Promise((resolve, reject) => {

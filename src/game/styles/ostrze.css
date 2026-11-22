@@ -1,3 +1,24 @@
+html,
+body,
+#hud-root {
+  overflow: hidden;
+  max-width: 100%;
+}
+
+@media (max-width: 640px) {
+  #hud-root .bottom-hud {
+    left: 8px;
+    right: 8px;
+    gap: 6px;
+  }
+
+  #hud-root .chronicle-log,
+  #hud-root .combat-unified-dock .chronicle-log {
+    min-width: 0;
+    max-width: calc(100vw - 16px);
+  }
+}
+
 .ostrze-overlay {
   position: fixed;
   inset: 0;
