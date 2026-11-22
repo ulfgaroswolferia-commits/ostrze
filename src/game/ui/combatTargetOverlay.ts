@@ -4,6 +4,7 @@ import { getPixArtMeta } from '../assets/pixArt';
 import { ostrzeAudio } from '../audio/ostrzeAudio';
 import type { OriginGameData } from '../data/originTypes';
 import { resolveEnemyArchetype } from '../rules/combatAi';
+import { resolveQuickBeltSlots } from '../rules/combatConsumables';
 import {
   classifyCombatLogEvent,
   formatEnemyResistances,
@@ -123,6 +124,13 @@ export class CombatTargetOverlay {
     const ostrzeState = this.engine.getActiveOstrzeState();
     const playerWeaponType = resolvePlayerWeaponDamageType(ostrzeState, this.data);
     const selectedMode = this.engine.combatState.selectedAttackMode;
+    const targetBurnTurns = this.engine.getEnemyBurnTurns(target.id);
+    const playerStatuses = this.engine.getPlayerActiveStatusTurns();
+    const playerDefending = Boolean(this.engine.player.combat?.defending);
+    const playerFeintReady = this.engine.isPlayerFeintReady();
+    const playerOiled = Boolean(
+      ostrzeState?.character?.effects.some((e) => e.id === 'natluszczone_ostrze')
+    );
     const stateKey = [
       target.id,
       target.recipe.name,
@@ -133,10 +141,17 @@ export class CombatTargetOverlay {
       c.dazedHeadTurns,
       c.crippledLegsTurns,
       c.defending ? 1 : 0,
+      targetBurnTurns,
       isCritFlash ? 1 : 0,
       telegraph ?? '',
       playerWeaponType,
       selectedMode,
+      playerDefending ? 1 : 0,
+      playerFeintReady ? 1 : 0,
+      playerOiled ? 1 : 0,
+      playerStatuses.krwawienie ?? 0,
+      playerStatuses.zatrucie ?? 0,
+      playerStatuses.strach ?? 0,
       this.engine.player.tileX,
       this.engine.player.tileY,
       target.tileX,
@@ -158,6 +173,9 @@ export class CombatTargetOverlay {
     const originDef = originId ? this.data.enemies.find((e) => e.id === originId) : undefined;
 
     const statusPills: string[] = [];
+    if (targetBurnTurns > 0) {
+      statusPills.push(`<span class="ostrze-combat-pill is-weak">🔥 Podpalony (${targetBurnTurns} t.)</span>`);
+    }
     if (c.dazedHeadTurns > 0) {
       statusPills.push(`<span class="ostrze-combat-pill is-status">💫 Oszołomiony (${c.dazedHeadTurns})</span>`);
     }
@@ -236,6 +254,56 @@ export class CombatTargetOverlay {
           ? `<div class="ostrze-combat-telegraph">⚠️ ZBIERA SIŁY DO WYCIA — ogłusz go!</div>`
           : '';
 
+    const playerPills: string[] = [];
+    const beltSlots = ostrzeState
+      ? resolveQuickBeltSlots(ostrzeState, this.data, this.engine.player.combat?.ap ?? 0, {
+          playerHp: this.engine.player.combat?.hp,
+          playerMaxHp: this.engine.player.combat?.maxHp,
+          hasLivingEnemy: livingEnemies.length > 0
+        })
+      : [];
+    const findCureHint = (effId: string): string => {
+      for (const s of beltSlots) {
+        if (!s) continue;
+        const item = this.data.items.find((i) => i.id === s.itemId);
+        if (item?.removes?.includes(effId)) {
+          return ` → [${s.slotIndex + 4}] ${item.name}`;
+        }
+      }
+      return '';
+    };
+    if ((playerStatuses.krwawienie ?? 0) > 0) {
+      const hint = findCureHint('krwawienie');
+      playerPills.push(
+        `<span class="ostrze-combat-pill is-weak">🩸 Krwawienie (${playerStatuses.krwawienie} t.)${this.escape(hint)}</span>`
+      );
+    }
+    if ((playerStatuses.zatrucie ?? 0) > 0) {
+      const hint = findCureHint('zatrucie');
+      playerPills.push(
+        `<span class="ostrze-combat-pill is-weak">☠️ Zatrucie (${playerStatuses.zatrucie} t.)${this.escape(hint)}</span>`
+      );
+    }
+    if ((playerStatuses.strach ?? 0) > 0) {
+      playerPills.push(
+        `<span class="ostrze-combat-pill is-status">😨 Strach (${playerStatuses.strach} t.)</span>`
+      );
+    }
+    if (playerDefending) {
+      playerPills.push(`<span class="ostrze-combat-pill is-defend">🛡️ Garda aktywna</span>`);
+    }
+    if (playerOiled) {
+      playerPills.push(`<span class="ostrze-combat-pill is-status">✨ Natłuszczone ostrze</span>`);
+    }
+    if (playerFeintReady) {
+      playerPills.push(`<span class="ostrze-combat-pill is-defend">⚔️ Finta gotowa</span>`);
+    }
+
+    const playerStripHtml =
+      playerPills.length > 0
+        ? `<div class="ostrze-combat-pills" data-player-combat-status="true">${playerPills.join('')}</div>`
+        : '';
+
     this.root.innerHTML = `
       <aside class="ostrze-combat-target-card ${isCritFlash ? 'is-crit-flash' : ''}">
         ${tabsHtml}
@@ -262,6 +330,7 @@ export class CombatTargetOverlay {
           ${multBadge}
         </div>
         ${statusPills.length > 0 ? `<div class="ostrze-combat-pills">${statusPills.join('')}</div>` : ''}
+        ${playerStripHtml}
       </aside>
     `;
 

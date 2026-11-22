@@ -274,6 +274,31 @@ class OstrzeAudioManager {
     return true;
   }
 
+  public playBeltItemSfx(kind: 'heal' | 'oil' | 'fire' | 'smoke' | 'throw'): void {
+    if (this.isMuted()) return;
+    switch (kind) {
+      case 'heal':
+        this.playTone(392, 0.12, 'sine', 0.045, 0, 523.25);
+        this.playTone(587.33, 0.18, 'triangle', 0.04, 0.08, 659.25);
+        return;
+      case 'oil':
+        this.playNoiseBurst(0.18, 'bandpass', 1850, 2.0, 0.036, 0);
+        this.playTone(320, 0.12, 'triangle', 0.03, 0.04, 480);
+        return;
+      case 'fire':
+        this.playNoiseBurst(0.32, 'lowpass', 620, 0.9, 0.065, 0);
+        this.playNoiseBurst(0.24, 'highpass', 2200, 1.8, 0.04, 0.03);
+        return;
+      case 'smoke':
+        this.playNoiseBurst(0.42, 'bandpass', 920, 1.4, 0.05, 0);
+        return;
+      case 'throw':
+        this.playTone(460, 0.09, 'sine', 0.04, 0, 190);
+        this.playNoiseBurst(0.12, 'bandpass', 1200, 1.5, 0.035, 0.06);
+        return;
+    }
+  }
+
   public playCombatSfx(kind: 'start' | 'hit' | 'crit' | 'miss' | 'victory' | 'defeat'): void {
     if (this.isMuted()) return;
     switch (kind) {

@@ -124,6 +124,7 @@ export class OstrzeEngineState extends CrpgGameState {
   private activeOstrzeState: OstrzeGameState | null = null;
   private combatAiSession = createCombatAiSessionState();
   private combatStatusSession = createCombatStatusSessionState();
+  private readonly enemyBurnTurns = new Map<string, number>();
   private pendingPlayerAttackMultiplier = 1;
   private pendingPlayerFeintActive = false;
   private feintUsedRound = -1;
@@ -159,8 +160,71 @@ export class OstrzeEngineState extends CrpgGameState {
   public resetCombatTacticalSessions(): void {
     this.combatAiSession = createCombatAiSessionState();
     this.combatStatusSession = createCombatStatusSessionState();
+    this.enemyBurnTurns.clear();
     this.feintUsedRound = -1;
     this.pendingPlayerFeintActive = false;
+  }
+
+  public applyEnemyBurn(enemyId: string, turns = 2): void {
+    const prev = this.enemyBurnTurns.get(enemyId) ?? 0;
+    this.enemyBurnTurns.set(enemyId, Math.max(prev, turns));
+  }
+
+  public getEnemyBurnTurns(enemyId: string): number {
+    return this.enemyBurnTurns.get(enemyId) ?? 0;
+  }
+
+  public getPlayerActiveStatusTurns(): Partial<Record<'krwawienie' | 'zatrucie' | 'strach', number>> {
+    return { ...this.combatStatusSession.activeTurns };
+  }
+
+  public isPlayerFeintReady(): boolean {
+    return Boolean(
+      this.activeOstrzeState?.character?.perks.includes('finta') &&
+        this.feintUsedRound !== this.combatState.round
+    );
+  }
+
+  public tickEnemyBurn(enemy: ActorEntity, rng: () => number = Math.random): number {
+    const rem = this.enemyBurnTurns.get(enemy.id) ?? 0;
+    if (rem <= 0 || !enemy.combat?.isAlive) {
+      this.enemyBurnTurns.delete(enemy.id);
+      return 0;
+    }
+    const base = 3 + Math.floor(rng() * 2); // 3–4 fire damage
+    const originId = resolveEnemyOriginId(enemy.id, enemy.recipe.name);
+    const mult = getEnemyDamageMultiplier(originId, 'ogien', ORIGIN_DATA);
+    const dmg = Math.max(1, Math.round(base * mult));
+    enemy.combat.hp = Math.max(0, enemy.combat.hp - dmg);
+    enemy.damageFlashTimer = 0.24;
+
+    if (rem - 1 <= 0) this.enemyBurnTurns.delete(enemy.id);
+    else this.enemyBurnTurns.set(enemy.id, rem - 1);
+
+    this.pushFloatingCombatText(
+      enemy.x,
+      enemy.y,
+      enemy.z + 2.0,
+      `🔥 -${dmg} PODPALENIE!`,
+      0xff7043
+    );
+    this.addCombatLog(
+      `🔥 Podpalenie zadaje ${dmg} obr. ognia: ${enemy.recipe.name}${mult > 1 ? ` (×${mult} podatność)` : ''}.`
+    );
+
+    if (enemy.combat.hp <= 0) {
+      enemy.combat.isAlive = false;
+      this.enemyBurnTurns.delete(enemy.id);
+      this.addCombatLog(`🔥 ${enemy.recipe.name} ginie w płomieniach!`);
+      const remainingHostiles = this.npcs.filter((n) => n.combat?.isHostile && n.combat.isAlive);
+      if (remainingHostiles.length === 0) {
+        this.combatState.active = false;
+        this.addLog(`Zwycięstwo w walce! Pokonano: ${enemy.recipe.name}.`, 'important');
+      } else if (this.combatState.selectedTargetId === enemy.id) {
+        this.combatState.selectedTargetId = remainingHostiles[0].id;
+      }
+    }
+    return dmg;
   }
 
   private handleEnemyHitStatusEffects(attacker: ActorEntity): void {
@@ -826,6 +890,11 @@ export class OstrzeEngineState extends CrpgGameState {
     const willGuard = ec.ap >= 2;
     const lowHp = ec.maxHp > 0 && ec.hp / ec.maxHp < 0.4;
     super.onEnemyCombatTurnEnded(enemy, attacksThisTurn);
+
+    this.tickEnemyBurn(enemy);
+    if (!ec.isAlive || !this.combatState.active) {
+      return;
+    }
 
     if (willGuard && ec.defending && (archetype === 'melee_cautious' || lowHp)) {
       this.addCombatLog(`🛡️ ${enemy.recipe.name} przechodzi w gardę (+20% Unik, +15% DR).`);

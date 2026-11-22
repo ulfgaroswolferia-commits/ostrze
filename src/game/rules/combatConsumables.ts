@@ -1,5 +1,6 @@
 import type { CombatBeltCategory, CombatQuickBeltSlot } from '@ulf/rpg/gameLoop';
 import type { OstrzeEngineState } from '../../engine-bridge/OstrzeEngineState';
+import { ostrzeAudio } from '../audio/ostrzeAudio';
 import type { ItemDef, OriginGameData, OstrzeGameState } from '../data/originTypes';
 import type { SeededRng } from './dice';
 import { getDamageTypeLabel, getEnemyDamageMultiplier, resolveEnemyOriginId } from './combatEnemyMeta';
@@ -314,6 +315,14 @@ export function useCombatBeltItem(params: {
     if (removedNames.length > 0) parts.push(`usunięto: ${removedNames.join(', ')}`);
     logMessage = `Użyto [${item.name}] (${parts.join(' · ') || 'zastosowano'}, -${slot.apCost} AP).`;
     engine.addCombatLog(logMessage);
+    ostrzeAudio.playBeltItemSfx('heal');
+    engine.pushFloatingCombatText(
+      engine.player.x,
+      engine.player.y,
+      engine.player.z + 2.0,
+      actualHeal > 0 ? `🩹 +${actualHeal} HP` : '✨ WYLECZONO',
+      0x6fd18e
+    );
     return { used: true, message: logMessage };
   }
 
@@ -339,14 +348,43 @@ export function useCombatBeltItem(params: {
 
     logMessage = `Użyto [${item.name}] → aktywowano: ${appliedNames.join(', ')} (-${slot.apCost} AP).`;
     engine.addCombatLog(logMessage);
+    ostrzeAudio.playBeltItemSfx('oil');
+    engine.pushFloatingCombatText(
+      engine.player.x,
+      engine.player.y,
+      engine.player.z + 2.0,
+      item.applies?.includes('natluszczone_ostrze') ? '✨ OSTRZE +2 OBR.' : `✨ ${item.name.toUpperCase()}`,
+      0xf5c66c
+    );
     return { used: true, message: logMessage };
   }
 
   // Throwable category
   if (item.id === 'swieca_dymna') {
     pCombat.defending = true;
-    logMessage = `Rzucono [${item.name}] — kłęby dymu osłaniają pole walki (Garda aktywna, -${slot.apCost} AP).`;
+    let dazedCount = 0;
+    for (const enemy of livingEnemies) {
+      if (!enemy.combat) continue;
+      const dist = Math.hypot(
+        enemy.tileX - engine.player.tileX,
+        enemy.tileY - engine.player.tileY
+      );
+      if (dist <= 2.25) {
+        enemy.combat.dazedHeadTurns = Math.max(enemy.combat.dazedHeadTurns, 1);
+        dazedCount++;
+        engine.pushFloatingCombatText(enemy.x, enemy.y, enemy.z + 1.9, '💨 DYM (-3 AP)', 0xcbd5e1);
+      }
+    }
+    logMessage = `Rzucono [${item.name}] — kłęby dymu osłaniają pole walki (Garda aktywna${dazedCount > 0 ? `, oszołomiono wrogów obok: ${dazedCount}` : ''}, -${slot.apCost} AP).`;
     engine.addCombatLog(logMessage);
+    ostrzeAudio.playBeltItemSfx('smoke');
+    engine.pushFloatingCombatText(
+      engine.player.x,
+      engine.player.y,
+      engine.player.z + 2.05,
+      '💨 ZASŁONA DYMNA!',
+      0xcbd5e1
+    );
     return { used: true, message: logMessage };
   }
 
@@ -404,6 +442,20 @@ export function useCombatBeltItem(params: {
 
   target.combat.hp = Math.max(0, target.combat.hp - dmg);
   target.damageFlashTimer = 0.28;
+
+  if (item.id === 'flasza_oleju' && target.combat.hp > 0) {
+    engine.applyEnemyBurn(target.id, 2);
+    statusNote += ' + PODPALENIE (2 t.)';
+  }
+
+  ostrzeAudio.playBeltItemSfx(item.id === 'flasza_oleju' ? 'fire' : 'throw');
+  engine.pushFloatingCombatText(
+    target.x,
+    target.y,
+    target.z + 2.05,
+    item.id === 'flasza_oleju' ? `🔥 -${dmg} OGIEŃ!` : `💥 -${dmg}!`,
+    item.id === 'flasza_oleju' ? 0xff7043 : 0xffca28
+  );
 
   if (target.combat.hp <= 0) {
     target.combat.isAlive = false;
