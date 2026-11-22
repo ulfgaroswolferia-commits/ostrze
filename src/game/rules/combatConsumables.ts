@@ -297,6 +297,7 @@ export function useCombatBeltItem(params: {
         const had = ch.effects.some((e) => e.id === effId);
         if (had) {
           ch.effects = ch.effects.filter((e) => e.id !== effId);
+          engine.notifyPlayerStatusCured(effId);
           const def = data.effects.find((d) => d.id === effId);
           removedNames.push(def?.name ?? effId);
         }

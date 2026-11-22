@@ -4,8 +4,14 @@ import { deltaToDirection8 } from '@ulf/core/pathfinding';
 import { IsometricWorldMap, MapId } from '@ulf/core/worldMap';
 import { registerPropVisualTransform } from '@ulf/renderer/isoSceneView';
 import { DIALOGUE_TREES, DialogueNode } from '@ulf/rpg/dialogueSystem';
-import type { CombatantSnapshot } from '@ulf/rpg/combatSystem';
-import { ActorEntity, CrpgGameState, LogSeverity } from '@ulf/rpg/gameLoop';
+import type { CombatAttackMode, CombatantSnapshot } from '@ulf/rpg/combatSystem';
+import {
+  ActorEntity,
+  CrpgGameState,
+  EnemyAiAttackDecision,
+  EnemyAiMovePlan,
+  LogSeverity
+} from '@ulf/rpg/gameLoop';
 import {
   bakeBoarCharacterBuffers,
   bakeDogCharacterBuffers,
@@ -17,7 +23,25 @@ import {
 import { getPropVisualTransform } from '../game/assets/buildingScaling';
 import { ORIGIN_DATA } from '../game/data/originData';
 import type { OriginGameData, OstrzeGameState } from '../game/data/originTypes';
+import {
+  createCombatAiSessionState,
+  findBestFlankAdjacentTile,
+  findBestKiteTile,
+  findBestRangedApproachTile,
+  pickBossTelegraphIntent,
+  resolveEnemyArchetype,
+  resolveEnemyTacticalTier,
+  shouldCautiousEnemyHoldForGuard,
+  TACTICAL_BUDGETS
+} from '../game/rules/combatAi';
 import { resolveEnemyOriginId } from '../game/rules/combatEnemyMeta';
+import {
+  createCombatStatusSessionState,
+  getPlayerStatusHitPenaltyPct,
+  markPlayerStatusCured,
+  tickPlayerCombatStatuses,
+  tryApplyPlayerCombatStatus
+} from '../game/rules/combatStatuses';
 import { ComputedStats, getStats } from '../game/rules/stats';
 
 let ostrzeEngineExtensionsRegistered = false;
@@ -70,12 +94,71 @@ export class OstrzeEngineState extends CrpgGameState {
   public onFallbackPropInteract?: (propId: string) => boolean;
   public onSceneLoaded?: (sceneId: string) => void;
   private readonly persistentMarkers = new Map<string, string>();
+  private activeOstrzeState: OstrzeGameState | null = null;
+  private combatAiSession = createCombatAiSessionState();
+  private combatStatusSession = createCombatStatusSessionState();
 
   constructor() {
     ensureOstrzeEngineExtensionsRegistered();
     super('forest_clearing');
     this.chronicleEntries.length = 0;
     this.logs.length = 0;
+    this.addCombatAttackListener((event) => {
+      if (!this.activeCustomSceneId) return;
+      if (event.target.id !== this.player.id || !event.outcome.hit) return;
+      this.handleEnemyHitStatusEffects(event.attacker);
+    });
+  }
+
+  public notifyPlayerStatusCured(statusId: string): void {
+    markPlayerStatusCured(this.combatStatusSession, statusId, this.combatState.round);
+  }
+
+  public resetCombatTacticalSessions(): void {
+    this.combatAiSession = createCombatAiSessionState();
+    this.combatStatusSession = createCombatStatusSessionState();
+  }
+
+  private handleEnemyHitStatusEffects(attacker: ActorEntity): void {
+    const originId = resolveEnemyOriginId(attacker.id, attacker.recipe.name);
+    const tier = resolveEnemyTacticalTier(
+      this.activeCustomSceneId,
+      originId,
+      attacker.combat?.difficulty
+    );
+    const budget = TACTICAL_BUDGETS[tier];
+    if (!budget.allowStatusEffects) return;
+
+    const enemyDef = originId ? ORIGIN_DATA.enemies.find((e) => e.id === originId) : undefined;
+    const primaryAttack = enemyDef?.attacks?.find(
+      (a) => Array.isArray(a.damage) && a.damage.length >= 2
+    );
+    const effects = primaryAttack?.effects ?? [];
+    for (const eff of effects) {
+      const mappedStatusId =
+        originId === 'zmija_lesna' && eff.id === 'krwawienie' ? 'zatrucie' : eff.id;
+      const res = tryApplyPlayerCombatStatus({
+        state: this.activeOstrzeState,
+        session: this.combatStatusSession,
+        statusId: mappedStatusId,
+        chancePct: eff.chance,
+        currentRound: this.combatState.round,
+        allowStatusEffects: budget.allowStatusEffects,
+        sourceName: attacker.recipe.name
+      });
+      if (res.applied && res.logMessage) {
+        this.addCombatLog(res.logMessage);
+        if (res.floatingText) {
+          this.pushFloatingCombatText(
+            this.player.x,
+            this.player.y,
+            this.player.z + 2.05,
+            res.floatingText,
+            res.floatingColorHex ?? 0xff453a
+          );
+        }
+      }
+    }
   }
 
   public setNpcMarker(npcId: string, markerText: string | null): void {
@@ -131,6 +214,7 @@ export class OstrzeEngineState extends CrpgGameState {
           ? 'defeat'
           : (reportOutcome || 'victory');
       this.wasCombatActive = false;
+      this.resetCombatTacticalSessions();
       this.onCombatEnded?.(outcome);
       return;
     }
@@ -192,6 +276,7 @@ export class OstrzeEngineState extends CrpgGameState {
    * Unified helper to synchronize Ostrze character state + derived stats into the 2.5D hero actor.
    */
   public syncFromOstrzeState(state: OstrzeGameState, data: OriginGameData): void {
+    this.activeOstrzeState = state;
     if (!state.character) return;
     const stats = getStats(state, data);
     const eq = state.inventory.equipped;
@@ -257,6 +342,7 @@ export class OstrzeEngineState extends CrpgGameState {
     }
 
     this.resetRuntimeStateForCustomMap();
+    this.resetCombatTacticalSessions();
     this.persistentMarkers.clear();
     this.wasCombatActive = false;
     this.activeCustomSceneId = sceneId;
@@ -326,12 +412,30 @@ export class OstrzeEngineState extends CrpgGameState {
 
   public override getActorCombatant(actor: ActorEntity): CombatantSnapshot {
     const base = super.getActorCombatant(actor);
-    if (actor.id === this.player.id || !this.activeCustomSceneId) {
+    if (!this.activeCustomSceneId) {
       return base;
+    }
+
+    if (actor.id === this.player.id) {
+      const hitPenalty = getPlayerStatusHitPenaltyPct(
+        this.activeOstrzeState,
+        this.combatStatusSession
+      );
+      if (hitPenalty <= 0) {
+        return base;
+      }
+      return {
+        ...base,
+        derived: {
+          ...base.derived,
+          activeProficiency: Math.max(10, base.derived.activeProficiency - hitPenalty)
+        }
+      };
     }
 
     const originId = resolveEnemyOriginId(actor.id, actor.recipe.name);
     const enemyDef = originId ? ORIGIN_DATA.enemies.find((e) => e.id === originId) : undefined;
+    const archetype = resolveEnemyArchetype(originId, enemyDef, actor.combat?.difficulty);
     const primaryAttack = enemyDef?.attacks?.find(
       (a) => Array.isArray(a.damage) && a.damage.length >= 2
     );
@@ -374,6 +478,10 @@ export class OstrzeEngineState extends CrpgGameState {
 
     const weaponProfile = {
       ...base.derived.weaponProfile,
+      minRange: 1,
+      maxRange: archetype === 'ranged_kiter' ? 5 : base.derived.weaponProfile.maxRange,
+      label: archetype === 'ranged_kiter' ? 'Łuk myśliwski' : base.derived.weaponProfile.label,
+      shortLabel: archetype === 'ranged_kiter' ? 'Łuk' : base.derived.weaponProfile.shortLabel,
       baseApCost: Math.max(4, Math.min(base.derived.weaponProfile.baseApCost, 4)),
       armorPenetrationRatio: Math.min(
         base.derived.weaponProfile.armorPenetrationRatio,
@@ -398,6 +506,297 @@ export class OstrzeEngineState extends CrpgGameState {
         weaponProfile
       }
     };
+  }
+
+  protected override planEnemyCombatMove(
+    enemy: ActorEntity,
+    eSnap: CombatantSnapshot,
+    dist: number
+  ): EnemyAiMovePlan | null {
+    if (!this.activeCustomSceneId || !enemy.combat) {
+      return super.planEnemyCombatMove(enemy, eSnap, dist);
+    }
+
+    const ec = enemy.combat;
+    const moveApCost = ec.crippledLegsTurns > 0 ? 2 : 1;
+    if (ec.ap < moveApCost) return null;
+
+    const originId = resolveEnemyOriginId(enemy.id, enemy.recipe.name);
+    const enemyDef = originId ? ORIGIN_DATA.enemies.find((e) => e.id === originId) : undefined;
+    const archetype = resolveEnemyArchetype(originId, enemyDef, ec.difficulty);
+    const isWalkable = (x: number, y: number) => this.isTileWalkable(x, y, enemy.id);
+
+    if (archetype === 'ranged_kiter') {
+      if (dist <= 1.55) {
+        const maxKiteSteps = Math.min(3, Math.floor(ec.ap / moveApCost));
+        const kiteTile = findBestKiteTile({
+          enemyPos: { x: enemy.tileX, y: enemy.tileY },
+          playerPos: { x: this.player.tileX, y: this.player.tileY },
+          mapWidth: this.map.width,
+          mapHeight: this.map.height,
+          maxSteps: maxKiteSteps,
+          isWalkable
+        });
+        if (kiteTile) {
+          return {
+            targetTile: kiteTile,
+            maxSteps: maxKiteSteps,
+            logMessage: `🏹 ${enemy.recipe.name} odskakuje na dystans!`
+          };
+        }
+        return null;
+      }
+
+      if (dist > 5.45) {
+        const approachTile = findBestRangedApproachTile({
+          enemyPos: { x: enemy.tileX, y: enemy.tileY },
+          playerPos: { x: this.player.tileX, y: this.player.tileY },
+          mapWidth: this.map.width,
+          mapHeight: this.map.height,
+          isWalkable
+        });
+        if (approachTile) {
+          return { targetTile: approachTile };
+        }
+      }
+      return null;
+    }
+
+    const maxRange = eSnap.derived.weaponProfile.maxRange;
+    if (dist > maxRange + 0.45) {
+      const allyPositions = this.npcs
+        .filter((n) => n.id !== enemy.id && n.combat?.isHostile && n.combat.isAlive)
+        .map((n) => ({ x: n.tileX, y: n.tileY }));
+      const flankTile = findBestFlankAdjacentTile({
+        enemyPos: { x: enemy.tileX, y: enemy.tileY },
+        playerPos: { x: this.player.tileX, y: this.player.tileY },
+        allyPositions,
+        mapWidth: this.map.width,
+        mapHeight: this.map.height,
+        isWalkable
+      });
+      if (flankTile) {
+        return { targetTile: flankTile };
+      }
+      return super.planEnemyCombatMove(enemy, eSnap, dist);
+    }
+
+    return null;
+  }
+
+  protected override chooseEnemyCombatAttack(
+    enemy: ActorEntity,
+    eSnap: CombatantSnapshot,
+    playerSnap: CombatantSnapshot,
+    dist: number,
+    attacksThisTurn: number
+  ): EnemyAiAttackDecision {
+    if (!this.activeCustomSceneId || !enemy.combat) {
+      return super.chooseEnemyCombatAttack(enemy, eSnap, playerSnap, dist, attacksThisTurn);
+    }
+
+    const ec = enemy.combat;
+    const originId = resolveEnemyOriginId(enemy.id, enemy.recipe.name);
+    const enemyDef = originId ? ORIGIN_DATA.enemies.find((e) => e.id === originId) : undefined;
+    const archetype = resolveEnemyArchetype(originId, enemyDef, ec.difficulty);
+    const tier = resolveEnemyTacticalTier(this.activeCustomSceneId, originId, ec.difficulty);
+    const budget = TACTICAL_BUDGETS[tier];
+
+    if (attacksThisTurn >= budget.maxAttacksPerTurn) {
+      return { kind: 'stop' };
+    }
+
+    if (
+      shouldCautiousEnemyHoldForGuard({
+        archetype,
+        hp: ec.hp,
+        maxHp: ec.maxHp,
+        ap: ec.ap,
+        attacksThisTurn
+      })
+    ) {
+      return { kind: 'stop' };
+    }
+
+    // Handle pending telegraphed boss intent on first action of the turn
+    if (attacksThisTurn === 0 && this.combatAiSession.telegraphedIntentByEnemy[enemy.id]) {
+      const intent = this.combatAiSession.telegraphedIntentByEnemy[enemy.id]!;
+      delete this.combatAiSession.telegraphedIntentByEnemy[enemy.id];
+
+      if (ec.dazedHeadTurns > 0) {
+        this.addCombatLog(`💫 Atak specjalny ${enemy.recipe.name} został przerwany przez ogłuszenie!`);
+        this.pushFloatingCombatText(
+          enemy.x,
+          enemy.y,
+          enemy.z + 2.0,
+          '💫 PRZERWANO!',
+          0xffca28
+        );
+      } else if (intent === 'terror_howl' && ec.ap >= 4) {
+        return {
+          kind: 'special',
+          apCost: 4,
+          execute: (rng) => {
+            this.addCombatLog(`👻 ${enemy.recipe.name} wydaje mrożące krew w żyłach Wycie!`);
+            this.pushFloatingCombatText(
+              enemy.x,
+              enemy.y,
+              enemy.z + 2.0,
+              '👻 WYCIE!',
+              0xce93d8
+            );
+            const res = tryApplyPlayerCombatStatus({
+              state: this.activeOstrzeState,
+              session: this.combatStatusSession,
+              statusId: 'strach',
+              chancePct: 75,
+              currentRound: this.combatState.round,
+              allowStatusEffects: true,
+              sourceName: enemy.recipe.name,
+              rng
+            });
+            if (res.applied && res.logMessage) {
+              this.addCombatLog(res.logMessage);
+              if (res.floatingText) {
+                this.pushFloatingCombatText(
+                  this.player.x,
+                  this.player.y,
+                  this.player.z + 2.05,
+                  res.floatingText,
+                  res.floatingColorHex ?? 0xce93d8
+                );
+              }
+            } else {
+              this.addCombatLog('🛡️ Oparłeś się grozie Wycia!');
+            }
+          }
+        };
+      } else if (intent === 'heavy_cleave' && dist <= eSnap.derived.weaponProfile.maxRange + 0.45 && ec.ap >= 4) {
+        const scale = playerSnap.combat.defending ? 0.65 : 1.25;
+        if (playerSnap.combat.defending) {
+          this.addCombatLog('🛡️ Twoja Garda amortyzuje telegrafowany zamach bossa!');
+        }
+        return {
+          kind: 'attack',
+          mode: 'power',
+          apCostOverride: 4,
+          damageRangeOverride: [
+            Math.max(2, Math.round(eSnap.derived.minDamage * scale)),
+            Math.max(4, Math.round(eSnap.derived.maxDamage * scale))
+          ],
+          labelOverride: 'Telegrafowany Zamach'
+        };
+      }
+    }
+
+    // Ranged kiter cornered in melee falls back to weaker knife strike
+    if (archetype === 'ranged_kiter' && dist <= 1.55) {
+      if (ec.ap >= 3) {
+        return {
+          kind: 'attack',
+          mode: 'quick',
+          apCostOverride: 3,
+          damageRangeOverride: [2, 4],
+          labelOverride: 'Nóż (zwarcie)'
+        };
+      }
+      return { kind: 'stop' };
+    }
+
+    const maxRange = eSnap.derived.weaponProfile.maxRange;
+    const baseAttackAp = eSnap.derived.weaponProfile.baseApCost;
+    if (dist > maxRange + 0.45 || ec.ap < baseAttackAp) {
+      return { kind: 'stop' };
+    }
+
+    let mode: CombatAttackMode = 'quick';
+    if (budget.allowPowerOrTorso && playerSnap.combat.defending && ec.ap >= baseAttackAp + 1) {
+      mode = archetype === 'boss' ? 'power' : 'aimed_torso';
+    }
+
+    return {
+      kind: 'attack',
+      mode,
+      labelOverride: archetype === 'ranged_kiter' ? 'Strzał z łuku' : undefined
+    };
+  }
+
+  protected override onEnemyCombatTurnEnded(enemy: ActorEntity, attacksThisTurn: number): void {
+    if (!this.activeCustomSceneId || !enemy.combat) {
+      super.onEnemyCombatTurnEnded(enemy, attacksThisTurn);
+      return;
+    }
+
+    const ec = enemy.combat;
+    const originId = resolveEnemyOriginId(enemy.id, enemy.recipe.name);
+    const enemyDef = originId ? ORIGIN_DATA.enemies.find((e) => e.id === originId) : undefined;
+    const archetype = resolveEnemyArchetype(originId, enemyDef, ec.difficulty);
+    const tier = resolveEnemyTacticalTier(this.activeCustomSceneId, originId, ec.difficulty);
+
+    const willGuard = ec.ap >= 2;
+    const lowHp = ec.maxHp > 0 && ec.hp / ec.maxHp < 0.4;
+    super.onEnemyCombatTurnEnded(enemy, attacksThisTurn);
+
+    if (willGuard && ec.defending && (archetype === 'melee_cautious' || lowHp)) {
+      this.addCombatLog(`🛡️ ${enemy.recipe.name} przechodzi w gardę (+20% Unik, +15% DR).`);
+      this.pushFloatingCombatText(enemy.x, enemy.y, enemy.z + 1.9, '🛡️ GARDA', 0x4da6ff);
+    }
+
+    const telegraph = pickBossTelegraphIntent({
+      enemyId: enemy.id,
+      originId,
+      archetype,
+      tier,
+      dazedHeadTurns: ec.dazedHeadTurns,
+      currentRound: this.combatState.round,
+      session: this.combatAiSession
+    });
+    if (telegraph) {
+      this.addCombatLog(telegraph.logMessage);
+      this.pushFloatingCombatText(
+        enemy.x,
+        enemy.y,
+        enemy.z + 2.1,
+        telegraph.floatingText,
+        0xffca28
+      );
+    }
+  }
+
+  protected override onPlayerCombatTurnStarted(): void {
+    if (!this.activeCustomSceneId || !this.player.combat) return;
+
+    const summary = tickPlayerCombatStatuses({
+      state: this.activeOstrzeState,
+      session: this.combatStatusSession,
+      currentRound: this.combatState.round
+    });
+
+    for (const log of summary.logs) {
+      this.addCombatLog(log);
+    }
+    for (const ft of summary.floatingTexts) {
+      this.pushFloatingCombatText(
+        this.player.x,
+        this.player.y,
+        this.player.z + 2.0,
+        ft.text,
+        ft.colorHex
+      );
+    }
+
+    if (summary.apPenalty > 0) {
+      this.player.combat.ap = Math.max(1, this.player.combat.ap - summary.apPenalty);
+    }
+    if (summary.totalDamage > 0) {
+      this.player.combat.hp = Math.max(0, this.player.combat.hp - summary.totalDamage);
+      if (this.activeOstrzeState?.character) {
+        this.activeOstrzeState.character.hp = this.player.combat.hp;
+      }
+      if (this.player.combat.hp <= 0) {
+        this.handlePlayerDefeated();
+      }
+    }
   }
 
   public override loadMap(mapId: MapId): void {

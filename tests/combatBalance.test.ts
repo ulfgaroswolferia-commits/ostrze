@@ -97,4 +97,39 @@ describe('Combat balance (Prologue & Chapter 1 early encounters)', () => {
       }
     }
   });
+
+  it('enforces early-tier tactical guardrail in Trakt ambush (max 1 attack/enemy/turn, no status spam)', () => {
+    const { engine, state } = createLevel2PlayerState();
+    engine.registerCustomScene(createTraktZasadzkaScene());
+    engine.loadCustomScene('trakt_zasadzka');
+    engine.syncFromOstrzeState(state, ORIGIN_DATA);
+
+    const bandits = engine.npcs.filter((n) => n.combat?.isHostile);
+    expect(bandits.length).toBe(2);
+
+    // Put both bandits right next to player with full AP
+    bandits[0].tileX = engine.player.tileX + 1;
+    bandits[0].tileY = engine.player.tileY;
+    bandits[1].tileX = engine.player.tileX - 1;
+    bandits[1].tileY = engine.player.tileY;
+
+    let enemyAttacksCount = 0;
+    engine.addCombatAttackListener((ev) => {
+      if (ev.target.id === engine.player.id) {
+        enemyAttacksCount++;
+        expect(ev.outcome.mode).toBe('quick');
+      }
+    });
+
+    engine.startCombatWithEnemy(bandits[0].id);
+    const hpBefore = engine.player.combat!.hp;
+    engine.endPlayerCombatTurn(false);
+
+    // At most 1 attack per bandit in early tier
+    expect(enemyAttacksCount).toBeLessThanOrEqual(2);
+    // No combat status effects applied in Trakt ambush
+    expect(state.character!.effects.some((e) => ['krwawienie', 'zatrucie', 'strach'].includes(e.id))).toBe(false);
+    // Player survives the round comfortably
+    expect(engine.player.combat!.hp).toBeGreaterThan(Math.round(hpBefore * 0.4));
+  });
 });

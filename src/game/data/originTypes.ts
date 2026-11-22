@@ -101,12 +101,19 @@ export interface ItemDef {
   description?: string;
 }
 
+export interface EnemyAttackEffectDef {
+  id: string;
+  chance: number;
+}
+
 export interface EnemyAttackDef {
   name?: string;
   damage?: [number, number];
   damageType?: string;
   apCost?: number;
   hit?: number;
+  range?: 'melee' | 'far';
+  effects?: EnemyAttackEffectDef[];
 }
 
 export interface EnemyDef {
@@ -118,6 +125,9 @@ export interface EnemyDef {
   armor?: number;
   initiative: number;
   xp: number;
+  ai?: string;
+  morale?: number | null;
+  leap?: boolean;
   damage?: [number, number];
   attacks?: EnemyAttackDef[];
   damageTaken?: Record<string, number>;
