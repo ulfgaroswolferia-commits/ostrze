@@ -25,9 +25,12 @@ export function resolveEnemyOriginId(actorId: string, actorName: string): string
   if (key.includes('radogost') || key.includes('instruktor')) return 'instruktor';
   if (key.includes('upior') || key.includes('upiór') || key.includes('zmora')) return 'upior_nocy';
   if (key.includes('herszt')) return 'herszt_zbojcow';
+  if (key.includes('lucznik') || key.includes('łucznik')) return 'rabus_lucznik';
+  if (key.includes('rabus') || key.includes('rabuś') || key.includes('rozbój') || key.includes('zbój')) return 'rabus';
   if (key.includes('bandyt') || key.includes('zbir') || key.includes('łupież')) return 'bandyta';
-  if (key.includes('wilk')) return 'wilk';
+  if (key.includes('wilk') || key.includes('basior')) return 'wilk';
   if (key.includes('dzik')) return 'dzik';
+  if (key.includes('zmija') || key.includes('żmija')) return 'zmija_lesna';
   if (key.includes('klusownik') || key.includes('kłusownik')) return 'klusownik';
   if (key.includes('maruder')) return 'maruder';
   if (key.includes('kieszonk')) return 'kieszonkowiec';
@@ -37,6 +40,8 @@ export function resolveEnemyOriginId(actorId: string, actorName: string): string
 const ORIGIN_ENEMY_TO_PIX: Record<string, string> = {
   instruktor: 'instruktor',
   bandyta: 'bandyta',
+  rabus: 'bandyta',
+  rabus_lucznik: 'bandyta',
   upior_nocy: 'upior_zwiadowca',
   wilk: 'wilk',
   dzik: 'dzik',

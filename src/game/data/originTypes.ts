@@ -101,15 +101,25 @@ export interface ItemDef {
   description?: string;
 }
 
+export interface EnemyAttackDef {
+  name?: string;
+  damage?: [number, number];
+  damageType?: string;
+  apCost?: number;
+  hit?: number;
+}
+
 export interface EnemyDef {
   id: string;
   name: string;
   hp: number;
   ap: number;
   defense: number;
+  armor?: number;
   initiative: number;
   xp: number;
   damage?: [number, number];
+  attacks?: EnemyAttackDef[];
   damageTaken?: Record<string, number>;
 }
 

@@ -4,6 +4,7 @@ import { deltaToDirection8 } from '@ulf/core/pathfinding';
 import { IsometricWorldMap, MapId } from '@ulf/core/worldMap';
 import { registerPropVisualTransform } from '@ulf/renderer/isoSceneView';
 import { DIALOGUE_TREES, DialogueNode } from '@ulf/rpg/dialogueSystem';
+import type { CombatantSnapshot } from '@ulf/rpg/combatSystem';
 import { ActorEntity, CrpgGameState, LogSeverity } from '@ulf/rpg/gameLoop';
 import {
   bakeBoarCharacterBuffers,
@@ -14,7 +15,9 @@ import {
   isWolfRecipe
 } from '../game/assets/beastSprites';
 import { getPropVisualTransform } from '../game/assets/buildingScaling';
+import { ORIGIN_DATA } from '../game/data/originData';
 import type { OriginGameData, OstrzeGameState } from '../game/data/originTypes';
+import { resolveEnemyOriginId } from '../game/rules/combatEnemyMeta';
 import { ComputedStats, getStats } from '../game/rules/stats';
 
 let ostrzeEngineExtensionsRegistered = false;
@@ -319,6 +322,82 @@ export class OstrzeEngineState extends CrpgGameState {
     this.recomputeFov();
     this.onSceneLoaded?.(sceneId);
     return true;
+  }
+
+  public override getActorCombatant(actor: ActorEntity): CombatantSnapshot {
+    const base = super.getActorCombatant(actor);
+    if (actor.id === this.player.id || !this.activeCustomSceneId) {
+      return base;
+    }
+
+    const originId = resolveEnemyOriginId(actor.id, actor.recipe.name);
+    const enemyDef = originId ? ORIGIN_DATA.enemies.find((e) => e.id === originId) : undefined;
+    const primaryAttack = enemyDef?.attacks?.find(
+      (a) => Array.isArray(a.damage) && a.damage.length >= 2
+    );
+
+    const isBossOrVeryHard =
+      actor.combat?.difficulty === 'very_hard' ||
+      originId === 'upior_nocy' ||
+      originId === 'herszt_zbojcow';
+
+    const minDamage = primaryAttack
+      ? Math.max(1, primaryAttack.damage![0])
+      : Math.min(base.derived.minDamage, 6);
+    const maxDamage = primaryAttack
+      ? Math.max(minDamage + 1, primaryAttack.damage![1])
+      : Math.max(minDamage + 1, Math.min(base.derived.maxDamage, 10));
+
+    const critChancePct =
+      originId === 'instruktor' ? 5 : isBossOrVeryHard ? 10 : 6;
+
+    const dazed = (actor.combat?.dazedHeadTurns ?? 0) > 0;
+    const defending = Boolean(actor.combat?.defending);
+    const baseMaxAp = enemyDef?.ap ?? actor.combat?.maxAp ?? 6;
+    const maxAp = Math.max(3, baseMaxAp - (dazed ? 2 : 0));
+
+    const activeProficiency = Math.max(
+      55,
+      Math.min(88, Math.round((primaryAttack?.hit ?? 62) + 12))
+    );
+
+    const evasionPct = enemyDef
+      ? Math.min(55, Math.max(5, Math.round(enemyDef.defense * 0.9) + (defending ? 20 : 0)))
+      : Math.min(40, base.derived.evasionPct);
+    const enemyArmor = enemyDef?.armor ?? 0;
+    const damageThreshold = enemyDef
+      ? Math.max(0, Math.floor(enemyArmor / 2) + (defending ? 2 : 0))
+      : Math.min(4, base.derived.damageThreshold);
+    const damageResistancePct = enemyDef
+      ? Math.min(60, Math.max(0, enemyArmor * 6 + (defending ? 15 : 0)))
+      : Math.min(35, base.derived.damageResistancePct);
+
+    const weaponProfile = {
+      ...base.derived.weaponProfile,
+      baseApCost: Math.max(4, Math.min(base.derived.weaponProfile.baseApCost, 4)),
+      armorPenetrationRatio: Math.min(
+        base.derived.weaponProfile.armorPenetrationRatio,
+        isBossOrVeryHard ? 0.25 : 0.15
+      ),
+      critBonus: 0
+    };
+
+    return {
+      ...base,
+      perception: 10,
+      derived: {
+        ...base.derived,
+        maxAp,
+        evasionPct,
+        damageThreshold,
+        damageResistancePct,
+        minDamage,
+        maxDamage,
+        critChancePct,
+        activeProficiency,
+        weaponProfile
+      }
+    };
   }
 
   public override loadMap(mapId: MapId): void {
