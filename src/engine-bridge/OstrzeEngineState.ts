@@ -27,6 +27,7 @@ import {
   isWolfRecipe
 } from '../game/assets/beastSprites';
 import { getPropVisualTransform } from '../game/assets/buildingScaling';
+import { ostrzeAudio } from '../game/audio/ostrzeAudio';
 import { ORIGIN_DATA } from '../game/data/originData';
 import type { OriginGameData, OstrzeGameState } from '../game/data/originTypes';
 import {
@@ -132,6 +133,10 @@ export class OstrzeEngineState extends CrpgGameState {
     this.logs.length = 0;
     this.addCombatAttackListener((event) => {
       if (!this.activeCustomSceneId) return;
+      if (event.attacker.id !== this.player.id) {
+        const originId = resolveEnemyOriginId(event.attacker.id, event.attacker.recipe.name);
+        ostrzeAudio.playEnemyAttackVoice(originId);
+      }
       if (event.target.id !== this.player.id || !event.outcome.hit) return;
       this.handleEnemyHitStatusEffects(event.attacker);
     });

@@ -36,6 +36,14 @@ async function bootstrapOstrze(): Promise<void> {
     e.preventDefault();
   });
 
+  const unlockAudioOnce = (): void => {
+    ostrzeAudio.unlock();
+    window.removeEventListener('pointerdown', unlockAudioOnce);
+    window.removeEventListener('keydown', unlockAudioOnce);
+  };
+  window.addEventListener('pointerdown', unlockAudioOnce, { passive: true });
+  window.addEventListener('keydown', unlockAudioOnce, { passive: true });
+
   const viewportContainer = document.getElementById('viewport-container');
   const hudRoot = document.getElementById('hud-root');
   const inspectorRoot = document.getElementById('inspector-root');
@@ -131,6 +139,7 @@ async function bootstrapOstrze(): Promise<void> {
   syncPhenomenonUi = () => {
     const atmosphere = getWorldAtmosphere(prologue.state, prologue.data);
     phenomenonOverlay.sync(atmosphere);
+    ostrzeAudio.setPhenomenonAudio(atmosphere.phenomenonId);
     if (devPhenomenonSelect) {
       devPhenomenonSelect.value = atmosphere.phenomenonId ?? '';
     }
