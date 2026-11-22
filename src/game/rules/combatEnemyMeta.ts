@@ -73,6 +73,9 @@ export function resolveEnemyOriginId(actorId: string, actorName: string): string
   if (key.includes('wilk') || key.includes('basior')) return 'wilk';
   if (key.includes('dzik')) return 'dzik';
   if (key.includes('zmija') || key.includes('żmija')) return 'zmija_lesna';
+  if (key.includes('blednik') || key.includes('błędnik')) return 'blednik';
+  if (key.includes('skrzat') || key.includes('chochlik')) return 'skrzat_zlosnik';
+  if (key.includes('utopiec') || key.includes('topielec')) return 'utopiec';
   if (key.includes('klusownik') || key.includes('kłusownik')) return 'klusownik';
   if (key.includes('maruder')) return 'maruder';
   if (key.includes('kieszonk')) return 'kieszonkowiec';

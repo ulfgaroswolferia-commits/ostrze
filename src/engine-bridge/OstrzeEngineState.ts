@@ -13,11 +13,17 @@ import {
   LogSeverity
 } from '@ulf/rpg/gameLoop';
 import {
+  bakeBlednikCharacterBuffers,
   bakeBoarCharacterBuffers,
   bakeDogCharacterBuffers,
+  bakeSkrzatCharacterBuffers,
+  bakeViperCharacterBuffers,
   bakeWolfCharacterBuffers,
+  isBlednikRecipe,
   isBoarRecipe,
   isDogRecipe,
+  isSkrzatRecipe,
+  isViperRecipe,
   isWolfRecipe
 } from '../game/assets/beastSprites';
 import { getPropVisualTransform } from '../game/assets/buildingScaling';
@@ -68,6 +74,21 @@ export function ensureOstrzeEngineExtensionsRegistered(): void {
     matches: (recipe) => isWolfRecipe(recipe),
     computeHash: (recipe) => `wolf|${recipe.id}|${recipe.name}`,
     bake: (recipe) => bakeWolfCharacterBuffers(recipe)
+  });
+  registerCustomCharacterBaker({
+    matches: (recipe) => isViperRecipe(recipe),
+    computeHash: (recipe) => `viper|${recipe.id}|${recipe.name}`,
+    bake: (recipe) => bakeViperCharacterBuffers(recipe)
+  });
+  registerCustomCharacterBaker({
+    matches: (recipe) => isBlednikRecipe(recipe),
+    computeHash: (recipe) => `blednik|${recipe.id}|${recipe.name}`,
+    bake: (recipe) => bakeBlednikCharacterBuffers(recipe)
+  });
+  registerCustomCharacterBaker({
+    matches: (recipe) => isSkrzatRecipe(recipe),
+    computeHash: (recipe) => `skrzat|${recipe.id}|${recipe.name}`,
+    bake: (recipe) => bakeSkrzatCharacterBuffers(recipe)
   });
   registerPropVisualTransform(getPropVisualTransform);
 }

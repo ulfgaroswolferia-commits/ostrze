@@ -1778,14 +1778,22 @@ export class Chapter1Director {
         const recipe = generateRandomCharacterRecipe(900 + idx * 17, actorId);
         recipe.name = enemyDef?.name ?? spec.id;
         recipe.title = 'Zasadzka na trakcie';
-        const isBeast = spec.id === 'wilk' || spec.id === 'dzik' || spec.id === 'zmija_lesna';
+        const isNonHuman =
+          spec.id === 'wilk' ||
+          spec.id === 'dzik' ||
+          spec.id === 'zmija_lesna' ||
+          spec.id === 'blednik' ||
+          spec.id === 'skrzat_zlosnik' ||
+          spec.id === 'utopiec' ||
+          spec.id === 'upior_zwiadowca' ||
+          spec.id === 'upior_nocy';
         recipe.id = actorId;
         recipe.equipment = {
-          head: isBeast ? null : 'helm_shadow_hood',
+          head: isNonHuman ? null : 'helm_shadow_hood',
           torso: 'torso_przeszywanica',
           cloak: null,
           legs: 'legs_leather_boots',
-          mainHand: isBeast ? null : 'weapon_iron_longsword',
+          mainHand: isNonHuman ? null : 'weapon_iron_longsword',
           offHand: null
         };
         const hp = enemyDef?.hp ?? 18;

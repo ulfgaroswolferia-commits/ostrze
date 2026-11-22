@@ -6,7 +6,7 @@ export function isWolfRecipe(recipe: { id?: string; name?: string; title?: strin
   const title = (recipe.title ?? '').toLowerCase();
   const name = (recipe.name ?? '').toLowerCase();
   return (
-    id.startsWith('enemy_wilk') ||
+    id.includes('wilk') ||
     id.startsWith('wolf_') ||
     title.includes('wataha') ||
     name.includes('wilk') ||
@@ -23,7 +23,34 @@ export function isDogRecipe(recipe: { id?: string; name?: string; title?: string
 export function isBoarRecipe(recipe: { id?: string; name?: string; title?: string }): boolean {
   const id = (recipe.id ?? '').toLowerCase();
   const name = (recipe.name ?? '').toLowerCase();
-  return id.startsWith('enemy_las_dzik') || name.includes('dzik');
+  return id.includes('dzik') || name.includes('dzik');
+}
+
+export function isViperRecipe(recipe: { id?: string; name?: string; title?: string }): boolean {
+  const id = (recipe.id ?? '').toLowerCase();
+  const name = (recipe.name ?? '').toLowerCase();
+  return (
+    id.includes('zmija') ||
+    id.includes('viper') ||
+    name.includes('żmij') ||
+    name.includes('zmij')
+  );
+}
+
+export function isBlednikRecipe(recipe: { id?: string; name?: string; title?: string }): boolean {
+  const id = (recipe.id ?? '').toLowerCase();
+  const name = (recipe.name ?? '').toLowerCase();
+  return id.includes('blednik') || name.includes('błędnik') || name.includes('blednik');
+}
+
+export function isSkrzatRecipe(recipe: { id?: string; name?: string; title?: string }): boolean {
+  const id = (recipe.id ?? '').toLowerCase();
+  const name = (recipe.name ?? '').toLowerCase();
+  return (
+    id.includes('skrzat') ||
+    name.includes('skrzat') ||
+    name.includes('chochlik')
+  );
 }
 
 function setPixel(
@@ -517,4 +544,377 @@ export function bakeBoarCharacterBuffers(recipe: CharacterVisualRecipe): BakedCh
   }
 
   return { ...buffers, recipeHash: `boar_${recipe.id}` };
+}
+
+/**
+ * Generates an 8-direction × 4-frame 2.5D coiled forest viper (`zmija_lesna`) sprite sheet.
+ */
+export function bakeViperCharacterBuffers(recipe: CharacterVisualRecipe): BakedCharacterBuffers {
+  const frameWidth = 64;
+  const frameHeight = 96;
+  const directions = 8;
+  const framesPerDirection = 4;
+  const sheetWidth = frameWidth * framesPerDirection;
+  const sheetHeight = frameHeight * directions;
+
+  const albedoRGBA = new Uint8ClampedArray(sheetWidth * sheetHeight * 4);
+  const normalMaterialRGBA = new Uint8ClampedArray(sheetWidth * sheetHeight * 4);
+
+  const scaleMain = { r: 74, g: 104, b: 56 };
+  const scaleDark = { r: 34, g: 44, b: 26 };
+  const scaleBelly = { r: 142, g: 154, b: 98 };
+
+  for (let dir = 0; dir < directions; dir++) {
+    const ang = (dir / directions) * Math.PI * 2;
+    const fx = Math.sin(ang);
+    const fy = -Math.cos(ang) * 0.58;
+    const perpX = -fy * 1.15;
+    const perpY = fx * 0.65;
+
+    for (let frame = 0; frame < framesPerDirection; frame++) {
+      const ox = frame * frameWidth;
+      const oy = dir * frameHeight;
+      const cx = ox + 32;
+      const groundY = oy + 80;
+      const phase = (frame / framesPerDirection) * Math.PI * 2;
+
+      // Ground shadow under coils
+      fillEllipse(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, cx, groundY + 1, 15, 7, 10, 14, 12, 108);
+
+      // Build S-curved spine from tail (t=0) to neck (t=1)
+      const segments = 10;
+      const points: Array<{ x: number; y: number; r: number }> = [];
+      for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const along = (t - 0.5) * 20;
+        const wave = Math.sin(t * Math.PI * 2.2 + phase) * (5.2 - Math.abs(t - 0.45) * 3.2);
+        const lift = t > 0.78 ? (t - 0.78) * 34 : 0;
+        const px = cx + fx * along + perpX * wave;
+        const py = groundY - 2 + fy * along * 0.85 + perpY * wave * 0.55 - lift;
+        const radius = 1.6 + Math.sin(t * Math.PI) * 2.4;
+        points.push({ x: px, y: py, r: radius });
+      }
+
+      // Belly underside & main scaly body
+      for (let i = 0; i < points.length - 1; i++) {
+        const a = points[i];
+        const b = points[i + 1];
+        fillSegment(
+          albedoRGBA,
+          normalMaterialRGBA,
+          sheetWidth,
+          sheetHeight,
+          a.x,
+          a.y + 1.2,
+          b.x,
+          b.y + 1.2,
+          a.r * 0.9,
+          scaleBelly.r,
+          scaleBelly.g,
+          scaleBelly.b
+        );
+        fillSegment(
+          albedoRGBA,
+          normalMaterialRGBA,
+          sheetWidth,
+          sheetHeight,
+          a.x,
+          a.y,
+          b.x,
+          b.y,
+          a.r,
+          scaleMain.r,
+          scaleMain.g,
+          scaleMain.b
+        );
+        // Dark dorsal zigzag diamond markings
+        if (i % 2 === 1) {
+          fillEllipse(
+            albedoRGBA,
+            normalMaterialRGBA,
+            sheetWidth,
+            sheetHeight,
+            (a.x + b.x) * 0.5,
+            (a.y + b.y) * 0.5 - 0.8,
+            a.r * 0.65,
+            a.r * 0.55,
+            scaleDark.r,
+            scaleDark.g,
+            scaleDark.b
+          );
+        }
+      }
+
+      // Raised triangular viper head
+      const neck = points[points.length - 1];
+      const strikeLift = frame === 1 ? -2.2 : frame === 3 ? -1.0 : 0;
+      const headX = neck.x + fx * 3.8;
+      const headY = neck.y + fy * 2.2 - 1.5 + strikeLift;
+      fillEllipse(
+        albedoRGBA,
+        normalMaterialRGBA,
+        sheetWidth,
+        sheetHeight,
+        headX,
+        headY,
+        4.2,
+        3.1,
+        scaleMain.r,
+        scaleMain.g,
+        scaleMain.b
+      );
+      fillEllipse(
+        albedoRGBA,
+        normalMaterialRGBA,
+        sheetWidth,
+        sheetHeight,
+        headX,
+        headY - 0.8,
+        2.2,
+        1.5,
+        scaleDark.r,
+        scaleDark.g,
+        scaleDark.b
+      );
+
+      // Forked crimson tongue on frames 1 & 3
+      if (frame === 1 || frame === 3) {
+        const tx = headX + fx * 6.5;
+        const ty = headY + fy * 3.8 + 0.6;
+        fillSegment(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, headX + fx * 3, headY + fy * 2, tx, ty, 0.8, 215, 48, 56);
+        setPixel(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, tx + perpX * 1.1, ty + perpY * 1.1, 230, 62, 68, 255);
+        setPixel(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, tx - perpX * 1.1, ty - perpY * 1.1, 230, 62, 68, 255);
+      }
+
+      // Bright yellow slit eyes
+      if (fy > -0.45) {
+        const eyeX = headX + fx * 1.5;
+        const eyeY = headY + fy * 1.0 - 0.8;
+        setPixel(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, eyeX - 1.4, eyeY, 248, 224, 62, 255);
+        setPixel(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, eyeX + 1.4, eyeY, 248, 224, 62, 255);
+      }
+    }
+  }
+
+  return {
+    recipeHash: `viper_${recipe.id}`,
+    frameWidth,
+    frameHeight,
+    directions,
+    framesPerDirection,
+    sheetWidth,
+    sheetHeight,
+    albedoRGBA,
+    normalMaterialRGBA
+  };
+}
+
+/**
+ * Generates an 8-direction × 4-frame 2.5D hovering marsh wisp (`blednik`) sprite sheet.
+ */
+export function bakeBlednikCharacterBuffers(recipe: CharacterVisualRecipe): BakedCharacterBuffers {
+  const frameWidth = 64;
+  const frameHeight = 96;
+  const directions = 8;
+  const framesPerDirection = 4;
+  const sheetWidth = frameWidth * framesPerDirection;
+  const sheetHeight = frameHeight * directions;
+
+  const albedoRGBA = new Uint8ClampedArray(sheetWidth * sheetHeight * 4);
+  const normalMaterialRGBA = new Uint8ClampedArray(sheetWidth * sheetHeight * 4);
+
+  for (let dir = 0; dir < directions; dir++) {
+    const ang = (dir / directions) * Math.PI * 2;
+    const fx = Math.sin(ang);
+    const fy = -Math.cos(ang) * 0.55;
+
+    for (let frame = 0; frame < framesPerDirection; frame++) {
+      const ox = frame * frameWidth;
+      const oy = dir * frameHeight;
+      const cx = ox + 32;
+      const groundY = oy + 79;
+      const phase = (frame / framesPerDirection) * Math.PI * 2;
+      const hoverY = groundY - 26 + Math.sin(phase) * 3.5;
+
+      // Pale teal marsh-glow reflection on the ground
+      fillEllipse(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, cx, groundY + 1, 13, 5.5, 46, 154, 144, 78);
+
+      // Trailing spectral wisps below core
+      for (const offset of [-5, 0, 5]) {
+        const sway = Math.sin(phase + offset * 0.6) * 2.5;
+        const tailEndX = cx + offset * 0.8 - fx * 4.5 + sway;
+        const tailEndY = hoverY + 15 + (offset === 0 ? 4 : 0);
+        fillSegment(
+          albedoRGBA,
+          normalMaterialRGBA,
+          sheetWidth,
+          sheetHeight,
+          cx + offset * 0.6,
+          hoverY + 3,
+          tailEndX,
+          tailEndY,
+          offset === 0 ? 2.8 : 1.9,
+          54,
+          172,
+          160
+        );
+      }
+
+      // Outer translucent cyan-emerald aura
+      fillEllipse(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, cx, hoverY, 12.5, 14.5, 48, 184, 168, 92);
+      // Mid flame body
+      fillEllipse(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, cx, hoverY - 1, 8.2, 10.2, 98, 232, 214, 210);
+      // Flame crown taper
+      fillEllipse(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, cx + Math.cos(phase) * 1.2, hoverY - 11, 3.6, 5.8, 128, 245, 228, 185);
+      // Luminous white-cyan inner core
+      fillEllipse(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, cx + fx * 1.2, hoverY - 1 + fy * 0.8, 4.4, 5.2, 226, 255, 248, 255);
+
+      // Hollow eerie eyes when facing camera
+      if (fy > -0.3) {
+        const eyeX = cx + fx * 2.2;
+        const eyeY = hoverY - 1.5 + fy * 1.2;
+        setPixel(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, eyeX - 2, eyeY, 18, 52, 56, 230);
+        setPixel(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, eyeX + 2, eyeY, 18, 52, 56, 230);
+      }
+
+      // Orbiting marsh sparks
+      const orb1X = cx + Math.cos(phase + dir * 0.4) * 11;
+      const orb1Y = hoverY - 3 + Math.sin(phase + dir * 0.4) * 5;
+      const orb2X = cx + Math.cos(phase + Math.PI + dir * 0.4) * 9.5;
+      const orb2Y = hoverY + 4 + Math.sin(phase + Math.PI + dir * 0.4) * 4;
+      fillEllipse(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, orb1X, orb1Y, 1.8, 1.8, 210, 255, 236, 235);
+      fillEllipse(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, orb2X, orb2Y, 1.5, 1.5, 130, 244, 218, 215);
+    }
+  }
+
+  return {
+    recipeHash: `blednik_${recipe.id}`,
+    frameWidth,
+    frameHeight,
+    directions,
+    framesPerDirection,
+    sheetWidth,
+    sheetHeight,
+    albedoRGBA,
+    normalMaterialRGBA
+  };
+}
+
+/**
+ * Generates an 8-direction × 4-frame 2.5D hunched forest imp (`skrzat_zlosnik`) sprite sheet.
+ */
+export function bakeSkrzatCharacterBuffers(recipe: CharacterVisualRecipe): BakedCharacterBuffers {
+  const frameWidth = 64;
+  const frameHeight = 96;
+  const directions = 8;
+  const framesPerDirection = 4;
+  const sheetWidth = frameWidth * framesPerDirection;
+  const sheetHeight = frameHeight * directions;
+
+  const albedoRGBA = new Uint8ClampedArray(sheetWidth * sheetHeight * 4);
+  const normalMaterialRGBA = new Uint8ClampedArray(sheetWidth * sheetHeight * 4);
+
+  const skin = { r: 122, g: 132, b: 96 };
+  const tunic = { r: 84, g: 64, b: 46 };
+  const moss = { r: 66, g: 94, b: 54 };
+  const cap = { r: 138, g: 44, b: 38 };
+
+  for (let dir = 0; dir < directions; dir++) {
+    const ang = (dir / directions) * Math.PI * 2;
+    const fx = Math.sin(ang);
+    const fy = -Math.cos(ang) * 0.58;
+    const perpX = -fy * 0.9;
+    const perpY = fx * 0.4;
+
+    for (let frame = 0; frame < framesPerDirection; frame++) {
+      const ox = frame * frameWidth;
+      const oy = dir * frameHeight;
+      const cx = ox + 32;
+      const groundY = oy + 79;
+      const stride = frame === 1 ? 2.8 : frame === 3 ? -2.8 : 0;
+      const hop = frame === 1 || frame === 3 ? -2.2 : 0;
+
+      // Ground shadow
+      fillEllipse(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, cx, groundY + 1, 11, 5.2, 10, 12, 14, 115);
+
+      // Short bent imp legs
+      fillSegment(
+        albedoRGBA,
+        normalMaterialRGBA,
+        sheetWidth,
+        sheetHeight,
+        cx - 3.5,
+        groundY - 11 + hop,
+        cx - 3.8 + fx * stride,
+        groundY,
+        2.1,
+        tunic.r - 16,
+        tunic.g - 12,
+        tunic.b - 10
+      );
+      fillSegment(
+        albedoRGBA,
+        normalMaterialRGBA,
+        sheetWidth,
+        sheetHeight,
+        cx + 3.5,
+        groundY - 11 + hop,
+        cx + 3.8 - fx * stride,
+        groundY,
+        2.1,
+        tunic.r - 10,
+        tunic.g - 8,
+        tunic.b - 6
+      );
+
+      // Hunched compact torso & mossy cloak rag
+      const torsoX = cx + fx * 1.5;
+      const torsoY = groundY - 16 + hop;
+      fillEllipse(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, torsoX, torsoY, 6.8, 6.2, tunic.r, tunic.g, tunic.b);
+      fillEllipse(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, torsoX - fx * 1.2, torsoY - 3, 6.4, 3.6, moss.r, moss.g, moss.b);
+
+      // Nimble clawed arms reaching slightly forward
+      for (const side of [-1, 1]) {
+        const shX = torsoX + perpX * side * 5.2;
+        const shY = torsoY - 2 + perpY * side * 2;
+        const handX = shX + fx * 4.2 + perpX * side * 1.4;
+        const handY = shY + 5.5 + (side === 1 ? -stride * 0.6 : stride * 0.6);
+        fillSegment(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, shX, shY, handX, handY, 1.8, skin.r, skin.g, skin.b);
+      }
+
+      // Large mischievous imp head hunched forward
+      const headX = torsoX + fx * 3.2;
+      const headY = torsoY - 8.5;
+      fillEllipse(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, headX, headY, 5.4, 4.8, skin.r, skin.g, skin.b);
+
+      // Long pointed sideways ears
+      fillSegment(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, headX - 4, headY, headX - 9.5, headY - 2.5, 1.6, skin.r - 12, skin.g - 10, skin.b - 10);
+      fillSegment(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, headX + 4, headY, headX + 9.5, headY - 2.5, 1.6, skin.r - 12, skin.g - 10, skin.b - 10);
+
+      // Tall pointed red-brown imp cap leaning slightly back
+      fillEllipse(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, headX, headY - 4.2, 5.6, 3.2, cap.r, cap.g, cap.b);
+      fillSegment(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, headX, headY - 5, headX - fx * 4.5, headY - 13.5, 2.6, cap.r, cap.g, cap.b);
+
+      // Glowing amber eyes & pointy nose
+      if (fy > -0.35) {
+        const faceX = headX + fx * 2.2;
+        const faceY = headY + fy * 1.4;
+        setPixel(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, faceX - 1.8, faceY - 0.8, 252, 198, 56, 255);
+        setPixel(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, faceX + 1.8, faceY - 0.8, 252, 198, 56, 255);
+        fillEllipse(albedoRGBA, normalMaterialRGBA, sheetWidth, sheetHeight, faceX + fx * 1.4, faceY + 1.2, 1.4, 1.1, skin.r - 14, skin.g - 14, skin.b - 10);
+      }
+    }
+  }
+
+  return {
+    recipeHash: `skrzat_${recipe.id}`,
+    frameWidth,
+    frameHeight,
+    directions,
+    framesPerDirection,
+    sheetWidth,
+    sheetHeight,
+    albedoRGBA,
+    normalMaterialRGBA
+  };
 }

@@ -11,7 +11,7 @@ import { forageWorldProp, performCampRecipe } from './game/rules/campCrafting';
 import { resolveQuickBeltSlots, useCombatBeltItem } from './game/rules/combatConsumables';
 import { rollStealthCheck } from './game/rules/stealth';
 import { waitUntilHour } from './game/rules/time';
-import { syncWorldLighting } from './game/rules/worldCycle';
+import { getWorldAtmosphere, syncWorldLighting } from './game/rules/worldCycle';
 import { OSTRZE_LOCATIONS } from './game/rules/travel';
 import { PrologueDirector, type ProloguePhase } from './game/scenes/PrologueDirector';
 import {
@@ -29,6 +29,7 @@ import {
 import { OstrzeModalUi } from './game/ui/OstrzeModalUi';
 import { ChronicleUxController } from './game/ui/chronicleUxController';
 import { CombatTargetOverlay } from './game/ui/combatTargetOverlay';
+import { PhenomenonOverlay } from './game/ui/phenomenonOverlay';
 
 async function bootstrapOstrze(): Promise<void> {
   window.addEventListener('contextmenu', (e) => {
@@ -46,19 +47,23 @@ async function bootstrapOstrze(): Promise<void> {
   const params = new URLSearchParams(window.location.search);
   const isDevMode = params.get('dev') === '1';
   const startChapter = params.get('chapter');
+  const startPhenomenon = params.get('phenomenon');
 
   const engine = new OstrzeEngineState();
 
   let hud: HudOverlay | null = null;
   let inspector: { render(): void } | null = null;
+  let syncPhenomenonUi: (() => void) | null = null;
   const chronicleUx = new ChronicleUxController(hudRoot, engine);
   const combatTargetOverlay = new CombatTargetOverlay(engine, ORIGIN_DATA);
+  const phenomenonOverlay = new PhenomenonOverlay();
 
   const refreshUi = (): void => {
     hud?.render();
     inspector?.render();
     chronicleUx.sync();
     combatTargetOverlay.sync();
+    syncPhenomenonUi?.();
   };
 
   const sceneView = new IsoSceneView(engine, refreshUi);
@@ -83,6 +88,8 @@ async function bootstrapOstrze(): Promise<void> {
   const uiPanBlockSelector = [
     '.ostrze-hub-bar',
     '.ostrze-combat-target-card',
+    '.ostrze-phenomenon-badge',
+    '.ostrze-dev-phenomenon-bar',
     '.ostrze-overlay',
     '.ostrze-toast',
     '.top-bar',
@@ -120,6 +127,14 @@ async function bootstrapOstrze(): Promise<void> {
     engine,
     onUiRefresh: refreshUi
   });
+  let devPhenomenonSelect: HTMLSelectElement | null = null;
+  syncPhenomenonUi = () => {
+    const atmosphere = getWorldAtmosphere(prologue.state, prologue.data);
+    phenomenonOverlay.sync(atmosphere);
+    if (devPhenomenonSelect) {
+      devPhenomenonSelect.value = atmosphere.phenomenonId ?? '';
+    }
+  };
   const modalUi = new OstrzeModalUi(prologue.data, prologue.state, prologue.rng);
   modalUi.setCombatChecker(() => engine.combatState.active);
   prologue.attachUi(modalUi);
@@ -530,6 +545,43 @@ async function bootstrapOstrze(): Promise<void> {
       refreshUi();
     }, 'journal');
   });
+
+  if (isDevMode) {
+    const devPhBar = document.createElement('div');
+    devPhBar.className = 'ostrze-dev-phenomenon-bar';
+    const label = document.createElement('span');
+    label.className = 'ostrze-dev-phenomenon-label';
+    label.textContent = 'DEV Zjawisko:';
+    const select = document.createElement('select');
+    select.className = 'ostrze-dev-phenomenon-select';
+    select.setAttribute('data-action', 'dev-phenomenon-select');
+    const noneOpt = document.createElement('option');
+    noneOpt.value = '';
+    noneOpt.textContent = 'Brak (czysta pogoda)';
+    select.appendChild(noneOpt);
+    for (const ph of ORIGIN_DATA.phenomena) {
+      const opt = document.createElement('option');
+      opt.value = ph.id;
+      opt.textContent = ph.name;
+      select.appendChild(opt);
+    }
+    select.addEventListener('change', () => {
+      const val = select.value || null;
+      prologue.state.world.activePhenomenon = val;
+      prologue.state.vars.phenomenon_hours_left = val ? 4 : 0;
+      syncWorldLighting(prologue.state, prologue.data, engine);
+      refreshUi();
+    });
+    devPhBar.appendChild(label);
+    devPhBar.appendChild(select);
+    document.body.appendChild(devPhBar);
+    devPhenomenonSelect = select;
+  }
+
+  if (startPhenomenon && ORIGIN_DATA.phenomena.some((p) => p.id === startPhenomenon)) {
+    prologue.state.world.activePhenomenon = startPhenomenon;
+    prologue.state.vars.phenomenon_hours_left = 4;
+  }
 
   if (isDevMode) {
     engine.loadCustomScene('brzezina_dziedziniec');

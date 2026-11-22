@@ -1643,3 +1643,176 @@ body:has(.combat-mode-active) .ostrze-toast-stack {
     animation: none;
   }
 }
+
+/* ==========================================================================
+   Atmospheric Phenomena Overlay & HUD Badge
+   ========================================================================== */
+
+.ostrze-phenomenon-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 450;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.ostrze-phenomenon-tint {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+
+.ostrze-phenomenon-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  display: block;
+}
+
+.ostrze-phenomenon-layer[data-phenomenon='burza_iskier'] .ostrze-phenomenon-tint {
+  background:
+    radial-gradient(ellipse at center, rgba(56, 189, 248, 0.04) 45%, rgba(14, 116, 144, 0.24) 100%),
+    linear-gradient(180deg, rgba(251, 191, 36, 0.07) 0%, rgba(15, 23, 42, 0.08) 100%);
+}
+
+.ostrze-phenomenon-layer[data-phenomenon='noc_bez_gwiazd'] .ostrze-phenomenon-tint {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(2, 6, 23, 0.14) 28%,
+    rgba(2, 6, 23, 0.62) 100%
+  );
+}
+
+.ostrze-phenomenon-layer[data-phenomenon='mgla_ciszy'] .ostrze-phenomenon-tint {
+  background:
+    radial-gradient(ellipse at center, rgba(203, 213, 225, 0.1) 35%, rgba(148, 163, 184, 0.3) 100%),
+    linear-gradient(180deg, rgba(226, 232, 240, 0.14) 0%, rgba(148, 163, 184, 0.2) 100%);
+}
+
+.ostrze-phenomenon-layer[data-phenomenon='mgla_poranna'] .ostrze-phenomenon-tint {
+  background: linear-gradient(
+    180deg,
+    rgba(241, 245, 249, 0.18) 0%,
+    rgba(226, 232, 240, 0.08) 55%,
+    rgba(203, 213, 225, 0.18) 100%
+  );
+}
+
+.ostrze-phenomenon-layer[data-phenomenon='ulewa'] .ostrze-phenomenon-tint {
+  background: linear-gradient(
+    180deg,
+    rgba(30, 58, 138, 0.18) 0%,
+    rgba(15, 23, 42, 0.16) 100%
+  );
+}
+
+.ostrze-phenomenon-layer[data-phenomenon='grad'] .ostrze-phenomenon-tint {
+  background: linear-gradient(
+    180deg,
+    rgba(71, 85, 105, 0.22) 0%,
+    rgba(30, 41, 59, 0.2) 100%
+  );
+}
+
+.ostrze-phenomenon-layer[data-phenomenon='wichura'] .ostrze-phenomenon-tint {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0) 50%,
+    rgba(68, 64, 60, 0.26) 100%
+  );
+}
+
+.ostrze-phenomenon-layer[data-phenomenon='przymrozek'] .ostrze-phenomenon-tint {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(165, 243, 252, 0) 52%,
+    rgba(103, 232, 249, 0.26) 100%
+  );
+}
+
+.ostrze-phenomenon-layer[data-phenomenon='upal'] .ostrze-phenomenon-tint {
+  background: radial-gradient(
+    ellipse at top,
+    rgba(251, 191, 36, 0.18) 0%,
+    rgba(217, 119, 6, 0.06) 65%,
+    rgba(120, 53, 15, 0.12) 100%
+  );
+}
+
+.ostrze-phenomenon-badge {
+  position: fixed;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 910;
+  max-width: min(440px, calc(100vw - 24px));
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(13, 16, 23, 0.88);
+  border: 1px solid #6b5332;
+  color: #f3e4c3;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.52);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  align-items: center;
+  gap: 6px;
+}
+
+.ostrze-phenomenon-badge[data-kind='magiczne'] {
+  border-color: #38bdf8;
+  color: #e0f2fe;
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.25), 0 6px 18px rgba(0, 0, 0, 0.52);
+}
+
+.ostrze-dev-phenomenon-bar {
+  position: fixed;
+  bottom: 14px;
+  left: 16px;
+  z-index: 960;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(14, 17, 24, 0.92);
+  border: 1px solid #5a472c;
+  color: #e5d8bc;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.78rem;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.55);
+}
+
+.ostrze-dev-phenomenon-label {
+  color: #e5b869;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ostrze-dev-phenomenon-select {
+  background: #141821;
+  color: #f4dfba;
+  border: 1px solid #4c3d28;
+  border-radius: 4px;
+  padding: 3px 7px;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+@media (max-width: 720px) {
+  .ostrze-phenomenon-badge {
+    top: auto;
+    bottom: 62px;
+    font-size: 0.72rem;
+    padding: 4px 10px;
+  }
+}
