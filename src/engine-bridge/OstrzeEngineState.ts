@@ -27,6 +27,7 @@ import {
   isWolfRecipe
 } from '../game/assets/beastSprites';
 import { getPropVisualTransform } from '../game/assets/buildingScaling';
+import { registerOstrzePainterlyProps } from '../game/assets/painterlyProps';
 import { ostrzeAudio } from '../game/audio/ostrzeAudio';
 import { ORIGIN_DATA } from '../game/data/originData';
 import type { OriginGameData, OstrzeGameState } from '../game/data/originTypes';
@@ -92,6 +93,7 @@ export function ensureOstrzeEngineExtensionsRegistered(): void {
     bake: (recipe) => bakeSkrzatCharacterBuffers(recipe)
   });
   registerPropVisualTransform(getPropVisualTransform);
+  registerOstrzePainterlyProps();
 }
 
 export interface CustomSceneConfig {
@@ -120,6 +122,7 @@ export class OstrzeEngineState extends CrpgGameState {
   public onPropInteract?: (propId: string) => boolean;
   public onFallbackPropInteract?: (propId: string) => boolean;
   public onSceneLoaded?: (sceneId: string) => void;
+  public onJuicyImpact?: (isBigImpact: boolean) => void;
   private readonly persistentMarkers = new Map<string, string>();
   private activeOstrzeState: OstrzeGameState | null = null;
   private combatAiSession = createCombatAiSessionState();
@@ -560,13 +563,14 @@ export class OstrzeEngineState extends CrpgGameState {
       );
       const mult = this.pendingPlayerAttackMultiplier;
       const feintBonus = this.pendingPlayerFeintActive ? 15 : 0;
+      const surpriseCritBonus = this.pendingSurpriseAttack ? 15 : 0;
       const ostrzeCrit = this.activeOstrzeState?.character
         ? getStats(this.activeOstrzeState, ORIGIN_DATA).derived.critChance
         : null;
       const nextCrit =
         ostrzeCrit !== null
-          ? Math.max(base.derived.critChancePct, Math.min(65, ostrzeCrit))
-          : base.derived.critChancePct;
+          ? Math.max(base.derived.critChancePct, Math.min(75, ostrzeCrit + surpriseCritBonus))
+          : Math.min(75, base.derived.critChancePct + surpriseCritBonus);
       if (hitPenalty <= 0 && mult === 1 && feintBonus === 0 && nextCrit === base.derived.critChancePct) {
         return base;
       }
@@ -990,13 +994,32 @@ export class OstrzeEngineState extends CrpgGameState {
       );
     }
 
-    this.pendingPlayerAttackMultiplier = mult;
+    const isSurprise = this.pendingSurpriseAttack;
+    if (isSurprise && enemy) {
+      this.addCombatLog(
+        `⚡ ATAK Z ZASKOCZENIA na ${enemy.recipe.name}! (+20% obrażeń, +15% szansy na kryta)`
+      );
+      this.pushFloatingCombatText(
+        enemy.x,
+        enemy.y,
+        enemy.z + 2.35,
+        '⚡ Z ZASKOCZENIA!',
+        0xffd54f
+      );
+    }
+
+    this.pendingPlayerAttackMultiplier = isSurprise ? mult * 1.2 : mult;
     let outcome;
     try {
       outcome = super.performPlayerCombatAttack(targetId, mode, rng);
     } finally {
       this.pendingPlayerAttackMultiplier = 1;
       this.pendingPlayerFeintActive = false;
+      this.pendingSurpriseAttack = false;
+    }
+
+    if (outcome?.hit && (outcome.critical || isSurprise)) {
+      this.onJuicyImpact?.(true);
     }
 
     if (outcome?.hit && enemy && mult !== 1) {

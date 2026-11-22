@@ -2354,3 +2354,50 @@ body:has(.combat-mode-active) .ostrze-toast-stack {
   margin-top: 2px;
   line-height: 1.35;
 }
+
+/* ==========================================================================
+   Fallout-Style Exploration Attack Mode Toggle & Crosshair Cursor
+   ========================================================================== */
+
+.ostrze-attack-fab {
+  position: fixed;
+  right: 60px;
+  bottom: 16px;
+  z-index: 920;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid #8a3f32;
+  background: rgba(24, 15, 16, 0.92);
+  color: #f8d4c8;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ostrze-attack-fab:hover,
+.ostrze-attack-fab.is-active {
+  border-color: #ef4444;
+  background: rgba(127, 29, 29, 0.92);
+  color: #fff;
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.45), 0 6px 18px rgba(0, 0, 0, 0.55);
+}
+
+body.ostrze-attack-cursor #viewport-container canvas {
+  cursor: crosshair !important;
+}
+
+@media (max-width: 720px) {
+  .ostrze-attack-fab {
+    bottom: 62px;
+    right: 54px;
+    height: 34px;
+    padding: 0 10px;
+    font-size: 0.72rem;
+  }
+}

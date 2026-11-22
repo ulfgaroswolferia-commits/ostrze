@@ -80,8 +80,12 @@ async function bootstrapOstrze(): Promise<void> {
   const sceneView = new IsoSceneView(engine, refreshUi);
   sceneView.organicTerrainBlending = true;
   sceneView.showGridInExploration = isDevMode;
-  sceneView.zoom = 0.78;
-  sceneView.targetZoom = 0.78;
+  sceneView.zoom = 0.88;
+  sceneView.targetZoom = 0.88;
+  engine.onJuicyImpact = (isBigImpact) => {
+    sceneView.hitStopTimer = isBigImpact ? 0.045 : 0.025;
+    sceneView.triggerScreenShake(isBigImpact ? 180 : 110, isBigImpact ? 4.4 : 2.6);
+  };
   if (isDevMode) {
     engine.fogOfWarEnabled = false;
     engine.ambientLightIntensity = 0.85;
@@ -102,6 +106,7 @@ async function bootstrapOstrze(): Promise<void> {
     '.ostrze-phenomenon-badge',
     '.ostrze-dev-phenomenon-bar',
     '.ostrze-help-fab',
+    '.ostrze-attack-fab',
     '.ostrze-overlay',
     '.ostrze-toast',
     '.top-bar',
@@ -561,9 +566,30 @@ async function bootstrapOstrze(): Promise<void> {
   });
   document.body.appendChild(helpFab);
 
+  const attackFab = document.createElement('button');
+  attackFab.type = 'button';
+  attackFab.className = 'ostrze-attack-fab';
+  attackFab.setAttribute('data-action', 'toggle-attack-mode');
+  attackFab.setAttribute('aria-label', 'Tryb ataku z eksploracji [A]');
+  attackFab.title = 'Inicjuj walkę z zaskoczenia [A] lub kliknij PPM na wroga';
+  attackFab.textContent = '⚔️ Atakuj [A]';
+  attackFab.addEventListener('click', () => {
+    if (engine.combatState.active || modalUi.hasOpenModal()) return;
+    sceneView.explorationAttackMode = !sceneView.explorationAttackMode;
+    refreshUi();
+  });
+  document.body.appendChild(attackFab);
+
   syncHelpFabAndTips = () => {
     const hideFab = engine.combatState.active || modalUi.hasOpenModal();
     helpFab.style.display = hideFab ? 'none' : 'inline-flex';
+    const hasLivingHostile = engine.npcs.some((n) => n.combat?.isHostile && n.combat.isAlive);
+    if (hideFab || !hasLivingHostile) {
+      sceneView.explorationAttackMode = false;
+    }
+    attackFab.style.display = !hideFab && hasLivingHostile ? 'inline-flex' : 'none';
+    attackFab.classList.toggle('is-active', sceneView.explorationAttackMode);
+    document.body.classList.toggle('ostrze-attack-cursor', sceneView.explorationAttackMode);
 
     if (
       engine.combatState.active &&
@@ -613,6 +639,16 @@ async function bootstrapOstrze(): Promise<void> {
       } else if (!modalUi.hasOpenModal()) {
         modalUi.showHelpModal('controls', () => refreshUi());
       }
+      refreshUi();
+      return;
+    }
+
+    if (key === 'a') {
+      if (engine.combatState.active || modalUi.hasOpenModal()) return;
+      const hasLivingHostile = engine.npcs.some((n) => n.combat?.isHostile && n.combat.isAlive);
+      if (!hasLivingHostile) return;
+      e.preventDefault();
+      sceneView.explorationAttackMode = !sceneView.explorationAttackMode;
       refreshUi();
       return;
     }

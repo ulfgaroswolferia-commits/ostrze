@@ -16,6 +16,7 @@ const CONTROL_GROUPS: ReadonlyArray<{
     title: 'Eksploracja i kamera',
     items: [
       { keys: 'LPM (klik)', desc: 'Ruch postaci, rozmowa z NPC, użycie ogniska, drogowskazu lub skrzyni' },
+      { keys: 'A / PPM na wrogu', desc: 'Tryb celowania — cios otwierający z zaskoczenia (+20% obr., +15% kryt) i start walki turowej' },
       { keys: 'WASD / Strzałki', desc: 'Przesuwanie kamery po mapie' },
       { keys: 'Kółko myszy', desc: 'Przybliżanie i oddalanie widoku 2.5D' },
       { keys: 'Krawędź ekranu', desc: 'Płynne przesuwanie kamery (zatrzymuje się nad panelami UI)' }
