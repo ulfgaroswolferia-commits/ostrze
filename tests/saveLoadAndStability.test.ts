@@ -185,6 +185,7 @@ describe('Save/Load E2E, Portable Keys & Restore Stability', () => {
     const expectedFlags = JSON.stringify(sourceState.flags);
     const expectedQuests = JSON.stringify(sourceState.quests);
 
+    expect(OSTRZE_LOCATIONS.length).toBe(12);
     for (const location of OSTRZE_LOCATIONS) {
       sourceState.world.location = location.id;
       const payload = importSaveKey(
@@ -213,6 +214,12 @@ describe('Save/Load E2E, Portable Keys & Restore Stability', () => {
       expect(JSON.stringify(prologue.state.quests)).toBe(expectedQuests);
       expect(prologue.state.time.minutes).toBe(17 * 60 + 25);
     }
+
+    // Also verify night-time Stary Młyn restore preserves nocturnal scene state
+    prologue.state.time.minutes = 22 * 60 + 15;
+    chapter1.restoreFromSave('stary_mlyn');
+    expect(engine.activeCustomSceneId).toBe('stary_mlyn');
+    expect(engine.ambientLightIntensity).toBeLessThan(0.6);
   });
 
   it('caches hasOstrzeSave() across save/clear cycles without re-parsing JSON on every HUD render', () => {
