@@ -201,16 +201,71 @@ export function renderCharacterSheetView(params: {
   const activeQuests = questEntries.filter(([, st]) => st === 'active');
   const doneQuests = questEntries.filter(([, st]) => st === 'completed');
 
+  const locationLabelMap: Record<string, string> = {
+    wilczy_brod: 'Wilczy Bród',
+    wilcza_nora: 'Wilcza Nora',
+    wilczy_las: 'Las Rubieży',
+    stary_mlyn: 'Stary Młyn',
+    trakt_kupiecki: 'Trakt Kupiecki',
+    lesniczowka: 'Leśniczówka',
+    ruiny_straznicy: 'Ruiny Strażnicy',
+    kamienna_przelecz: 'Kamienna Przełęcz',
+    gluszec: 'Głuszec',
+    bor_klusownikow: 'Bór Kłusowników',
+    stary_trakt: 'Stary Trakt',
+    kapliczka_rozstaje: 'Kapliczka na Rozstajach',
+    kamieniolom: 'Kamieniołom',
+    bagna_szarej_wody: 'Bagna Szarej Wody',
+    wzgorze_wartownicze: 'Wzgórze Wartownicze',
+    spalona_osada: 'Spalona Osada',
+    stara_kopalnia: 'Stara Kopalnia'
+  };
+
+  const formatAtHint = (at?: string): string => {
+    if (!at) return '';
+    const [locId, spotId] = at.split('.');
+    const locName = locationLabelMap[locId] ?? locId.replace(/_/g, ' ');
+    if (!spotId) return locName;
+    return `${locName} · ${spotId.replace(/_/g, ' ')}`;
+  };
+
+  const isObjectiveDone = (done?: { flag?: string; item?: string }): boolean => {
+    if (!done) return false;
+    if (done.flag && state.flags[done.flag]) return true;
+    if (
+      done.item &&
+      (state.inventory.items.some((i) => i.id === done.item && i.qty > 0) ||
+        Object.values(state.inventory.equipped).includes(done.item))
+    ) {
+      return true;
+    }
+    return false;
+  };
+
   const renderQuestList = (list: Array<[string, string]>, emptyMsg: string): string => {
     if (list.length === 0) return `<div class="ostrze-subtitle" style="margin-bottom:0">${emptyMsg}</div>`;
     return list
       .map(([qId, status]) => {
         const def = data.quests.find((q) => q.id === qId);
+        const objectivesHtml =
+          status === 'active' && def?.objectives && def.objectives.length > 0
+            ? `<ul class="ostrze-quest-objectives">${def.objectives
+                .map((obj) => {
+                  const done = isObjectiveDone(obj.done);
+                  const hint = formatAtHint(obj.at);
+                  return `<li class="ostrze-quest-obj ${done ? 'is-done' : ''}">
+                    <span class="ostrze-quest-obj-mark">${done ? '✓' : '○'}</span>
+                    <span>${escapeHtml(obj.text)}${hint ? ` <em class="ostrze-quest-obj-loc">(${escapeHtml(hint)})</em>` : ''}</span>
+                  </li>`;
+                })
+                .join('')}</ul>`
+            : '';
         return `
-          <div class="ostrze-row">
-            <div>
+          <div class="ostrze-row ostrze-quest-row">
+            <div style="flex:1">
               <strong>${escapeHtml(def?.name ?? qId)}</strong>
               ${def?.description ? `<div class="ostrze-shop-desc">${escapeHtml(def.description)}</div>` : ''}
+              ${objectivesHtml}
             </div>
             <span class="ostrze-shop-tag">${status === 'completed' ? '✓ Ukończone' : 'Aktywne'}</span>
           </div>

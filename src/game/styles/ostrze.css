@@ -19,6 +19,111 @@ body,
   }
 }
 
+.ostrze-quest-row {
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.ostrze-quest-objectives {
+  list-style: none;
+  margin: 6px 0 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.84rem;
+  color: #d6cfc2;
+}
+
+.ostrze-quest-obj {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.ostrze-quest-obj.is-done {
+  color: #8fd9a8;
+  text-decoration: line-through;
+  opacity: 0.82;
+}
+
+.ostrze-quest-obj-mark {
+  font-weight: 700;
+  color: #e5b869;
+}
+
+.ostrze-quest-obj.is-done .ostrze-quest-obj-mark {
+  color: #6ee7b7;
+}
+
+.ostrze-quest-obj-loc {
+  font-style: normal;
+  font-size: 0.78rem;
+  color: #9e9689;
+}
+
+.ostrze-combat-archetype {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: rgba(229, 184, 105, 0.14);
+  border: 1px solid rgba(229, 184, 105, 0.35);
+  color: #f3d28e;
+  vertical-align: middle;
+}
+
+.ostrze-combat-telegraph {
+  margin-bottom: 8px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  background: rgba(255, 193, 7, 0.16);
+  border: 1px solid rgba(255, 202, 40, 0.75);
+  color: #ffe082;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.ostrze-combat-attack-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(196, 158, 84, 0.25);
+  font-size: 0.78rem;
+  color: #dfd8ca;
+}
+
+.ostrze-combat-mult {
+  font-weight: 700;
+  font-size: 0.74rem;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.ostrze-combat-mult.is-resist {
+  color: #90caf9;
+  background: rgba(144, 202, 249, 0.16);
+}
+
+.ostrze-combat-mult.is-weak {
+  color: #ffab40;
+  background: rgba(255, 171, 64, 0.18);
+}
+
+.ostrze-combat-mult.is-star {
+  color: #80deea;
+  background: rgba(128, 222, 234, 0.18);
+}
+
 .ostrze-overlay {
   position: fixed;
   inset: 0;

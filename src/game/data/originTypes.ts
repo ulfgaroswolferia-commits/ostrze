@@ -174,12 +174,23 @@ export interface DialogueActionSpec {
 
 export type QuestStatus = 'none' | 'active' | 'completed' | 'failed';
 
+export interface QuestObjectiveDef {
+  id: string;
+  text: string;
+  at?: string;
+  done?: {
+    flag?: string;
+    item?: string;
+  };
+}
+
 export interface QuestDef {
   id: string;
   kind?: string;
   name: string;
   hub?: string;
   description: string;
+  objectives?: QuestObjectiveDef[];
   location?: string;
   route?: string;
   deadlineDays?: number | null;

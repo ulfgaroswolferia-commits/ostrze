@@ -515,6 +515,22 @@ async function bootstrapOstrze(): Promise<void> {
     });
   };
 
+  window.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() !== 'j' || e.ctrlKey || e.altKey || e.metaKey) return;
+    const tag = (e.target as HTMLElement | null)?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (!prologue.state.character || modalUi.hasOpenModal()) return;
+    e.preventDefault();
+    modalUi.showCharacterSheet(() => {
+      engine.syncFromOstrzeState(prologue.state, prologue.data);
+      if (activeChapter === 'prologue') prologue.refreshObjectiveTracker();
+      else if (activeChapter === 'chapter2') chapter2?.refreshHubPanel();
+      else chapter1.refreshHubPanel();
+      performSave(true);
+      refreshUi();
+    }, 'journal');
+  });
+
   if (isDevMode) {
     engine.loadCustomScene('brzezina_dziedziniec');
     engine.addLog('Tryb deweloperski (?dev=1): załadowano scenę Brzezina — Dziedziniec.', 'info');

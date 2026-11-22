@@ -1,12 +1,17 @@
+import { computeAttackPreview } from '@ulf/rpg/combatSystem';
 import type { OstrzeEngineState } from '../../engine-bridge/OstrzeEngineState';
 import { getPixArtMeta } from '../assets/pixArt';
 import { ostrzeAudio } from '../audio/ostrzeAudio';
 import type { OriginGameData } from '../data/originTypes';
+import { resolveEnemyArchetype } from '../rules/combatAi';
 import {
   classifyCombatLogEvent,
   formatEnemyResistances,
+  getDamageTypeLabel,
+  getEnemyDamageMultiplier,
   resolveEnemyOriginId,
-  resolveEnemyPixArtId
+  resolveEnemyPixArtId,
+  resolvePlayerWeaponDamageType
 } from '../rules/combatEnemyMeta';
 import { escapeHtml } from './escapeHtml';
 
@@ -102,13 +107,22 @@ export class CombatTargetOverlay {
     }
 
     if (!this.selectedEnemyId || !livingEnemies.some((e) => e.id === this.selectedEnemyId)) {
-      const activeTurnEnemy = livingEnemies.find((e) => e.id === this.engine.combatState.activeTurnActorId);
-      this.selectedEnemyId = (activeTurnEnemy ?? livingEnemies[0]).id;
+      const selectedTarget = livingEnemies.find(
+        (e) => e.id === this.engine.combatState.selectedTargetId
+      );
+      const activeTurnEnemy = livingEnemies.find(
+        (e) => e.id === this.engine.combatState.activeTurnActorId
+      );
+      this.selectedEnemyId = (selectedTarget ?? activeTurnEnemy ?? livingEnemies[0]).id;
     }
 
     const target = livingEnemies.find((e) => e.id === this.selectedEnemyId) ?? livingEnemies[0];
     const c = target.combat!;
     const isCritFlash = Date.now() < this.critFlashUntil;
+    const telegraph = this.engine.getTelegraphedIntent(target.id);
+    const ostrzeState = this.engine.getActiveOstrzeState();
+    const playerWeaponType = resolvePlayerWeaponDamageType(ostrzeState, this.data);
+    const selectedMode = this.engine.combatState.selectedAttackMode;
     const stateKey = [
       target.id,
       target.recipe.name,
@@ -120,6 +134,13 @@ export class CombatTargetOverlay {
       c.crippledLegsTurns,
       c.defending ? 1 : 0,
       isCritFlash ? 1 : 0,
+      telegraph ?? '',
+      playerWeaponType,
+      selectedMode,
+      this.engine.player.tileX,
+      this.engine.player.tileY,
+      target.tileX,
+      target.tileY,
       livingEnemies.map((e) => `${e.id}:${e.recipe.name}`).join(',')
     ].join('|');
 
@@ -183,14 +204,49 @@ export class CombatTargetOverlay {
       : '';
 
     const defenseVal = originDef?.defense ?? 12;
+    const archetype = resolveEnemyArchetype(originId, originDef, c.difficulty);
+    const archetypeLabels: Record<typeof archetype, string> = {
+      boss: '👑 Boss',
+      ranged_kiter: '🏹 Łucznik',
+      predator: '🐺 Drapieżnik',
+      melee_cautious: '⚔️ Wojownik'
+    };
+
+    const mult = getEnemyDamageMultiplier(originId, playerWeaponType, this.data);
+    const dmgTypeLabel = getDamageTypeLabel(playerWeaponType);
+    const playerSnap = this.engine.getActorCombatant(this.engine.player);
+    const enemySnap = this.engine.getActorCombatant(target);
+    const dist = Math.hypot(target.tileX - this.engine.player.tileX, target.tileY - this.engine.player.tileY);
+    const preview = computeAttackPreview(playerSnap, enemySnap, dist, selectedMode);
+    const estMin = Math.max(1, Math.round(preview.estimatedMinDamage * mult));
+    const estMax = Math.max(estMin, Math.round(preview.estimatedMaxDamage * mult));
+    const multBadge =
+      mult < 1
+        ? `<span class="ostrze-combat-mult is-resist">×${mult} ODPORNOŚĆ</span>`
+        : mult > 1
+          ? `<span class="ostrze-combat-mult is-weak">×${mult} PODATNOŚĆ</span>`
+          : playerWeaponType === 'gwiezdne'
+            ? `<span class="ostrze-combat-mult is-star">✨ Gwiezdne (×1.0)</span>`
+            : `<span class="ostrze-combat-mult">×1.0</span>`;
+
+    const telegraphHtml =
+      telegraph === 'heavy_cleave'
+        ? `<div class="ostrze-combat-telegraph">⚠️ BIERZE ZAMACH — użyj Gardy lub ogłusz!</div>`
+        : telegraph === 'terror_howl'
+          ? `<div class="ostrze-combat-telegraph">⚠️ ZBIERA SIŁY DO WYCIA — ogłusz go!</div>`
+          : '';
 
     this.root.innerHTML = `
       <aside class="ostrze-combat-target-card ${isCritFlash ? 'is-crit-flash' : ''}">
         ${tabsHtml}
+        ${telegraphHtml}
         <div class="ostrze-combat-target-head">
           ${portraitHtml}
           <div class="ostrze-combat-target-info">
-            <div class="ostrze-combat-target-name">${this.escape(target.recipe.name)}</div>
+            <div class="ostrze-combat-target-name">
+              ${this.escape(target.recipe.name)}
+              <span class="ostrze-combat-archetype">${archetypeLabels[archetype]}</span>
+            </div>
             <div class="ostrze-combat-target-stats">
               <span>AP: <strong>${c.ap}/${c.maxAp}</strong></span>
               <span>Obrona: <strong>${defenseVal}</strong></span>
@@ -200,6 +256,10 @@ export class CombatTargetOverlay {
               <span class="ostrze-hp-label">${c.hp} / ${c.maxHp} HP</span>
             </div>
           </div>
+        </div>
+        <div class="ostrze-combat-attack-preview">
+          <span>⚔️ Twój atak (${this.escape(dmgTypeLabel)}): <strong>${estMin}–${estMax} obr.</strong> · ${preview.hitChancePct}%</span>
+          ${multBadge}
         </div>
         ${statusPills.length > 0 ? `<div class="ostrze-combat-pills">${statusPills.join('')}</div>` : ''}
       </aside>

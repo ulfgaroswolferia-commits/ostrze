@@ -1,6 +1,4 @@
 import { expect, test } from '@playwright/test';
-import fs from 'node:fs';
-import path from 'node:path';
 
 const SCREENSHOT_LOCATIONS = new Set([
   'brzezina_dziedziniec',
@@ -40,11 +38,6 @@ test('DEV selector visits all 21 Prologue, Act I, and Act II maps with zero erro
     options.map((option) => (option as HTMLOptionElement).value)
   );
 
-  const extraDir = process.env.OSTRZE_SCREENSHOT_DIR;
-  if (extraDir) {
-    fs.mkdirSync(extraDir, { recursive: true });
-  }
-
   let previousLocationId: string | null = null;
   for (const locationId of locations) {
     if (!(await selector.isVisible())) {
@@ -63,10 +56,7 @@ test('DEV selector visits all 21 Prologue, Act I, and Act II maps with zero erro
 
     if (SCREENSHOT_LOCATIONS.has(locationId)) {
       await page.waitForTimeout(350);
-      const outPath = extraDir
-        ? path.join(extraDir, `${locationId}.png`)
-        : testInfo.outputPath(`${locationId}.png`);
-      await page.screenshot({ path: outPath });
+      await page.screenshot({ path: testInfo.outputPath(`${locationId}.png`) });
     }
     previousLocationId = locationId;
   }

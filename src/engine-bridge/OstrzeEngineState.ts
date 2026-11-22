@@ -120,6 +120,14 @@ export class OstrzeEngineState extends CrpgGameState {
     markPlayerStatusCured(this.combatStatusSession, statusId, this.combatState.round);
   }
 
+  public getActiveOstrzeState(): OstrzeGameState | null {
+    return this.activeOstrzeState;
+  }
+
+  public getTelegraphedIntent(enemyId: string) {
+    return this.combatAiSession.telegraphedIntentByEnemy[enemyId] ?? null;
+  }
+
   public resetCombatTacticalSessions(): void {
     this.combatAiSession = createCombatAiSessionState();
     this.combatStatusSession = createCombatStatusSessionState();
