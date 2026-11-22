@@ -1,0 +1,171 @@
+import { escapeHtml } from '../escapeHtml';
+
+export type HelpModalTab = 'controls' | 'guide';
+
+export interface HelpModalViewParams {
+  root: HTMLElement;
+  initialTab?: HelpModalTab;
+  onClose: () => void;
+}
+
+const CONTROL_GROUPS: ReadonlyArray<{
+  title: string;
+  items: ReadonlyArray<{ keys: string; desc: string }>;
+}> = [
+  {
+    title: 'Eksploracja i kamera',
+    items: [
+      { keys: 'LPM (klik)', desc: 'Ruch postaci, rozmowa z NPC, użycie ogniska, drogowskazu lub skrzyni' },
+      { keys: 'WASD / Strzałki', desc: 'Przesuwanie kamery po mapie' },
+      { keys: 'Kółko myszy', desc: 'Przybliżanie i oddalanie widoku 2.5D' },
+      { keys: 'Krawędź ekranu', desc: 'Płynne przesuwanie kamery (zatrzymuje się nad panelami UI)' }
+    ]
+  },
+  {
+    title: 'Okna i nawigacja',
+    items: [
+      { keys: 'M', desc: 'Interaktywna mapa świata i podróż (w Prologu tryb podglądu)' },
+      { keys: 'J', desc: 'Dziennik aktywnych zadań i lista kroków do wykonania' },
+      { keys: 'F1 / ?', desc: 'Otwórz lub zamknij to okno Pomocy i skrótów' },
+      { keys: 'ESC', desc: 'Zamknij aktywne okno lub otwórz Menu pauzy' }
+    ]
+  },
+  {
+    title: 'Walka turowa 2.5D',
+    items: [
+      { keys: 'Klik na wroga', desc: 'Wybór celu (aktualizuje kartę celu i podgląd obrażeń) lub atak' },
+      { keys: '1 / 2', desc: 'Atak podstawowy lub precyzyjny / silny cios' },
+      { keys: '3', desc: 'Garda — zwiększa obronę i amortyzuje telegrafowane ataki bossów' },
+      { keys: '4 – 7', desc: 'Pas Szybkiego Użycia: opatrunki, odtrutki, olej na ostrze i bomby' }
+    ]
+  }
+];
+
+const GUIDE_SECTIONS: ReadonlyArray<{ icon: string; title: string; body: string }> = [
+  {
+    icon: '🔥',
+    title: 'Odporności i podatności wrogów',
+    body: 'Karta celu w prawym górnym rogu pokazuje odporności i podatności wybranego wroga. Upiory odpychają zwykłą stal (-90% cięte/kłute), ale są silnie podatne na ogień (Flasza oleju) i Gwiezdne Ostrze wykute przez kowala Bogdana.'
+  },
+  {
+    icon: '🛡️',
+    title: 'Telegrafy bossów i Garda [3]',
+    body: 'Gdy boss szykuje potężny cios, nad kartą celu pojawia się ostrzeżenie. Włączenie Gardy [3] wyraźnie zmniejsza otrzymane obrażenia. Perk Mistrz finty pozwala raz na rundę przełamać Gardę wroga i daje +15% trafienia.'
+  },
+  {
+    icon: '⛺',
+    title: 'Ognisko, alchemia i zbieranie ziół',
+    body: 'Kliknij dowolne ognisko, aby uwarzyć napary, wytopić łój do ostrza (+2 obr.), przygotować Flaszę oleju, Świecę dymną, ugotować posiłek lub przespać noc (usuwa Zmęczenie i leczy). W lasach zbieraj zioła i jagody z krzewów.'
+  },
+  {
+    icon: '🌩️',
+    title: 'Zjawiska atmosferyczne i pora dnia',
+    body: 'Burza Iskier, Mgła Ciszy, Ulewa czy Noc bez Gwiazd wpływają na widoczność, walkę i czas podróży. Mgła Ciszy blokuje broń prochową, ale wspiera skradanie (+20%). Aktywne zjawisko widać na górnej odznace HUD i na Mapie [M].'
+  },
+  {
+    icon: '🩹',
+    title: 'Statusy bojowe i perki',
+    body: 'Krwawienie i Zatrucie zadają obrażenia na początku tury — wyleczysz je z Pasa [4]–[7] (opatrunek, odtrutka). Cyrulik wzmacnia leczenie o +25%, Sokole oko dodaje +2 obr. do rzutów, a Nieugięty chroni przed strachem i ogłuszeniem.'
+  }
+];
+
+export function renderHelpModalView(params: HelpModalViewParams): void {
+  const { root, onClose } = params;
+  let activeTab: HelpModalTab = params.initialTab ?? 'controls';
+
+  const draw = (): void => {
+    const bodyHtml =
+      activeTab === 'controls'
+        ? `
+          <div class="ostrze-help-groups">
+            ${CONTROL_GROUPS.map(
+              (group) => `
+                <section class="ostrze-panel ostrze-help-group">
+                  <h3>${escapeHtml(group.title)}</h3>
+                  <div class="ostrze-help-list">
+                    ${group.items
+                      .map(
+                        (item) => `
+                          <div class="ostrze-help-row">
+                            <kbd class="ostrze-kbd">${escapeHtml(item.keys)}</kbd>
+                            <span>${escapeHtml(item.desc)}</span>
+                          </div>
+                        `
+                      )
+                      .join('')}
+                  </div>
+                </section>
+              `
+            ).join('')}
+          </div>
+        `
+        : `
+          <div class="ostrze-help-guide">
+            ${GUIDE_SECTIONS.map(
+              (sec) => `
+                <article class="ostrze-panel ostrze-help-guide-card">
+                  <h3>${sec.icon} ${escapeHtml(sec.title)}</h3>
+                  <p>${escapeHtml(sec.body)}</p>
+                </article>
+              `
+            ).join('')}
+          </div>
+        `;
+
+    root.innerHTML = `
+      <div class="ostrze-overlay">
+        <div class="ostrze-card ostrze-help-card" data-help-modal="true">
+          <div class="ostrze-worldmap-header">
+            <div>
+              <h2 class="ostrze-title" style="margin-bottom:4px;">❓ Pomoc i sterowanie — Ostrze 2.5D</h2>
+              <div class="ostrze-subtitle" style="margin-bottom:0;">
+                Skróty klawiszowe i najważniejsze zasady przetrwania na Pogórzu oraz w Głuszu.
+              </div>
+            </div>
+            <div class="ostrze-worldmap-tabs" role="tablist">
+              <button type="button"
+                class="ostrze-cs-tab ${activeTab === 'controls' ? 'is-active' : ''}"
+                data-help-tab="controls"
+                role="tab"
+                aria-selected="${activeTab === 'controls' ? 'true' : 'false'}">
+                ⌨️ Sterowanie i skróty
+              </button>
+              <button type="button"
+                class="ostrze-cs-tab ${activeTab === 'guide' ? 'is-active' : ''}"
+                data-help-tab="guide"
+                role="tab"
+                aria-selected="${activeTab === 'guide' ? 'true' : 'false'}">
+                📖 Poradnik Ostrza
+              </button>
+            </div>
+          </div>
+
+          <div class="ostrze-help-body">
+            ${bodyHtml}
+          </div>
+
+          <div class="ostrze-worldmap-footer">
+            <span class="ostrze-worldmap-region-caption">Wskazówka: naciśnij F1 lub ? w dowolnym momencie poza polem tekstowym.</span>
+            <button type="button" class="ostrze-hub-btn" id="ostrze-help-close">Zamknij [ESC / F1]</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    root.querySelectorAll<HTMLButtonElement>('[data-help-tab]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const next = btn.dataset.helpTab as HelpModalTab | undefined;
+        if (next && next !== activeTab) {
+          activeTab = next;
+          draw();
+        }
+      });
+    });
+
+    root.querySelector<HTMLButtonElement>('#ostrze-help-close')?.addEventListener('click', () => {
+      onClose();
+    });
+  };
+
+  draw();
+}

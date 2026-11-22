@@ -5,6 +5,7 @@ export interface PauseMenuOptions {
   onSave: () => void;
   onLoad: () => void;
   onOpenKey: () => void;
+  onOpenHelp?: () => void;
   onToggleMute: () => boolean;
   onNewGame: () => void;
   onClosed?: () => void;
@@ -29,6 +30,7 @@ export function renderPauseMenuView(params: {
           <button type="button" class="ostrze-hub-btn" id="ostrze-pm-save">💾 Zapisz grę [Ctrl+S]</button>
           ${pm.hasSave ? `<button type="button" class="ostrze-hub-btn" id="ostrze-pm-load">📂 Wczytaj zapis</button>` : ''}
           <button type="button" class="ostrze-hub-btn" id="ostrze-pm-key">🔑 Klucz rozgrywki</button>
+          ${pm.onOpenHelp ? `<button type="button" class="ostrze-hub-btn" id="ostrze-pm-help">❓ Pomoc i sterowanie [F1]</button>` : ''}
           <button type="button" class="ostrze-hub-btn" id="ostrze-pm-mute">${pm.isMuted ? '🔇 Dźwięk: Wyciszony' : '🔊 Dźwięk: Włączony'}</button>
           <button type="button" class="ostrze-hub-btn" id="ostrze-pm-new" style="border-color:rgba(239,68,68,0.45);color:#fca5a5;">🔄 Nowa gra</button>
         </div>
@@ -48,6 +50,10 @@ export function renderPauseMenuView(params: {
   root.querySelector('#ostrze-pm-key')?.addEventListener('click', () => {
     onDismissForAction();
     pm.onOpenKey();
+  });
+  root.querySelector('#ostrze-pm-help')?.addEventListener('click', () => {
+    onDismissForAction();
+    pm.onOpenHelp?.();
   });
   root.querySelector('#ostrze-pm-mute')?.addEventListener('click', () => {
     pm.isMuted = pm.onToggleMute();

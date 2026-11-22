@@ -2173,3 +2173,109 @@ body:has(.combat-mode-active) .ostrze-toast-stack {
     animation: none;
   }
 }
+
+/* ==========================================================================
+   Help / Controls Modal & Floating '?' Button
+   ========================================================================== */
+
+.ostrze-help-fab {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 920;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid #7a6037;
+  background: rgba(16, 19, 27, 0.92);
+  color: #f3dca8;
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  font-weight: 700;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+  transition: border-color 0.15s ease, transform 0.15s ease, background 0.15s ease;
+}
+
+.ostrze-help-fab:hover {
+  border-color: #f5c66c;
+  background: #272014;
+  transform: translateY(-1px);
+}
+
+.ostrze-help-card {
+  width: min(820px, calc(100vw - 28px));
+  max-width: 820px;
+  max-height: calc(100vh - 28px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ostrze-help-body {
+  overflow-y: auto;
+  max-height: 60vh;
+  padding-right: 4px;
+}
+
+.ostrze-help-groups {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.ostrze-help-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ostrze-help-row {
+  display: grid;
+  grid-template-columns: 138px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  font-size: 0.86rem;
+  color: #e4dccb;
+}
+
+.ostrze-kbd {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #12151d;
+  border: 1px solid #6b5332;
+  color: #f4dfba;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.ostrze-help-guide {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.ostrze-help-guide-card p {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.48;
+  color: #d6cebe;
+}
+
+@media (max-width: 720px) {
+  .ostrze-help-fab {
+    bottom: 62px;
+    right: 12px;
+    width: 34px;
+    height: 34px;
+  }
+  .ostrze-help-row {
+    grid-template-columns: 112px minmax(0, 1fr);
+    font-size: 0.8rem;
+  }
+}

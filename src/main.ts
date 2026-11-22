@@ -62,6 +62,7 @@ async function bootstrapOstrze(): Promise<void> {
   let hud: HudOverlay | null = null;
   let inspector: { render(): void } | null = null;
   let syncPhenomenonUi: (() => void) | null = null;
+  let syncHelpFabAndTips: (() => void) | null = null;
   const chronicleUx = new ChronicleUxController(hudRoot, engine);
   const combatTargetOverlay = new CombatTargetOverlay(engine, ORIGIN_DATA);
   const phenomenonOverlay = new PhenomenonOverlay();
@@ -72,6 +73,7 @@ async function bootstrapOstrze(): Promise<void> {
     chronicleUx.sync();
     combatTargetOverlay.sync();
     syncPhenomenonUi?.();
+    syncHelpFabAndTips?.();
   };
 
   const sceneView = new IsoSceneView(engine, refreshUi);
@@ -98,6 +100,7 @@ async function bootstrapOstrze(): Promise<void> {
     '.ostrze-combat-target-card',
     '.ostrze-phenomenon-badge',
     '.ostrze-dev-phenomenon-bar',
+    '.ostrze-help-fab',
     '.ostrze-overlay',
     '.ostrze-toast',
     '.top-bar',
@@ -468,6 +471,7 @@ async function bootstrapOstrze(): Promise<void> {
       onSave: () => performSave(false),
       onLoad: performLoad,
       onOpenKey: () => openSaveKeyModal(),
+      onOpenHelp: () => modalUi.showHelpModal('controls', () => refreshUi()),
       onToggleMute: toggleUnifiedAudio,
       onNewGame: startNewGame,
       onClosed: () => refreshUi()
@@ -539,11 +543,70 @@ async function bootstrapOstrze(): Promise<void> {
     });
   };
 
+  const helpFab = document.createElement('button');
+  helpFab.type = 'button';
+  helpFab.className = 'ostrze-help-fab';
+  helpFab.setAttribute('data-action', 'open-help-modal');
+  helpFab.setAttribute('aria-label', 'Pomoc i sterowanie [F1]');
+  helpFab.title = 'Pomoc i sterowanie [F1 / ?]';
+  helpFab.textContent = '?';
+  helpFab.addEventListener('click', () => {
+    if (modalUi.isHelpModalOpen()) {
+      modalUi.closeHelpModal();
+    } else if (!modalUi.hasOpenModal()) {
+      modalUi.showHelpModal('controls', () => refreshUi());
+    }
+    refreshUi();
+  });
+  document.body.appendChild(helpFab);
+
+  syncHelpFabAndTips = () => {
+    const hideFab = engine.combatState.active || modalUi.hasOpenModal();
+    helpFab.style.display = hideFab ? 'none' : 'inline-flex';
+
+    if (
+      engine.combatState.active &&
+      prologue.state.character &&
+      !prologue.state.flags.tip_first_combat_shown &&
+      !isDevMode
+    ) {
+      prologue.state.flags.tip_first_combat_shown = true;
+      modalUi.showToast(
+        'Wskazówka: Garda [3] chroni przed ciosami bossów, Pas [4]–[7] leczy i rzuca bomby. Pomoc: [F1].',
+        'gold'
+      );
+    }
+    if (
+      activeChapter === 'chapter1' &&
+      engine.activeCustomSceneId === 'wilczy_brod' &&
+      !modalUi.hasOpenModal() &&
+      !prologue.state.flags.tip_act1_map_shown &&
+      !isDevMode
+    ) {
+      prologue.state.flags.tip_act1_map_shown = true;
+      modalUi.showToast(
+        'Wskazówka: naciśnij [M] dla mapy świata, [J] dla Dziennika lub [F1] dla Pomocy.',
+        'info'
+      );
+    }
+  };
+
   window.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.altKey || e.metaKey) return;
     const tag = (e.target as HTMLElement | null)?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     const key = e.key.toLowerCase();
+
+    if (e.key === 'F1' || e.key === '?') {
+      e.preventDefault();
+      if (modalUi.isHelpModalOpen()) {
+        modalUi.closeHelpModal();
+      } else if (!modalUi.hasOpenModal()) {
+        modalUi.showHelpModal('controls', () => refreshUi());
+      }
+      refreshUi();
+      return;
+    }
 
     if (key === 'j') {
       if (!prologue.state.character || modalUi.hasOpenModal()) return;

@@ -32,6 +32,10 @@ import {
 } from './views/CharacterSheetView';
 import { renderDialogueView } from './views/DialogueView';
 import {
+  type HelpModalTab,
+  renderHelpModalView
+} from './views/HelpModalView';
+import {
   type PauseMenuOptions,
   renderPauseMenuView
 } from './views/PauseMenuView';
@@ -117,6 +121,7 @@ export class OstrzeModalUi {
   private isCombatActiveFn: (() => boolean) | null = null;
   private activeCampfire: CampfireModalOptions | null = null;
   private activePauseMenu: PauseMenuOptions | null = null;
+  private activeHelp: { initialTab?: HelpModalTab; onClosed?: () => void } | null = null;
   private lastEscapeClosedAt = 0;
   public onOpenCampfire?: () => void;
   private readonly shopBoughtCounts = new Map<string, number>();
@@ -175,6 +180,14 @@ export class OstrzeModalUi {
         }
 
         if (e.key !== 'Escape') return;
+        if (this.activeHelp) {
+          const cb = this.activeHelp.onClosed;
+          this.activeHelp = null;
+          this.lastEscapeClosedAt = performance.now();
+          this.render();
+          cb?.();
+          return;
+        }
         if (this.activePauseMenu) {
           const cb = this.activePauseMenu.onClosed;
           this.activePauseMenu = null;
@@ -333,7 +346,8 @@ export class OstrzeModalUi {
 
   public hasOpenModal(): boolean {
     return Boolean(
-      this.activePauseMenu ||
+      this.activeHelp ||
+        this.activePauseMenu ||
         this.activeSaveKey ||
         this.activeWelcome ||
         this.activeNarrative ||
@@ -354,6 +368,23 @@ export class OstrzeModalUi {
   public showPauseMenu(opts: PauseMenuOptions): void {
     this.activePauseMenu = opts;
     this.render();
+  }
+
+  public showHelpModal(initialTab: HelpModalTab = 'controls', onClosed?: () => void): void {
+    this.activeHelp = { initialTab, onClosed };
+    this.render();
+  }
+
+  public isHelpModalOpen(): boolean {
+    return this.activeHelp !== null;
+  }
+
+  public closeHelpModal(): void {
+    if (!this.activeHelp) return;
+    const cb = this.activeHelp.onClosed;
+    this.activeHelp = null;
+    this.render();
+    cb?.();
   }
 
   public showNoticeBoard(entries: NoticeBoardEntry[], onClosed?: () => void): void {
@@ -412,6 +443,7 @@ export class OstrzeModalUi {
   }
 
   public closeAll(): void {
+    this.activeHelp = null;
     this.activePauseMenu = null;
     this.activeWelcome = null;
     this.activeSaveKey = null;
@@ -428,6 +460,10 @@ export class OstrzeModalUi {
 
   public render(): void {
     this.renderHubPanel();
+    if (this.activeHelp) {
+      this.renderHelpModal();
+      return;
+    }
     if (this.activePauseMenu) {
       this.renderPauseMenu();
       return;
@@ -1066,6 +1102,22 @@ export class OstrzeModalUi {
   public showCampfireModal(opts: CampfireModalOptions): void {
     this.activeCampfire = opts;
     this.render();
+  }
+
+  private renderHelpModal(): void {
+    const help = this.activeHelp;
+    if (!help) return;
+    renderHelpModalView({
+      root: this.root,
+      initialTab: help.initialTab,
+      onClose: () => {
+        ostrzeAudio.playUiClick();
+        const cb = help.onClosed;
+        this.activeHelp = null;
+        this.render();
+        cb?.();
+      }
+    });
   }
 
   private renderPauseMenu(): void {
