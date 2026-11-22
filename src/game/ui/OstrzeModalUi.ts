@@ -35,6 +35,7 @@ import {
   type PauseMenuOptions,
   renderPauseMenuView
 } from './views/PauseMenuView';
+import { renderWorldMapView } from './views/WorldMapView';
 
 export interface NarrativeCardData {
   title: string;
@@ -108,6 +109,8 @@ export class OstrzeModalUi {
     destinations: TravelDestinationEntry[];
     onSelect: (id: string) => void;
     onClosed?: () => void;
+    readOnly?: boolean;
+    currentLocationId?: string;
   } | null = null;
   private hubPanel: HubPanelData | null = null;
   private hubCollapsed = false;
@@ -361,10 +364,36 @@ export class OstrzeModalUi {
   public showTravelModal(
     destinations: TravelDestinationEntry[],
     onSelect: (id: string) => void,
-    onClosed?: () => void
+    onClosed?: () => void,
+    options?: { readOnly?: boolean; currentLocationId?: string }
   ): void {
-    this.activeTravel = { destinations, onSelect, onClosed };
+    this.activeTravel = {
+      destinations,
+      onSelect,
+      onClosed,
+      readOnly: options?.readOnly,
+      currentLocationId: options?.currentLocationId
+    };
     this.render();
+  }
+
+  public showWorldMapPreview(currentLocationId: string, onClosed?: () => void): void {
+    this.showTravelModal([], () => undefined, onClosed, {
+      readOnly: true,
+      currentLocationId
+    });
+  }
+
+  public isTravelModalOpen(): boolean {
+    return this.activeTravel !== null;
+  }
+
+  public closeTravelModal(): void {
+    if (!this.activeTravel) return;
+    const cb = this.activeTravel.onClosed;
+    this.activeTravel = null;
+    this.render();
+    cb?.();
   }
 
   public showToast(text: string, tone: 'info' | 'gold' | 'success' = 'info'): void {
@@ -1005,62 +1034,32 @@ export class OstrzeModalUi {
     const modal = this.activeTravel;
     if (!modal) return;
 
-    const listHtml = modal.destinations
-      .map(
-        (d) => `
-          <div class="ostrze-shop-item">
-            <div>
-              <strong>${this.escape(d.name)}</strong>
-              <div style="font-size:0.78rem;color:#9f9585;margin-top:2px;">
-                ${this.escape(d.subtitle)} · ok. ${d.travelMinutes} min drogi
-              </div>
-            </div>
-            <div>
-              ${
-                d.isCurrent
-                  ? '<span class="ostrze-badge">Tu jesteś</span>'
-                  : `<button type="button" class="ostrze-hub-btn" data-travel-dest="${this.escape(d.id)}">Wyrusz</button>`
-              }
-            </div>
-          </div>
-        `
-      )
-      .join('');
+    const currentLoc =
+      modal.currentLocationId ??
+      modal.destinations.find((d) => d.isCurrent)?.id ??
+      this.state.world.location ??
+      'wilczy_brod';
 
-    this.root.innerHTML = `
-      <div class="ostrze-overlay">
-        <div class="ostrze-card" style="max-width:620px;">
-          <h2 class="ostrze-title">Podróż — Odwiedzone lokacje</h2>
-          <p class="ostrze-subtitle">
-            Wybierz cel podróży spośród znanych miejsc tej krainy. Na trakcie między lokacjami możesz natrafić na przypadkowe spotkania lub zasadzkę.
-          </p>
-          <div style="display:flex;flex-direction:column;gap:8px;max-height:55vh;overflow:auto;margin-bottom:14px;">
-            ${listHtml}
-          </div>
-          <div style="display:flex;justify-content:flex-end;">
-            <button type="button" class="ostrze-hub-btn" id="ostrze-travel-close">Zamknij [ESC]</button>
-          </div>
-        </div>
-      </div>
-    `;
-
-    this.root.querySelectorAll<HTMLButtonElement>('[data-travel-dest]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const destId = btn.dataset.travelDest;
-        if (!destId) return;
+    renderWorldMapView({
+      root: this.root,
+      state: this.state,
+      data: this.data,
+      destinations: modal.destinations,
+      currentLocationId: currentLoc,
+      readOnly: modal.readOnly,
+      onSelectDestination: (destId) => {
         ostrzeAudio.playUiClick();
         this.activeTravel = null;
         this.render();
         modal.onSelect(destId);
-      });
-    });
-
-    this.root.querySelector('#ostrze-travel-close')?.addEventListener('click', () => {
-      ostrzeAudio.playUiClick();
-      const cb = modal.onClosed;
-      this.activeTravel = null;
-      this.render();
-      cb?.();
+      },
+      onClose: () => {
+        ostrzeAudio.playUiClick();
+        const cb = modal.onClosed;
+        this.activeTravel = null;
+        this.render();
+        cb?.();
+      }
     });
   }
 

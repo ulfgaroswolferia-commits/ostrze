@@ -531,19 +531,46 @@ async function bootstrapOstrze(): Promise<void> {
   };
 
   window.addEventListener('keydown', (e) => {
-    if (e.key.toLowerCase() !== 'j' || e.ctrlKey || e.altKey || e.metaKey) return;
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
     const tag = (e.target as HTMLElement | null)?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-    if (!prologue.state.character || modalUi.hasOpenModal()) return;
-    e.preventDefault();
-    modalUi.showCharacterSheet(() => {
-      engine.syncFromOstrzeState(prologue.state, prologue.data);
-      if (activeChapter === 'prologue') prologue.refreshObjectiveTracker();
-      else if (activeChapter === 'chapter2') chapter2?.refreshHubPanel();
-      else chapter1.refreshHubPanel();
-      performSave(true);
-      refreshUi();
-    }, 'journal');
+    const key = e.key.toLowerCase();
+
+    if (key === 'j') {
+      if (!prologue.state.character || modalUi.hasOpenModal()) return;
+      e.preventDefault();
+      modalUi.showCharacterSheet(() => {
+        engine.syncFromOstrzeState(prologue.state, prologue.data);
+        if (activeChapter === 'prologue') prologue.refreshObjectiveTracker();
+        else if (activeChapter === 'chapter2') chapter2?.refreshHubPanel();
+        else chapter1.refreshHubPanel();
+        performSave(true);
+        refreshUi();
+      }, 'journal');
+      return;
+    }
+
+    if (key === 'm') {
+      if (modalUi.isTravelModalOpen()) {
+        e.preventDefault();
+        modalUi.closeTravelModal();
+        refreshUi();
+        return;
+      }
+      if (engine.combatState.active || modalUi.hasOpenModal()) return;
+      if (!prologue.state.character && !isDevMode) return;
+      e.preventDefault();
+      if (activeChapter === 'prologue') {
+        modalUi.showWorldMapPreview(
+          engine.activeCustomSceneId ?? 'brzezina_dziedziniec',
+          () => refreshUi()
+        );
+      } else if (activeChapter === 'chapter2') {
+        chapter2?.openTravelModal();
+      } else {
+        chapter1.openTravelModal();
+      }
+    }
   });
 
   if (isDevMode) {

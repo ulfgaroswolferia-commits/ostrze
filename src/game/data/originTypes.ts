@@ -72,6 +72,10 @@ export interface PhenomenonDef {
   kind?: 'magiczne' | 'pogodowe';
   modifiers?: Record<string, number>;
   bystroscSkillPenalty?: number;
+  world?: {
+    visibility?: number;
+    travel?: 'slow' | 'dangerous';
+  };
 }
 
 export interface ItemDef {
