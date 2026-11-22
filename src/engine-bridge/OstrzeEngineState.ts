@@ -322,6 +322,18 @@ export class OstrzeEngineState extends CrpgGameState {
       offHandVisual,
       stats
     });
+
+    if (this.player.combat) {
+      if (state.flags.bogdan_ulepszenie_bron) {
+        this.player.combat.customDamageBonus = (this.player.combat.customDamageBonus ?? 0) + 2;
+      }
+      if (state.flags.bogdan_gwiezdne_ostrze) {
+        this.player.combat.customDamageBonus = (this.player.combat.customDamageBonus ?? 0) + 3;
+      }
+      if (state.flags.bogdan_ulepszenie_pancerz) {
+        this.player.combat.customArmorBonus = (this.player.combat.customArmorBonus ?? 0) + 2;
+      }
+    }
   }
 
   /**

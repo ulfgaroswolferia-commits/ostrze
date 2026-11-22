@@ -9,6 +9,7 @@ import dlgKowalGluszec from '../../../origin/data/dialogues/kowal_gluszec.json';
 import dlgNajemnik from '../../../origin/data/dialogues/najemnik.json';
 import dlgOblawa from '../../../origin/data/dialogues/oblawa.json';
 import dlgPisarz from '../../../origin/data/dialogues/pisarz.json';
+import dlgRadosz from '../../../origin/data/dialogues/radosz.json';
 import dlgRanny from '../../../origin/data/dialogues/ranny.json';
 import dlgSoltys from '../../../origin/data/dialogues/soltys.json';
 import dlgStach from '../../../origin/data/dialogues/stach.json';
@@ -35,7 +36,8 @@ export const CHAPTER2_DIALOGUES: Record<string, DialogueFileDef> = {
   halina: dlgHalina as unknown as DialogueFileDef,
   dozorca: dlgDozorca as unknown as DialogueFileDef,
   ranny: dlgRanny as unknown as DialogueFileDef,
-  pisarz: dlgPisarz as unknown as DialogueFileDef
+  pisarz: dlgPisarz as unknown as DialogueFileDef,
+  radosz: dlgRadosz as unknown as DialogueFileDef
 };
 
 export function registerChapter2Dialogues(data: OriginGameData): void {

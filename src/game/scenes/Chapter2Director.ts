@@ -138,6 +138,219 @@ export class Chapter2Director {
     }
   }
 
+  private hasItem(itemId: string): boolean {
+    if (this.state.inventory.items.some((i) => i.id === itemId && i.qty > 0)) return true;
+    return Object.values(this.state.inventory.equipped).includes(itemId);
+  }
+
+  private awardQuestCompletion(
+    questId: string,
+    title: string,
+    money: number,
+    xp: number,
+    items?: Array<{ id: string; qty: number }>
+  ): void {
+    if (this.state.quests[questId] === 'completed') return;
+    this.state.quests[questId] = 'completed';
+    let leveledUp = false;
+    if (this.state.character) {
+      if (money > 0) this.state.character.money += money;
+      if (items) {
+        for (const it of items) this.addItemStack(it.id, it.qty);
+      }
+      if (xp > 0) {
+        const xpRes = grantXp(this.state, xp, this.data);
+        leveledUp = xpRes.levelsGained > 0;
+        if (leveledUp) {
+          this.ui?.showToast(`Awans na poziom ${xpRes.newLevel}! Otwórz kartę Postaci [K].`, 'gold');
+        }
+      }
+    }
+    const rewardParts = [
+      money > 0 ? `+${money} gr` : '',
+      xp > 0 ? `+${xp} XP` : '',
+      ...(items ?? []).map((it) => `+${it.qty}× ${it.id}`)
+    ].filter(Boolean);
+    this.engine.addLog(`🏆 Ukończono „${title}” (${rewardParts.join(', ')})!`, 'important');
+    this.ui?.showToast(`Ukończono: ${title}`, 'success');
+    ostrzeAudio.playQuestEvent(leveledUp ? 'levelup' : 'complete');
+  }
+
+  /**
+   * Mirrors origin/data/quests.json completion rules for all 13 Act II (Głuszec) quests.
+   */
+  public checkAndCompleteSideQuests(): void {
+    if (this.state.flags.soltys_potwierdzil) {
+      this.awardQuestCompletion('przyjecie_w_osadzie', 'Swój w osadzie', 10, 40);
+    }
+    if (this.state.flags.gajowy_zamkniete) {
+      this.awardQuestCompletion('klusownik_i_gajowy', 'Kłusownik i gajowy', 15, 40);
+    }
+    if (this.state.flags.mruk_dlug_rozliczony) {
+      this.awardQuestCompletion('dlug_mlynarza', 'Dług młynarza', 6, 30);
+    }
+    if (this.state.flags.kopacz_listy_zamkniete) {
+      this.awardQuestCompletion('listy_z_tamtej_strony', 'Listy z tamtej strony', 3, 45);
+    }
+    if (this.state.flags.soltys_donosiciel_zamkniete) {
+      this.awardQuestCompletion('kto_sprzedal_ocalalego', 'Kto sprzedał ocalałego', 20, 55);
+    }
+    if (this.state.flags.kowal_zwiad_zamkniety) {
+      this.awardQuestCompletion('zwiad_na_wzgorzu', 'Zwiad na wzgórzu', 10, 45);
+    }
+    if (this.state.flags.papiery_falszywe) {
+      this.awardQuestCompletion('falszywe_papiery', 'Fałszywe papiery', 5, 40);
+    }
+    if (this.state.flags.dozorca_zamkniete) {
+      this.awardQuestCompletion('rannego_nie_zostawia_sie', 'Rannego nie zostawia się', 18, 50);
+    }
+    if (this.state.flags.trzcina_oddana) {
+      this.awardQuestCompletion('szara_trzcina', 'Szara trzcina', 0, 50, [
+        { id: 'napar_ziol', qty: 2 }
+      ]);
+    }
+    if (this.state.flags.wdowa_zamknieta) {
+      this.awardQuestCompletion('wdowa_po_straznik', 'Wdowa po strażniku', 0, 45, [
+        { id: 'prowiant', qty: 2 }
+      ]);
+    }
+    if (this.state.flags.najemnik_rozwiazany) {
+      this.awardQuestCompletion('najemnik_w_karczmie', 'Najemnik w karczmie', 0, 45);
+    }
+    if (this.state.flags.furman_zamkniety) {
+      this.awardQuestCompletion('zaginiona_karawana', 'Zaginiona karawana', 20, 45, [
+        { id: 'prowiant', qty: 1 }
+      ]);
+    }
+    if (this.state.flags.halina_echo) {
+      this.state.flags.akt3a_koniec = true;
+      this.awardQuestCompletion('co_widziala_ragnoslawa', 'Co widziała Ragnosława', 0, 60);
+    }
+  }
+
+  public applyBogdanUpgrade(kind: 'weapon' | 'armor' | 'star_blade'): { ok: boolean; message: string } {
+    const ch = this.state.character;
+    if (!ch) return { ok: false, message: 'Brak postaci.' };
+
+    if (kind === 'weapon') {
+      if (this.state.flags.bogdan_ulepszenie_bron) {
+        return { ok: false, message: 'Broń została już przekuta u Bogdana.' };
+      }
+      if (ch.money < 35) return { ok: false, message: 'Potrzebujesz 35 gr.' };
+      ch.money -= 35;
+      this.state.flags.bogdan_ulepszenie_bron = true;
+      this.syncHeroTo25D();
+      this.engine.addLog('⚒️ Kowal Bogdan przekuł twoją broń (+2 do obrażeń)!', 'important');
+      this.onAutoSave?.();
+      return { ok: true, message: 'Broń przekuta (+2 obr.)!' };
+    }
+
+    if (kind === 'armor') {
+      if (this.state.flags.bogdan_ulepszenie_pancerz) {
+        return { ok: false, message: 'Pancerz został już wzmocniony u Bogdana.' };
+      }
+      if (ch.money < 35) return { ok: false, message: 'Potrzebujesz 35 gr.' };
+      ch.money -= 35;
+      this.state.flags.bogdan_ulepszenie_pancerz = true;
+      this.syncHeroTo25D();
+      this.engine.addLog('🛡️ Kowal Bogdan wzmocnił twój pancerz (+2 do pancerza)!', 'important');
+      this.onAutoSave?.();
+      return { ok: true, message: 'Pancerz wzmocniony (+2 pancerza)!' };
+    }
+
+    if (this.state.flags.bogdan_gwiezdne_ostrze) {
+      return { ok: false, message: 'Gwiezdne Ostrze zostało już wykute.' };
+    }
+    if (!this.state.flags.zyla_gwiezdnego_zelaza_wydobyta) {
+      return { ok: false, message: 'Wymagany okruch z żyły gwiezdnego żelaza (Stara Kopalnia).' };
+    }
+    if (ch.money < 50) return { ok: false, message: 'Potrzebujesz 50 gr.' };
+    ch.money -= 50;
+    this.state.flags.bogdan_gwiezdne_ostrze = true;
+    this.syncHeroTo25D();
+    this.engine.addLog(
+      '✨ Kowal Bogdan wykuł Gwiezdne Ostrze (+3 obr., typ obrażeń „gwiezdne” — przełamuje odporność upiorów)!',
+      'important'
+    );
+    this.onAutoSave?.();
+    return { ok: true, message: 'Wykuto Gwiezdne Ostrze (+3 obr., przełamuje odporność upiorów)!' };
+  }
+
+  public openBogdanUpgrades(): void {
+    if (!this.ui) return;
+    const ch = this.state.character;
+    const money = ch?.money ?? 0;
+    const hasOre = Boolean(this.state.flags.zyla_gwiezdnego_zelaza_wydobyta);
+
+    this.ui.showNoticeBoard(
+      [
+        {
+          id: 'bogdan_upg_weapon',
+          title: '⚒️ Przekucie i wyważenie broni (+2 obr.)',
+          author: 'Kuźnia Bogdana — Głuszec',
+          reward: 'Koszt: 35 gr',
+          body: 'Bogdan hartuje krawędź i poprawia wyważenie twojej broni. Stała premia +2 do obrażeń w walce 2.5D.',
+          actionLabel: this.state.flags.bogdan_ulepszenie_bron ? '✓ Wykuto' : 'Przekuj (35 gr)',
+          actionDisabled: Boolean(this.state.flags.bogdan_ulepszenie_bron) || money < 35,
+          onAction: () => {
+            const res = this.applyBogdanUpgrade('weapon');
+            this.ui?.showToast(res.message, res.ok ? 'success' : 'info');
+            this.ui?.closeAll();
+            this.refreshHubPanel();
+          }
+        },
+        {
+          id: 'bogdan_upg_armor',
+          title: '🛡️ Wzmocnienie pancerza (+2 pancerza)',
+          author: 'Kuźnia Bogdana — Głuszec',
+          reward: 'Koszt: 35 gr',
+          body: 'Bogdan nabija stalowe łuski na kluczowe punkty pancerza. Stała premia +2 do pancerza w walce 2.5D.',
+          actionLabel: this.state.flags.bogdan_ulepszenie_pancerz ? '✓ Wzmocniono' : 'Wzmocnij (35 gr)',
+          actionDisabled: Boolean(this.state.flags.bogdan_ulepszenie_pancerz) || money < 35,
+          onAction: () => {
+            const res = this.applyBogdanUpgrade('armor');
+            this.ui?.showToast(res.message, res.ok ? 'success' : 'info');
+            this.ui?.closeAll();
+            this.refreshHubPanel();
+          }
+        },
+        {
+          id: 'bogdan_upg_star_blade',
+          title: '✨ Wykucie Gwiezdnego Ostrza (+3 obr. · przełamuje upiory)',
+          author: 'Kuźnia Bogdana — Sekretne rzemiosło',
+          reward: hasOre ? 'Koszt: 50 gr + Okruch gwiezdnego żelaza' : 'Wymaga okruchu ze Starej Kopalni',
+          body: 'Wtopienie gwiezdnego żelaza ze Starej Kopalni w klingę nadaje jej typ obrażeń „gwiezdne” — omija 90% odporności upiorów na stal!',
+          actionLabel: this.state.flags.bogdan_gwiezdne_ostrze
+            ? '✓ Wykuto'
+            : hasOre
+              ? 'Wykuj Gwiezdne Ostrze (50 gr)'
+              : 'Brak gwiezdnego żelaza',
+          actionDisabled: Boolean(this.state.flags.bogdan_gwiezdne_ostrze) || !hasOre || money < 50,
+          onAction: () => {
+            const res = this.applyBogdanUpgrade('star_blade');
+            this.ui?.showToast(res.message, res.ok ? 'success' : 'info');
+            this.ui?.closeAll();
+            this.refreshHubPanel();
+          }
+        },
+        {
+          id: 'bogdan_open_shop',
+          title: '🛒 Towar Kuźni Bogdana',
+          author: 'Kuźnia Bogdana — Handel',
+          reward: 'Sklep kowala',
+          body: 'Przejrzyj gotową broń i pancerze dostępne u Bogdana.',
+          actionLabel: 'Otwórz sklep',
+          actionDisabled: false,
+          onAction: () => {
+            this.ui?.closeAll();
+            this.openShop('kowal_gluszec_sklep');
+          }
+        }
+      ],
+      () => this.refreshHubPanel()
+    );
+  }
+
   public enterGluszec(opts?: { skipIntro?: boolean }): void {
     this.bindHooks();
     this.activeCombatStage = 'none';
@@ -317,6 +530,7 @@ export class Chapter2Director {
       advanceMinutes(this.state, 115, this.data);
     }
     this.state.world.location = 'wzgorze_wartownicze';
+    this.state.flags.wzgorze_zwiad = true;
     markOstrzeLocationVisited(this.state, 'wzgorze_wartownicze');
     this.engine.registerCustomScene(createWzgorzeWartowniczeScene({ withHunt }));
     this.engine.loadCustomScene('wzgorze_wartownicze');
@@ -434,7 +648,31 @@ export class Chapter2Director {
       return true;
     }
     if (propId === 'gluszec_kuznia') {
-      this.openShop('kowal_gluszec_sklep');
+      this.openBogdanUpgrades();
+      return true;
+    }
+    if (propId === 'gluszec_kapliczka_cmentarz') {
+      if (!this.state.flags.cmentarz_echo_ragnoslawa) {
+        this.state.flags.cmentarz_echo_ragnoslawa = true;
+        if (!this.state.quests.co_widziala_ragnoslawa) {
+          this.state.quests.co_widziala_ragnoslawa = 'active';
+        }
+        const msg =
+          '🕯️ Między nagrobkami cmentarza niesie się cichy szept przypominający głos Ragnosławy — wskazuje na Szklane Wzgórza, gdzie spadła gwiazda. Opowiedz o tym Siostrze Halinie w Kapliczce na Rozstajach.';
+        this.engine.addLog(msg, 'important');
+        this.ui?.showNarrative({
+          title: 'Echo z kamieni — Ragnosława',
+          subtitle: 'Cmentarz w Głuszcu',
+          artId: 'gluszec',
+          text: msg,
+          buttonLabel: 'Zapamiętaj',
+          onContinue: () => this.refreshHubPanel()
+        });
+        this.refreshHubPanel();
+        this.onAutoSave?.();
+      } else {
+        this.engine.addLog('🕯️ Na cmentarzu panuje cisza. Porozmawiaj z Siostrą Haliną w Kapliczce na Rozstajach.', 'info');
+      }
       return true;
     }
     if (propId === 'gluszec_studnia') {
@@ -442,7 +680,19 @@ export class Chapter2Director {
       return true;
     }
     if (propId === 'gluszec_drogowskaz') {
-      this.openTravelModal();
+      if (this.state.flags.akt3a_koniec && !this.chapter2Completed) {
+        if (this.state.flags.papiery_falszywe) {
+          this.finishChapter2(false);
+        } else {
+          this.engine.addLog(
+            '⚠️ Przy bramie czeka Cesarska Obława — bez fałszywych papierów musisz przebić się przez Wzgórze Wartownicze!',
+            'critical'
+          );
+          this.enterWzgorzeWartownicze(true);
+        }
+      } else {
+        this.openTravelModal();
+      }
       return true;
     }
     if (
@@ -531,11 +781,9 @@ export class Chapter2Director {
     if (propId === 'bagna_trzcinowisko') {
       if (!this.state.flags.szara_trzcina_zebrana) {
         this.state.flags.szara_trzcina_zebrana = true;
-        this.state.quests.szara_trzcina = 'completed';
-        this.addItemStack('napar_ziol', 1);
-        const xp = grantXp(this.state, 55, this.data);
+        this.addItemStack('szara_trzcina', 1);
         this.engine.addLog(
-          `🌿 Zebrałeś Szarą Trzcinę na moczarach! (+1 Napar z ziół, +55 XP, Poz. ${xp.newLevel}).`,
+          '🌿 Zebrałeś Szarą Trzcinę na moczarach! Zanieś ją Znachorce Dobrawie w Głuszcu.',
           'important'
         );
         this.syncHeroTo25D();
@@ -583,8 +831,9 @@ export class Chapter2Director {
       return true;
     }
     if (propId === 'stary_trakt_rozbity_woz') {
+      this.state.flags.woz_znaleziony = true;
       if (this.state.flags.stary_trakt_wilki_pokonane) {
-        this.engine.addLog('🛞 Rozbity wóz karawany został już dokładnie przeszukany.', 'info');
+        this.engine.addLog('🛞 Rozbity wóz karawany został już dokładnie przeszukany. Zdaj relację Furmanowi Sieciechowi.', 'info');
       } else {
         this.enterStaryTrakt(true);
       }
@@ -643,6 +892,10 @@ export class Chapter2Director {
       this.runDialogue('wdowa');
       return true;
     }
+    if (npcId === 'npc_mlynarz_radosz') {
+      this.runDialogue('radosz');
+      return true;
+    }
     if (npcId === 'npc_stach_bor') {
       this.runDialogue('stach');
       return true;
@@ -695,13 +948,15 @@ export class Chapter2Director {
   private runDialogue(dialogueId: string): void {
     const session = startOstrzeDialogue(dialogueId, this.state, this.data);
     if (!this.ui) {
+      this.checkAndCompleteSideQuests();
       return;
     }
     this.ui.showDialogue(session, {
       onClosed: () => {
+        this.checkAndCompleteSideQuests();
         if (this.state.flags.kowal_gluszec_sklep) {
           this.state.flags.kowal_gluszec_sklep = false;
-          this.openShop('kowal_gluszec_sklep');
+          this.openBogdanUpgrades();
           return;
         }
         this.syncHeroTo25D();
@@ -1017,25 +1272,76 @@ export class Chapter2Director {
     this.engine.clearAllNpcMarkers();
     const loc = this.state.world.location;
     if (loc === 'gluszec') {
-      this.engine.setNpcMarker('npc_soltys_gluszec', '❗');
-      this.engine.setNpcMarker('npc_karczmarz_kogut', '🍺');
-      this.engine.setNpcMarker('npc_najemnik_kogut', '💬');
+      const soltysUrgent =
+        !this.state.flags.soltys_przyjal ||
+        Boolean(this.state.flags.nocleg_oplacony && !this.state.flags.soltys_potwierdzil) ||
+        Boolean(
+          this.state.flags.znachorka_wskazala &&
+            this.state.flags.kowal_wskazal &&
+            !this.state.flags.soltys_donosiciel_zamkniete
+        );
+      this.engine.setNpcMarker('npc_soltys_gluszec', soltysUrgent ? '❗' : '💬');
+
+      const karczmarzUrgent =
+        !this.state.flags.nocleg_oplacony ||
+        Boolean(this.state.flags.radosz_rozmowa && !this.state.flags.mruk_dlug_rozliczony);
+      this.engine.setNpcMarker('npc_karczmarz_kogut', karczmarzUrgent ? '❗' : '🍺');
+
+      this.engine.setNpcMarker(
+        'npc_najemnik_kogut',
+        !this.state.flags.najemnik_rozwiazany ? '❗' : '💬'
+      );
       this.engine.setNpcMarker('npc_kramarz_gluszec', '🛒');
-      this.engine.setNpcMarker('npc_kowal_bogdan', '⚒️');
-      this.engine.setNpcMarker('npc_zielarka_znachorka', '🌿');
-      this.engine.setNpcMarker('npc_wartownik_gajowy', '❗');
-      this.engine.setNpcMarker('npc_kopacz_jerzy', '💬');
-      this.engine.setNpcMarker('npc_zona_wdowa_jaga', '💬');
+
+      const bogdanUrgent =
+        Boolean(this.state.flags.wzgorze_zwiad && !this.state.flags.kowal_zwiad_zamkniety) ||
+        Boolean(this.state.flags.zyla_gwiezdnego_zelaza_wydobyta && !this.state.flags.bogdan_gwiezdne_ostrze);
+      this.engine.setNpcMarker('npc_kowal_bogdan', bogdanUrgent ? '❗' : '⚒️');
+
+      const znachorkaUrgent =
+        Boolean(this.hasItem('szara_trzcina') && !this.state.flags.trzcina_oddana);
+      this.engine.setNpcMarker('npc_zielarka_znachorka', znachorkaUrgent ? '❗' : '🌿');
+
+      const gajowyUrgent =
+        !this.state.flags.gajowy_zamkniete &&
+        (!this.state.quests.klusownik_i_gajowy || Boolean(this.state.flags.stach_rozmowa));
+      this.engine.setNpcMarker('npc_wartownik_gajowy', gajowyUrgent ? '❗' : '💬');
+
+      const kopaczUrgent =
+        Boolean(this.state.flags.halina_przeczytala && !this.state.flags.kopacz_listy_zamkniete);
+      this.engine.setNpcMarker('npc_kopacz_jerzy', kopaczUrgent ? '❗' : '💬');
+
+      const wdowaUrgent =
+        Boolean(this.state.flags.grob_odwiedzony && !this.state.flags.wdowa_zamknieta);
+      this.engine.setNpcMarker('npc_zona_wdowa_jaga', wdowaUrgent ? '❗' : '💬');
+
+      const radoszUrgent =
+        this.state.quests.dlug_mlynarza === 'active' && !this.state.flags.radosz_rozmowa;
+      this.engine.setNpcMarker('npc_mlynarz_radosz', radoszUrgent ? '❗ Radosz' : '💬 Radosz');
     } else if (loc === 'bor_klusownikow') {
-      this.engine.setNpcMarker('npc_stach_bor', '❗ Stach');
+      this.engine.setNpcMarker('npc_stach_bor', !this.state.flags.stach_rozmowa ? '❗ Stach' : '💬 Stach');
     } else if (loc === 'stary_trakt') {
-      this.engine.setNpcMarker('npc_furman_sieciech', '❗ Furman');
+      this.engine.setNpcMarker(
+        'npc_furman_sieciech',
+        Boolean(this.state.flags.woz_znaleziony && !this.state.flags.furman_zamkniety)
+          ? '❗ Furman'
+          : '💬 Furman'
+      );
     } else if (loc === 'kapliczka_rozstaje') {
-      this.engine.setNpcMarker('npc_halina_kapliczka', '❗ Siostra Halina');
+      const halinaUrgent =
+        Boolean(this.state.flags.cmentarz_echo_ragnoslawa && !this.state.flags.halina_echo) ||
+        !this.state.flags.halina_przeczytala;
+      this.engine.setNpcMarker('npc_halina_kapliczka', halinaUrgent ? '❗ Siostra Halina' : '💬 Siostra Halina');
       this.engine.setNpcMarker('npc_pustelnik_rozstaje', '💬 Pustelnik');
     } else if (loc === 'kamieniolom') {
-      this.engine.setNpcMarker('npc_dozorca_wincenty', '❗ Dozorca');
-      this.engine.setNpcMarker('npc_ranny_gornik', '❗ Ranny Górnik');
+      this.engine.setNpcMarker(
+        'npc_dozorca_wincenty',
+        Boolean(this.state.flags.ranny_pomoc && !this.state.flags.dozorca_zamkniete) ? '❗ Dozorca' : '💬 Dozorca'
+      );
+      this.engine.setNpcMarker(
+        'npc_ranny_gornik',
+        !this.state.flags.ranny_pomoc ? '❗ Ranny Górnik' : '💬 Górnik'
+      );
     } else if (loc === 'bagna_szarej_wody') {
       this.engine.setNpcMarker('npc_zielarka_bagna', '🌿 Zielarka');
     } else if (loc === 'wzgorze_wartownicze') {

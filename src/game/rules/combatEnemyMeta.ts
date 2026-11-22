@@ -30,6 +30,9 @@ export function resolvePlayerWeaponDamageType(
   state: OstrzeGameState | null,
   data: OriginGameData
 ): string {
+  if (state?.flags?.bogdan_gwiezdne_ostrze) {
+    return 'gwiezdne';
+  }
   const bronId = state?.inventory?.equipped?.bron;
   if (bronId) {
     const item = data.items.find((i) => i.id === bronId);

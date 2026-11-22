@@ -17,7 +17,11 @@ import {
 } from '../src/game/maps/chapter2Maps';
 import { createCharacter, createEmptyOstrzeState, grantXp } from '../src/game/rules/character';
 import { resolveEnemyArchetype } from '../src/game/rules/combatAi';
-import { resolveEnemyOriginId } from '../src/game/rules/combatEnemyMeta';
+import {
+  getEnemyDamageMultiplier,
+  resolveEnemyOriginId,
+  resolvePlayerWeaponDamageType
+} from '../src/game/rules/combatEnemyMeta';
 import { createRng } from '../src/game/rules/dice';
 import { Chapter2Director } from '../src/game/scenes/Chapter2Director';
 
@@ -170,6 +174,9 @@ describe('Chapter 2 Phase 1 Audit (Gluszec, Bor Klusownikow, Stary Trakt & Visua
     const { state, director } = createAct2Fixture();
     director.enterBagnaSzarejWody(false);
     director.handlePropInteract('bagna_trzcinowisko');
+    expect(state.inventory.items.some((i) => i.id === 'szara_trzcina' && i.qty > 0)).toBe(true);
+    state.flags.trzcina_oddana = true;
+    director.checkAndCompleteSideQuests();
     expect(state.quests.szara_trzcina).toBe('completed');
 
     director.enterWzgorzeWartownicze(true);
@@ -177,6 +184,63 @@ describe('Chapter 2 Phase 1 Audit (Gluszec, Bor Klusownikow, Stary Trakt & Visua
     expect(state.flags.oblawa_pokonana).toBe(true);
     expect(state.flags.akt3a_koniec).toBe(true);
     expect(director.chapter2Completed).toBe(true);
+  });
+
+  it('verifies all 13 Act II quests, Mlynarz Radosz, Cemetery Echo, diplomatic vs Oblawa finale, and Bogdan upgrades', () => {
+    const gluszec = createGluszecScene();
+    const radosz = (gluszec.actors ?? []).find((a) => a.id === 'npc_mlynarz_radosz')!;
+    expect(radosz).toBeDefined();
+    expect(resolveCharacterArchetypeTag(radosz.recipe)).toBe('peasant_man');
+
+    const { engine, state, director } = createAct2Fixture();
+    state.character!.money = 200;
+    director.enterGluszec({ skipIntro: true });
+
+    // Cemetery Ragnosława Echo activates quest
+    director.handlePropInteract('gluszec_kapliczka_cmentarz');
+    expect(state.flags.cmentarz_echo_ragnoslawa).toBe(true);
+    expect(state.quests.co_widziala_ragnoslawa).toBe('active');
+
+    // Bogdan upgrades: weapon (+2), armor (+2), and Gwiezdne Ostrze (+3 + 'gwiezdne' bypassing wraith resist)
+    expect(director.applyBogdanUpgrade('weapon').ok).toBe(true);
+    expect(director.applyBogdanUpgrade('armor').ok).toBe(true);
+    expect(director.applyBogdanUpgrade('star_blade').ok).toBe(false); // needs star-iron vein first
+
+    state.flags.zyla_gwiezdnego_zelaza_wydobyta = true;
+    expect(director.applyBogdanUpgrade('star_blade').ok).toBe(true);
+    expect(resolvePlayerWeaponDamageType(state, ORIGIN_DATA)).toBe('gwiezdne');
+    expect(getEnemyDamageMultiplier('upior_nocy', 'gwiezdne', ORIGIN_DATA)).toBe(1);
+
+    // Complete all 13 quests via their canonical origin flags
+    const flags = [
+      'soltys_potwierdzil',
+      'gajowy_zamkniete',
+      'mruk_dlug_rozliczony',
+      'kopacz_listy_zamkniete',
+      'soltys_donosiciel_zamkniete',
+      'kowal_zwiad_zamkniety',
+      'papiery_falszywe',
+      'dozorca_zamkniete',
+      'trzcina_oddana',
+      'wdowa_zamknieta',
+      'najemnik_rozwiazany',
+      'furman_zamkniety',
+      'halina_echo'
+    ];
+    for (const f of flags) state.flags[f] = true;
+    director.checkAndCompleteSideQuests();
+
+    expect(state.flags.akt3a_koniec).toBe(true);
+    expect(state.quests.przyjecie_w_osadzie).toBe('completed');
+    expect(state.quests.dlug_mlynarza).toBe('completed');
+    expect(state.quests.kto_sprzedal_ocalalego).toBe('completed');
+    expect(state.quests.falszywe_papiery).toBe('completed');
+    expect(state.quests.co_widziala_ragnoslawa).toBe('completed');
+
+    // Diplomatic exit via gate when akt3a_koniec + papiery_falszywe -> completes Act II without Oblawa combat
+    director.handlePropInteract('gluszec_drogowskaz');
+    expect(director.chapter2Completed).toBe(true);
+    expect(engine.combatState.active).toBe(false);
   });
 
   it('verifies Phase 3 exploration scenes: Spalona Osada & Stara Kopalnia (utopiec + wraith boss, star-iron vein)', () => {

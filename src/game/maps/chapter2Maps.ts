@@ -311,7 +311,7 @@ export function createGluszecScene(): CustomSceneConfig {
       },
       {
         id: 'gluszec_kapliczka_cmentarz',
-        name: 'Kapliczka przy cmentarzu',
+        name: 'Cmentarz i kapliczka (Echo z kamieni)',
         kind: 'travel_signpost',
         x: 22,
         y: 4,
@@ -321,7 +321,7 @@ export function createGluszecScene(): CustomSceneConfig {
         heightZ: 2,
         blocksMovement: true,
         blocksSight: false,
-        interactive: false
+        interactive: true
       },
       {
         id: 'gluszec_drogowskaz',
@@ -516,6 +516,18 @@ export function createGluszecScene(): CustomSceneConfig {
       direction: 5,
       torso: 'torso_przeszywanica',
       dialogueId: 'wdowa'
+    }),
+    makeChapter2Npc({
+      id: 'npc_mlynarz_radosz',
+      seed: 2110,
+      name: 'Młynarz Radosz',
+      title: 'Młyn wodny w Głuszcu',
+      x: 22,
+      y: 21,
+      z: 0,
+      direction: 6,
+      torso: 'torso_przeszywanica',
+      dialogueId: 'radosz'
     })
   ];
 
