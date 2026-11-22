@@ -480,6 +480,7 @@ export class Chapter1Director {
   public enterWilczyLas(withHunt = false): void {
     this.bindHubHooks();
     this.revealPlace('wilczy_las');
+    markOstrzeLocationVisited(this.state, 'wilczy_las');
     if (!withHunt) {
       advanceMinutes(this.state, 90, this.data);
     }
@@ -502,6 +503,7 @@ export class Chapter1Director {
   public enterStaryMlyn(): void {
     this.bindHubHooks();
     this.revealPlace('stary_mlyn');
+    markOstrzeLocationVisited(this.state, 'stary_mlyn');
     if (this.state.world.location !== 'stary_mlyn') {
       advanceMinutes(this.state, 35, this.data);
     }
@@ -523,6 +525,7 @@ export class Chapter1Director {
   public enterTraktKupiecki(withHunt = false): void {
     this.bindHubHooks();
     this.revealPlace('trakt_kupiecki');
+    markOstrzeLocationVisited(this.state, 'trakt_kupiecki');
     if (!withHunt && this.state.world.location !== 'trakt_kupiecki') {
       advanceMinutes(this.state, 180, this.data);
     }
@@ -545,6 +548,7 @@ export class Chapter1Director {
   public enterLesniczowka(withHunt = false): void {
     this.bindHubHooks();
     this.revealPlace('lesniczowka');
+    markOstrzeLocationVisited(this.state, 'lesniczowka');
     if (!withHunt && this.state.world.location !== 'lesniczowka') {
       advanceMinutes(this.state, 240, this.data);
     }
@@ -567,6 +571,7 @@ export class Chapter1Director {
   public enterRuinyStraznicy(withHunt = false): void {
     this.bindHubHooks();
     this.revealPlace('ruiny_straznicy');
+    markOstrzeLocationVisited(this.state, 'ruiny_straznicy');
     if (!withHunt && this.state.world.location !== 'ruiny_straznicy') {
       advanceMinutes(this.state, 180, this.data);
     }
@@ -840,7 +845,7 @@ export class Chapter1Director {
 
     // Satellite NPCs: Ruiny Strażnicy
     if (npcId === 'npc_borek_ruiny') {
-      if (!this.state.flags.pobojowisko_ragnoslawa && !this.state.flags.amulet_zebrany && !this.hasItem('amulet_strazniczy')) {
+      if (!this.state.flags.amulet_zebrany && !this.hasItem('amulet_strazniczy')) {
         this.state.flags.amulet_zebrany = true;
         this.addItemStack('amulet_strazniczy', 1);
         this.engine.addLog('✨ Znaleziono w rumowisku: Amulet strażniczy!', 'important');
@@ -1235,6 +1240,7 @@ export class Chapter1Director {
   public startOstromirEscort(): void {
     this.state.quests.eskorta_ostromira = 'active';
     this.state.world.location = 'kamienna_przelecz';
+    markOstrzeLocationVisited(this.state, 'kamienna_przelecz');
     this.engine.loadCustomScene('kamienna_przelecz');
     ostrzeAudio.setAmbience('dawn');
     this.syncHeroTo25D();
@@ -1426,10 +1432,22 @@ export class Chapter1Director {
         }
       } else {
         this.engine.addLog('💀 Klęska na leśnym trakcie.', 'critical');
+        this.pendingTravel = null;
+        if (this.ui && this.onDefeatToPrologue) {
+          this.ui.showNarrative({
+            title: 'Poległeś na trakcie',
+            text: 'Napastnicy na szlaku okazali się zbyt silni. Twoja podróż dobiega końca — wracasz na początek Prologu.',
+            buttonLabel: 'Wróć na początek Prologu',
+            onContinue: () => this.onDefeatToPrologue?.()
+          });
+        } else {
+          this.onDefeatToPrologue?.();
+        }
+        return;
       }
       const targetDest = this.pendingTravel?.destId;
       this.pendingTravel = null;
-      if (targetDest && outcome !== 'defeat') {
+      if (targetDest) {
         this.arriveAtLocation(targetDest);
       } else {
         this.syncHeroTo25D();
@@ -1483,9 +1501,15 @@ export class Chapter1Director {
     ]);
     const targetScene = validScenes.has(sceneId) ? sceneId : 'wilczy_brod';
     this.state.world.location = targetScene;
+    const isNight = timeOfDay(this.state.time.minutes, this.data.rules) === 'noc';
+    if (targetScene === 'stary_mlyn') {
+      this.engine.registerCustomScene(createStaryMlynScene({ isNight }));
+    }
     this.engine.loadCustomScene(targetScene);
     ostrzeAudio.setAmbience(
-      targetScene === 'wilcza_nora' || targetScene === 'ruiny_straznicy'
+      targetScene === 'wilcza_nora' ||
+        targetScene === 'ruiny_straznicy' ||
+        (targetScene === 'stary_mlyn' && isNight)
         ? 'creepy_forest'
         : targetScene === 'kamienna_przelecz' || targetScene === 'stary_mlyn'
           ? 'dawn'
@@ -1730,9 +1754,9 @@ export class Chapter1Director {
     afterVictoryText?: string,
     afterFleeText?: string
   ): void {
-    const roadScene = createTraktZasadzkaScene();
+    const roadScene = { ...createTraktZasadzkaScene(), id: 'trakt_podroz' };
     this.engine.registerCustomScene(roadScene);
-    this.engine.loadCustomScene('trakt_zasadzka');
+    this.engine.loadCustomScene('trakt_podroz');
     this.engine.npcs.length = 0;
 
     const specs = sc.enemies ?? [{ id: 'wilk', count: 2 }];
