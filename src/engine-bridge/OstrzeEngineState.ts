@@ -860,6 +860,42 @@ export class OstrzeEngineState extends CrpgGameState {
     return outcome;
   }
 
+  protected override handlePlayerDefeated(): void {
+    if (!this.activeCustomSceneId) {
+      super.handlePlayerDefeated();
+      return;
+    }
+
+    this.isSequentialEnemyTurnActive = false;
+    this.combatState.active = false;
+    this.combatState.activeTurnActorId = null;
+    this.combatState.selectedTargetId = null;
+
+    if (this.player.combat) {
+      this.player.combat.hp = 0;
+      this.player.combat.isAlive = false;
+      this.player.combat.defending = false;
+      this.player.combat.dazedHeadTurns = 0;
+      this.player.combat.crippledLegsTurns = 0;
+    }
+
+    for (const npc of this.npcs) {
+      npc.path = [];
+      npc.isMoving = false;
+      npc.aggroCooldownTimer = 5.0;
+    }
+
+    if (this.activeCombatReportId && this.combatReports[this.activeCombatReportId]) {
+      this.combatReports[this.activeCombatReportId].outcome = 'defeat';
+    }
+    this.addCombatLog('💀 Zostałeś powalony w walce!');
+    this.addLog(
+      '📜 Raport z walki: Porażka w starciu.',
+      'critical',
+      this.activeCombatReportId ?? undefined
+    );
+  }
+
   public override loadMap(mapId: MapId): void {
     this.activeCustomSceneId = null;
     super.loadMap(mapId);

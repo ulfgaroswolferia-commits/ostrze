@@ -79,7 +79,7 @@ export function resolveEnemyArchetype(
   return 'melee_cautious';
 }
 
-const EARLY_GUARDRAIL_SCENES = new Set(['brzezina_yard', 'trakt_zasadzka']);
+const EARLY_GUARDRAIL_SCENES = new Set(['brzezina_dziedziniec', 'brzezina_yard', 'trakt_zasadzka']);
 
 export function resolveEnemyTacticalTier(
   sceneId: string | null,

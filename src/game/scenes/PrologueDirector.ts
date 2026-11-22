@@ -820,6 +820,12 @@ export class PrologueDirector {
         `🏆 Nagroda po sparingu: +160 XP (Poziom ${xpRes.newLevel}), +15 gr, Kaptur Myśliwego!`,
         'important'
       );
+      if (xpRes.levelsGained > 0 && (this.state.character.freeSkillPoints > 0 || this.state.character.freePerkPicks > 0)) {
+        this.engine.addLog(
+          `✨ Awans na Poziom ${xpRes.newLevel}! Otwórz Kartę Postaci [K], aby rozdać punkty umiejętności (${this.state.character.freeSkillPoints}) i wybrać Atut (${this.state.character.freePerkPicks}).`,
+          'important'
+        );
+      }
     }
     this.syncHeroTo25D();
   }
@@ -987,6 +993,13 @@ export class PrologueDirector {
       );
     }
     this.engine.loadCustomScene(sceneId);
+    if (sceneId === 'uroczysko_noc') {
+      ostrzeAudio.setAmbience('night_storm');
+    } else if (sceneId === 'trakt_zasadzka') {
+      ostrzeAudio.setAmbience('forest');
+    } else {
+      ostrzeAudio.setAmbience('dawn');
+    }
     if (phase === 'trakt_ognisko') {
       for (let i = this.engine.npcs.length - 1; i >= 0; i--) {
         if (this.engine.npcs[i].id.startsWith('enemy_bandyta_')) {
