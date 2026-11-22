@@ -15,6 +15,7 @@ export interface CampRecipe {
   resultEffectId?: string;
   durationMinutes: number;
   minMedycyna?: number;
+  minMedycynaOrWiedza?: number;
 }
 
 export const CAMP_RECIPES: readonly CampRecipe[] = [
@@ -92,6 +93,56 @@ export const CAMP_RECIPES: readonly CampRecipe[] = [
     durationMinutes: 20
   },
   {
+    id: 'camp_cook_gulasz',
+    label: 'Ugotuj Potrawkę z kaszą (przedmiot do plecaka)',
+    category: 'cooking',
+    description: 'Sycąca potrawka z mięsa i grzybów na drogę lub do Pasa Szybkiego Użycia.',
+    ingredients: [
+      { itemId: 'mieso', qty: 1 },
+      { itemId: 'grzyby', qty: 1 }
+    ],
+    resultItemId: 'gulasz',
+    durationMinutes: 35
+  },
+  {
+    id: 'camp_render_oil',
+    label: 'Wytop Łój do ostrza (z mięsa i ziół)',
+    category: 'alchemy',
+    description: 'Wytapia tłuszcz z ziołami w łój do smarowania klingi (+2 obr.).',
+    ingredients: [
+      { itemId: 'mieso', qty: 1 },
+      { itemId: 'ziola_lesne', qty: 1 }
+    ],
+    resultItemId: 'loj_do_ostrza',
+    durationMinutes: 30
+  },
+  {
+    id: 'brew_flasza_oleju',
+    label: 'Przygotuj Flaszę oleju (6–11 obr. ogień)',
+    category: 'alchemy',
+    description: 'Butelka zapalająca skuteczna przeciw upiorom (Medycyna lub Wiedza tajemna ≥ 20).',
+    ingredients: [
+      { itemId: 'loj_do_ostrza', qty: 1 },
+      { itemId: 'bimber', qty: 1 }
+    ],
+    resultItemId: 'flasza_oleju',
+    durationMinutes: 35,
+    minMedycynaOrWiedza: 20
+  },
+  {
+    id: 'brew_swieca_dymna',
+    label: 'Zrób Świecę dymną (Dym + Garda w walce)',
+    category: 'alchemy',
+    description: 'Mieszanka ziół, grzybów i łoju tworząca gęstą zasłonę dymną.',
+    ingredients: [
+      { itemId: 'ziola_lesne', qty: 1 },
+      { itemId: 'grzyby', qty: 1 },
+      { itemId: 'loj_do_ostrza', qty: 1 }
+    ],
+    resultItemId: 'swieca_dymna',
+    durationMinutes: 30
+  },
+  {
     id: 'camp_sleep_6h',
     label: 'Sen i odpoczynek przy ognisku (6h)',
     category: 'sleep',
@@ -132,6 +183,16 @@ export function canPerformCampRecipe(
       return { ok: false, reason: `Wymaga Medycyny ≥ ${recipe.minMedycyna}` };
     }
   }
+  if (recipe.minMedycynaOrWiedza) {
+    const sk = getStats(state, data).skills;
+    const best = Math.max(sk.medycyna ?? 0, sk.wiedza_tajemna ?? 0);
+    if (best < recipe.minMedycynaOrWiedza) {
+      return {
+        ok: false,
+        reason: `Wymaga Medycyny lub Wiedzy tajemnej ≥ ${recipe.minMedycynaOrWiedza}`
+      };
+    }
+  }
   for (const ing of recipe.ingredients) {
     if (getItemQty(state, ing.itemId) < ing.qty) {
       const def = data.items.find((i) => i.id === ing.itemId);
@@ -166,7 +227,7 @@ export function performCampRecipe(params: {
   const ch = state.character;
   let message = '';
 
-  if (recipe.category === 'alchemy' && recipe.resultItemId) {
+  if ((recipe.category === 'alchemy' || recipe.category === 'cooking') && recipe.resultItemId) {
     addItemQty(state, recipe.resultItemId, 1);
     const outItem = data.items.find((i) => i.id === recipe.resultItemId);
     message = `Przygotowano przy ognisku: ${outItem?.name ?? recipe.resultItemId}.`;

@@ -279,11 +279,15 @@ export function useCombatBeltItem(params: {
   if (slot.category === 'heal' || slot.category === 'remedy') {
     const stats = getStats(state, data);
     const medBonus = Math.floor((stats.skills.medycyna ?? 0) / 20);
+    const hasCyrulik = ch.perks.includes('cyrulik');
     let healed = 0;
     if (Array.isArray(item.heal)) {
       healed = rng.int(item.heal[0], item.heal[1]) + medBonus;
     } else if (typeof item.healHp === 'number') {
       healed = item.healHp + medBonus;
+    }
+    if (healed > 0 && hasCyrulik) {
+      healed = Math.ceil(healed * 1.25);
     }
     const prevHp = pCombat.hp;
     if (healed > 0) {
@@ -306,7 +310,7 @@ export function useCombatBeltItem(params: {
     }
 
     const parts: string[] = [];
-    if (actualHeal > 0) parts.push(`+${actualHeal} HP`);
+    if (actualHeal > 0) parts.push(`+${actualHeal} HP${hasCyrulik ? ' (Cyrulik)' : ''}`);
     if (removedNames.length > 0) parts.push(`usunięto: ${removedNames.join(', ')}`);
     logMessage = `Użyto [${item.name}] (${parts.join(' · ') || 'zastosowano'}, -${slot.apCost} AP).`;
     engine.addCombatLog(logMessage);
@@ -374,6 +378,15 @@ export function useCombatBeltItem(params: {
     statusNote = ' + OKALECZENIE (rój)';
   } else {
     dmg = rng.int(3, 6);
+  }
+
+  if (dmg > 0) {
+    const hasSokoleOko = ch.perks.includes('sokole_oko');
+    const hasPewnaReka = ch.perks.includes('pewna_reka');
+    if (hasSokoleOko || hasPewnaReka) {
+      dmg += 2;
+      statusNote += hasSokoleOko ? ' (+2 Sokole oko)' : ' (+2 Pewna ręka)';
+    }
   }
 
   if (dmgType) {

@@ -340,8 +340,26 @@ export function renderCharacterSheetView(params: {
             ${attrsHtml}
             <h3 style="margin-top:14px">Pochodne bojowe</h3>
             <div class="ostrze-row"><span>Pancerz / Obrona</span><strong>${stats.derived.armor} / ${stats.derived.defense}</strong></div>
+            <div class="ostrze-row"><span>Premia obrażeń</span><strong>+${stats.derived.bonusDamage} obr.</strong></div>
             <div class="ostrze-row"><span>Trafienie (wręcz / dyst.)</span><strong>+${stats.derived.meleeHitChance}% / +${stats.derived.rangedHitChance}%</strong></div>
             <div class="ostrze-row"><span>Krytyk / Inicjatywa</span><strong>${stats.derived.critChance}% / ${stats.derived.initiative}</strong></div>
+            ${
+              stats.derived.resistStrach > 0 || stats.derived.resistOgluszenie > 0 || stats.derived.resistRozkojarzenie > 0
+                ? `<div class="ostrze-row"><span>Odporności (Strach / Ogł. / Rozk.)</span><strong>${stats.derived.resistStrach}% / ${stats.derived.resistOgluszenie}% / ${stats.derived.resistRozkojarzenie}%</strong></div>`
+                : ''
+            }
+            ${(() => {
+              const badges: string[] = [];
+              if (ch.perks.includes('finta')) badges.push('⚔️ Mistrz finty');
+              if (ch.perks.includes('cyrulik')) badges.push('🩹 Cyrulik (+25% lecz.)');
+              if (ch.perks.includes('sokole_oko')) badges.push('🎯 Sokole oko (+2 rzut)');
+              if (ch.perks.includes('pewna_reka')) badges.push('🏹 Pewna ręka (+2 rzut)');
+              if (ch.perks.includes('nieugiety')) badges.push('🛡️ Nieugięty');
+              if (ch.perks.includes('chlodna_glowa')) badges.push('🧠 Chłodna głowa');
+              return badges.length > 0
+                ? `<div class="ostrze-combat-pills" style="margin-top:8px;">${badges.map((b) => `<span class="ostrze-combat-pill is-status">${escapeHtml(b)}</span>`).join('')}</div>`
+                : '';
+            })()}
           </div>
           <div class="ostrze-panel">
             <h3>Umiejętności ${ch.freeSkillPoints > 0 ? `(wolne: ${ch.freeSkillPoints})` : ''}</h3>

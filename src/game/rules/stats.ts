@@ -28,6 +28,10 @@ export interface ComputedStats {
     fleeChance: number;
     initiative: number;
     armor: number;
+    bonusDamage: number;
+    resistStrach: number;
+    resistOgluszenie: number;
+    resistRozkojarzenie: number;
   };
 }
 
@@ -192,6 +196,12 @@ export function getStats(
       : Math.floor(softCap.armorFrom + (wornArmor - softCap.armorFrom) * softCap.rate);
   const armor = cappedWornArmor + sumKey(allSources, 'armor');
 
+  const hasOiledBlade = !opts.permanentOnly && ch.effects.some((e) => e.id === 'natluszczone_ostrze');
+  const oilDefHasDamage = Boolean(
+    data.effects.find((e) => e.id === 'natluszczone_ostrze')?.modifiers?.damage
+  );
+  const bonusDamage = sumKey(allSources, 'damage') + (hasOiledBlade && !oilDefHasDamage ? 2 : 0);
+
   return {
     attributes,
     permanentAttributes,
@@ -206,7 +216,11 @@ export function getStats(
       critChance: attributes.fart + sumKey(allSources, 'critChance'),
       fleeChance: sumKey(allSources, 'fleeChance'),
       initiative: attributes.bystrosc + attributes.zrecznosc + sumKey(allSources, 'initiative'),
-      armor
+      armor,
+      bonusDamage,
+      resistStrach: sumKey(allSources, 'resist_strach'),
+      resistOgluszenie: sumKey(allSources, 'resist_ogluszenie'),
+      resistRozkojarzenie: sumKey(allSources, 'resist_rozkojarzenie')
     }
   };
 }

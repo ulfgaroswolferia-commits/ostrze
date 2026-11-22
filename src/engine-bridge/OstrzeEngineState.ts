@@ -125,6 +125,8 @@ export class OstrzeEngineState extends CrpgGameState {
   private combatAiSession = createCombatAiSessionState();
   private combatStatusSession = createCombatStatusSessionState();
   private pendingPlayerAttackMultiplier = 1;
+  private pendingPlayerFeintActive = false;
+  private feintUsedRound = -1;
 
   constructor() {
     ensureOstrzeEngineExtensionsRegistered();
@@ -157,6 +159,8 @@ export class OstrzeEngineState extends CrpgGameState {
   public resetCombatTacticalSessions(): void {
     this.combatAiSession = createCombatAiSessionState();
     this.combatStatusSession = createCombatStatusSessionState();
+    this.feintUsedRound = -1;
+    this.pendingPlayerFeintActive = false;
   }
 
   private handleEnemyHitStatusEffects(attacker: ActorEntity): void {
@@ -173,15 +177,29 @@ export class OstrzeEngineState extends CrpgGameState {
     const primaryAttack = enemyDef?.attacks?.find(
       (a) => Array.isArray(a.damage) && a.damage.length >= 2
     );
+    const playerStats = this.activeOstrzeState?.character
+      ? getStats(this.activeOstrzeState, ORIGIN_DATA)
+      : null;
+
     const effects = primaryAttack?.effects ?? [];
     for (const eff of effects) {
       const mappedStatusId =
         originId === 'zmija_lesna' && eff.id === 'krwawienie' ? 'zatrucie' : eff.id;
+      let resistPct = 0;
+      if (playerStats) {
+        if (mappedStatusId === 'strach') resistPct = playerStats.derived.resistStrach;
+        else if (mappedStatusId === 'ogluszenie' || mappedStatusId === 'zamroczenie') {
+          resistPct = playerStats.derived.resistOgluszenie;
+        } else if (mappedStatusId === 'rozkojarzenie') {
+          resistPct = playerStats.derived.resistRozkojarzenie;
+        }
+      }
+      const adjustedChance = Math.max(0, eff.chance - resistPct);
       const res = tryApplyPlayerCombatStatus({
         state: this.activeOstrzeState,
         session: this.combatStatusSession,
         statusId: mappedStatusId,
-        chancePct: eff.chance,
+        chancePct: adjustedChance,
         currentRound: this.combatState.round,
         allowStatusEffects: budget.allowStatusEffects,
         sourceName: attacker.recipe.name
@@ -299,7 +317,10 @@ export class OstrzeEngineState extends CrpgGameState {
       if (opts.stats) {
         const s = opts.stats;
         this.player.combat.customArmorBonus = Math.max(0, Math.round(s.derived.armor + s.derived.defense / 4));
-        this.player.combat.customDamageBonus = Math.max(0, Math.floor((s.attributes.sila - 5) / 2));
+        this.player.combat.customDamageBonus = Math.max(
+          0,
+          Math.floor((s.attributes.sila - 5) / 2) + s.derived.bonusDamage
+        );
         this.player.combat.proficiencies.blades = Math.max(
           60,
           Math.min(95, 55 + Math.round(s.skills.sieczna * 0.45) + Math.round(s.derived.meleeHitChance * 0.2))
@@ -474,7 +495,15 @@ export class OstrzeEngineState extends CrpgGameState {
         this.combatStatusSession
       );
       const mult = this.pendingPlayerAttackMultiplier;
-      if (hitPenalty <= 0 && mult === 1) {
+      const feintBonus = this.pendingPlayerFeintActive ? 15 : 0;
+      const ostrzeCrit = this.activeOstrzeState?.character
+        ? getStats(this.activeOstrzeState, ORIGIN_DATA).derived.critChance
+        : null;
+      const nextCrit =
+        ostrzeCrit !== null
+          ? Math.max(base.derived.critChancePct, Math.min(65, ostrzeCrit))
+          : base.derived.critChancePct;
+      if (hitPenalty <= 0 && mult === 1 && feintBonus === 0 && nextCrit === base.derived.critChancePct) {
         return base;
       }
       const scaledMin = Math.max(1, Math.round(base.derived.minDamage * mult));
@@ -485,7 +514,11 @@ export class OstrzeEngineState extends CrpgGameState {
           ...base.derived,
           minDamage: scaledMin,
           maxDamage: scaledMax,
-          activeProficiency: Math.max(10, base.derived.activeProficiency - hitPenalty)
+          critChancePct: nextCrit,
+          activeProficiency: Math.min(
+            98,
+            Math.max(10, base.derived.activeProficiency - hitPenalty + feintBonus)
+          )
         }
       };
     }
@@ -870,12 +903,31 @@ export class OstrzeEngineState extends CrpgGameState {
     const damageType = resolvePlayerWeaponDamageType(this.activeOstrzeState, ORIGIN_DATA);
     const mult = getEnemyDamageMultiplier(originId, damageType, ORIGIN_DATA);
 
+    const hasFeint = Boolean(
+      this.activeOstrzeState?.character?.perks.includes('finta') &&
+        this.feintUsedRound !== this.combatState.round
+    );
+    if (hasFeint && enemy?.combat) {
+      this.feintUsedRound = this.combatState.round;
+      this.pendingPlayerFeintActive = true;
+      const brokeGuard = enemy.combat.defending;
+      if (brokeGuard) {
+        enemy.combat.defending = false;
+      }
+      this.addCombatLog(
+        brokeGuard
+          ? `⚔️ Mistrz finty! Zmyłka przełamuje gardę ${enemy.recipe.name} (+15% trafienia).`
+          : `⚔️ Mistrz finty! Pierwszy cios w rundzie (+15% trafienia).`
+      );
+    }
+
     this.pendingPlayerAttackMultiplier = mult;
     let outcome;
     try {
       outcome = super.performPlayerCombatAttack(targetId, mode, rng);
     } finally {
       this.pendingPlayerAttackMultiplier = 1;
+      this.pendingPlayerFeintActive = false;
     }
 
     if (outcome?.hit && enemy && mult !== 1) {
