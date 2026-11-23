@@ -9,6 +9,12 @@ import { ORIGIN_DATA } from './game/data/originData';
 import { createCharacter, createEmptyOstrzeState, grantXp, xpRequiredForLevel } from './game/rules/character';
 import { checkNewAchievementUnlocks } from './game/rules/achievements';
 import { tryTriggerAmbientBark } from './game/rules/ambientBarks';
+import {
+  cycleOstrzeDifficulty,
+  getDifficultyProfile,
+  getOstrzeDifficulty,
+  setOstrzeDifficulty
+} from './game/rules/difficulty';
 import { forageWorldProp, performCampRecipe } from './game/rules/campCrafting';
 import { resolveQuickBeltSlots, useCombatBeltItem } from './game/rules/combatConsumables';
 import { rollStealthCheck } from './game/rules/stealth';
@@ -280,6 +286,8 @@ async function bootstrapOstrze(): Promise<void> {
     chapter2.onAutoSave = () => performSave(true);
     chapter2.onLoadRequested = performLoad;
     chapter2.onKeyRequested = () => openSaveKeyModal();
+    chapter2.onExportHeroKey = () => openSaveKeyModal();
+    chapter2.onNewGame = () => startNewGame();
     chapter2.onDefeatToPrologue = returnToPrologueStart;
     return chapter2;
   };
@@ -475,6 +483,17 @@ async function bootstrapOstrze(): Promise<void> {
       hasSave: hasAvailableSave(),
       devMode: isDevMode,
       isMuted: CombatAudioEngine.getInstance().getMuted(),
+      difficultyLabel: getDifficultyProfile(getOstrzeDifficulty(prologue.state)).label,
+      onCycleDifficulty: () => {
+        const next = cycleOstrzeDifficulty(getOstrzeDifficulty(prologue.state));
+        setOstrzeDifficulty(prologue.state, next);
+        engine.applyDifficultyScalingToLoadedEnemies();
+        performSave(true);
+        const profile = getDifficultyProfile(next);
+        modalUi.showToast(`⚔️ Poziom trudności: ${profile.label} (${profile.shortDesc}).`, 'info');
+        refreshUi();
+        return profile.label;
+      },
       onSave: () => performSave(false),
       onLoad: performLoad,
       onOpenKey: () => openSaveKeyModal(),

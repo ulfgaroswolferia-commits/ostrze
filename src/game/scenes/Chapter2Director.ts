@@ -75,6 +75,8 @@ export class Chapter2Director {
   public onAutoSave?: () => void;
   public onKeyRequested?: () => void;
   public onDefeatToPrologue?: () => void;
+  public onExportHeroKey?: () => void;
+  public onNewGame?: () => void;
   public hasSave?: () => boolean;
 
   constructor(opts: {
@@ -610,27 +612,17 @@ export class Chapter2Director {
     this.state.flags.akt3a_koniec = true;
     const sceneId = viaOblawa ? 'akt3a_koniec_oblawa' : 'akt3a_koniec_scena';
     const scene = this.data.story.scenes.find((s) => s.id === sceneId);
-    const ch = this.state.character;
-    const summary = [
-      typeof scene?.text === 'string' && scene.text.trim()
-        ? scene.text
-        : 'Głuszec zostaje za plecami. Przed tobą Szklane Wzgórza i Obserwatorium, gdzie ślady spadłych gwiazd zbiegają się w jedno.',
-      '',
-      '--- KONIEC AKTU II (OSADA GŁUSZEC) ---',
-      `Bohater: ${ch?.name ?? 'Adept'} (Poz. ${ch?.level ?? 1}, ${ch?.xp ?? 0} XP, ${ch?.money ?? 0} gr)`,
-      `Osie moralne: Wola = ${this.state.vars.wola ?? 0}, Dług = ${this.state.vars.dlug ?? 0}`
-    ].join('\n');
+    const storyText = typeof scene?.text === 'string' ? scene.text : undefined;
 
-    this.ui?.showNarrative({
-      title: viaOblawa ? 'Przerwanie Obławy — Koniec Aktu II' : 'Za Głuszcem — Koniec Aktu II',
-      subtitle: 'Zapowiedź Aktu III: Obserwatorium na Szklanym Wzgórzu',
-      artId: 'gluszec',
-      text: summary,
-      buttonLabel: 'Zostań w okolicach Głuszca',
-      onContinue: () => {
+    this.ui?.showCampaignSummary({
+      viaOblawa,
+      storyText,
+      onStayFreeRoam: () => {
         this.engine.addLog('🏁 Akt II ukończony! Otwarto szlak na Szklane Wzgórza (Akt III).', 'important');
         this.refreshHubPanel();
-      }
+      },
+      onExportHeroKey: this.onExportHeroKey,
+      onNewGame: this.onNewGame
     });
   }
 

@@ -28,6 +28,10 @@ import {
 } from '../game/assets/beastSprites';
 import { getPropVisualTransform } from '../game/assets/buildingScaling';
 import {
+  getDifficultyProfile,
+  getOstrzeDifficulty
+} from '../game/rules/difficulty';
+import {
   computeActorTacticalCover,
   findDetonatableOilBarrel,
   OIL_BARREL_AP_COST,
@@ -145,6 +149,7 @@ export class OstrzeEngineState extends CrpgGameState {
   private feintUsedRound = -1;
   private maneuverCooldownUntilRound = 0;
   private readonly detonatedOilBarrelIds = new Set<string>();
+  private readonly enemyBaseMaxHp = new Map<string, number>();
 
   constructor() {
     ensureOstrzeEngineExtensionsRegistered();
@@ -421,6 +426,7 @@ export class OstrzeEngineState extends CrpgGameState {
    */
   public syncFromOstrzeState(state: OstrzeGameState, data: OriginGameData): void {
     this.activeOstrzeState = state;
+    this.applyDifficultyScalingToLoadedEnemies();
     if (!state.character) return;
     const stats = getStats(state, data);
     const eq = state.inventory.equipped;
@@ -499,6 +505,7 @@ export class OstrzeEngineState extends CrpgGameState {
 
     this.resetRuntimeStateForCustomMap();
     this.resetCombatTacticalSessions();
+    this.enemyBaseMaxHp.clear();
     this.persistentMarkers.clear();
     this.wasCombatActive = false;
     this.activeCustomSceneId = sceneId;
@@ -563,7 +570,29 @@ export class OstrzeEngineState extends CrpgGameState {
 
     this.recomputeFov();
     this.onSceneLoaded?.(sceneId);
+    this.applyDifficultyScalingToLoadedEnemies();
     return true;
+  }
+
+  public applyDifficultyScalingToLoadedEnemies(): void {
+    const profile = getDifficultyProfile(getOstrzeDifficulty(this.activeOstrzeState));
+    for (const npc of this.npcs) {
+      if (!npc.combat?.isHostile) continue;
+      let baseMaxHp = this.enemyBaseMaxHp.get(npc.id);
+      if (baseMaxHp === undefined) {
+        baseMaxHp = npc.combat.maxHp;
+        this.enemyBaseMaxHp.set(npc.id, baseMaxHp);
+      }
+      const prevMax = Math.max(1, npc.combat.maxHp);
+      const hpRatio = Math.min(1, Math.max(0, npc.combat.hp / prevMax));
+      const nextMax = Math.max(4, Math.round(baseMaxHp * profile.enemyHpMult));
+      if (nextMax !== npc.combat.maxHp) {
+        npc.combat.maxHp = nextMax;
+        if (npc.combat.isAlive) {
+          npc.combat.hp = Math.max(1, Math.round(nextMax * hpRatio));
+        }
+      }
+    }
   }
 
   public override getActorCombatant(actor: ActorEntity): CombatantSnapshot {
@@ -573,12 +602,14 @@ export class OstrzeEngineState extends CrpgGameState {
     }
 
     if (actor.id === this.player.id) {
+      const diffProfile = getDifficultyProfile(getOstrzeDifficulty(this.activeOstrzeState));
       const hitPenalty = getPlayerStatusHitPenaltyPct(
         this.activeOstrzeState,
         this.combatStatusSession
       );
       const mult = this.pendingPlayerAttackMultiplier;
       const feintBonus = this.pendingPlayerFeintActive ? 15 : 0;
+      const diffHitBonus = diffProfile.playerHitBonusPct;
       const surpriseCritBonus = this.pendingSurpriseAttack ? 15 : 0;
       const ostrzeCrit = this.activeOstrzeState?.character
         ? getStats(this.activeOstrzeState, ORIGIN_DATA).derived.critChance
@@ -587,7 +618,13 @@ export class OstrzeEngineState extends CrpgGameState {
         ostrzeCrit !== null
           ? Math.max(base.derived.critChancePct, Math.min(75, ostrzeCrit + surpriseCritBonus))
           : Math.min(75, base.derived.critChancePct + surpriseCritBonus);
-      if (hitPenalty <= 0 && mult === 1 && feintBonus === 0 && nextCrit === base.derived.critChancePct) {
+      if (
+        hitPenalty <= 0 &&
+        mult === 1 &&
+        feintBonus === 0 &&
+        diffHitBonus === 0 &&
+        nextCrit === base.derived.critChancePct
+      ) {
         return base;
       }
       const scaledMin = Math.max(1, Math.round(base.derived.minDamage * mult));
@@ -601,12 +638,13 @@ export class OstrzeEngineState extends CrpgGameState {
           critChancePct: nextCrit,
           activeProficiency: Math.min(
             98,
-            Math.max(10, base.derived.activeProficiency - hitPenalty + feintBonus)
+            Math.max(10, base.derived.activeProficiency - hitPenalty + feintBonus + diffHitBonus)
           )
         }
       };
     }
 
+    const diffProfile = getDifficultyProfile(getOstrzeDifficulty(this.activeOstrzeState));
     const originId = resolveEnemyOriginId(actor.id, actor.recipe.name);
     const enemyDef = originId ? ORIGIN_DATA.enemies.find((e) => e.id === originId) : undefined;
     const archetype = resolveEnemyArchetype(originId, enemyDef, actor.combat?.difficulty);
@@ -619,19 +657,22 @@ export class OstrzeEngineState extends CrpgGameState {
       originId === 'upior_nocy' ||
       originId === 'herszt_zbojcow';
 
-    const minDamage = primaryAttack
+    const rawMinDamage = primaryAttack
       ? Math.max(1, primaryAttack.damage![0])
       : Math.min(base.derived.minDamage, 6);
-    const maxDamage = primaryAttack
-      ? Math.max(minDamage + 1, primaryAttack.damage![1])
-      : Math.max(minDamage + 1, Math.min(base.derived.maxDamage, 10));
+    const rawMaxDamage = primaryAttack
+      ? Math.max(rawMinDamage + 1, primaryAttack.damage![1])
+      : Math.max(rawMinDamage + 1, Math.min(base.derived.maxDamage, 10));
+    const minDamage = Math.max(1, Math.round(rawMinDamage * diffProfile.enemyDamageMult));
+    const maxDamage = Math.max(minDamage + 1, Math.round(rawMaxDamage * diffProfile.enemyDamageMult));
 
     const critChancePct =
       originId === 'instruktor' ? 5 : isBossOrVeryHard ? 10 : 6;
 
     const dazed = (actor.combat?.dazedHeadTurns ?? 0) > 0;
     const defending = Boolean(actor.combat?.defending);
-    const baseMaxAp = enemyDef?.ap ?? actor.combat?.maxAp ?? 6;
+    const baseMaxAp =
+      (enemyDef?.ap ?? actor.combat?.maxAp ?? 6) + (isBossOrVeryHard ? diffProfile.bossApBonus : 0);
     const maxAp = Math.max(3, baseMaxAp - (dazed ? 2 : 0));
 
     const activeProficiency = Math.max(

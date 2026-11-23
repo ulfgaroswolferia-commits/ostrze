@@ -2,6 +2,8 @@ export interface PauseMenuOptions {
   devMode?: boolean;
   hasSave: boolean;
   isMuted: boolean;
+  difficultyLabel?: string;
+  onCycleDifficulty?: () => string;
   onSave: () => void;
   onLoad: () => void;
   onOpenKey: () => void;
@@ -31,6 +33,7 @@ export function renderPauseMenuView(params: {
           ${pm.hasSave ? `<button type="button" class="ostrze-hub-btn" id="ostrze-pm-load">📂 Wczytaj zapis</button>` : ''}
           <button type="button" class="ostrze-hub-btn" id="ostrze-pm-key">🔑 Klucz rozgrywki</button>
           ${pm.onOpenHelp ? `<button type="button" class="ostrze-hub-btn" id="ostrze-pm-help">❓ Pomoc i sterowanie [F1]</button>` : ''}
+          ${pm.onCycleDifficulty ? `<button type="button" class="ostrze-hub-btn" id="ostrze-pm-diff">⚔️ Trudność: ${pm.difficultyLabel ?? 'Klasyczny'}</button>` : ''}
           <button type="button" class="ostrze-hub-btn" id="ostrze-pm-mute">${pm.isMuted ? '🔇 Dźwięk: Wyciszony' : '🔊 Dźwięk: Włączony'}</button>
           <button type="button" class="ostrze-hub-btn" id="ostrze-pm-new" style="border-color:rgba(239,68,68,0.45);color:#fca5a5;">🔄 Nowa gra</button>
         </div>
@@ -54,6 +57,12 @@ export function renderPauseMenuView(params: {
   root.querySelector('#ostrze-pm-help')?.addEventListener('click', () => {
     onDismissForAction();
     pm.onOpenHelp?.();
+  });
+  root.querySelector('#ostrze-pm-diff')?.addEventListener('click', () => {
+    if (pm.onCycleDifficulty) {
+      pm.difficultyLabel = pm.onCycleDifficulty();
+      onRerender();
+    }
   });
   root.querySelector('#ostrze-pm-mute')?.addEventListener('click', () => {
     pm.isMuted = pm.onToggleMute();

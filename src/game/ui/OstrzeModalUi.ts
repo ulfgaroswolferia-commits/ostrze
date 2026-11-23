@@ -36,6 +36,10 @@ import {
   renderHelpModalView
 } from './views/HelpModalView';
 import {
+  type CampaignSummaryOptions,
+  renderCampaignSummaryView
+} from './views/CampaignSummaryView';
+import {
   type PauseMenuOptions,
   renderPauseMenuView
 } from './views/PauseMenuView';
@@ -121,6 +125,7 @@ export class OstrzeModalUi {
   private isCombatActiveFn: (() => boolean) | null = null;
   private activeCampfire: CampfireModalOptions | null = null;
   private activePauseMenu: PauseMenuOptions | null = null;
+  private activeCampaignSummary: CampaignSummaryOptions | null = null;
   private activeHelp: { initialTab?: HelpModalTab; onClosed?: () => void } | null = null;
   private lastEscapeClosedAt = 0;
   public onOpenCampfire?: () => void;
@@ -348,6 +353,7 @@ export class OstrzeModalUi {
     return Boolean(
       this.activeHelp ||
         this.activePauseMenu ||
+        this.activeCampaignSummary ||
         this.activeSaveKey ||
         this.activeWelcome ||
         this.activeNarrative ||
@@ -367,6 +373,11 @@ export class OstrzeModalUi {
 
   public showPauseMenu(opts: PauseMenuOptions): void {
     this.activePauseMenu = opts;
+    this.render();
+  }
+
+  public showCampaignSummary(opts: CampaignSummaryOptions): void {
+    this.activeCampaignSummary = opts;
     this.render();
   }
 
@@ -445,6 +456,7 @@ export class OstrzeModalUi {
   public closeAll(): void {
     this.activeHelp = null;
     this.activePauseMenu = null;
+    this.activeCampaignSummary = null;
     this.activeWelcome = null;
     this.activeSaveKey = null;
     this.activeNarrative = null;
@@ -466,6 +478,20 @@ export class OstrzeModalUi {
     }
     if (this.activePauseMenu) {
       this.renderPauseMenu();
+      return;
+    }
+    if (this.activeCampaignSummary) {
+      const opts = this.activeCampaignSummary;
+      renderCampaignSummaryView({
+        root: this.root,
+        state: this.state,
+        data: this.data,
+        opts,
+        onClose: () => {
+          this.activeCampaignSummary = null;
+          this.render();
+        }
+      });
       return;
     }
     if (this.activeSaveKey) {

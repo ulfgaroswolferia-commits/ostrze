@@ -2433,6 +2433,89 @@ body:has(.combat-mode-active) .ostrze-toast-stack {
   cursor: not-allowed;
 }
 
+.ostrze-creator-diff-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0 8px;
+}
+
+.ostrze-creator-diff-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #cbb88a;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ostrze-creator-diff-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ostrze-diff-btn {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 9px;
+  border-radius: 5px;
+  border: 1px solid rgba(196, 158, 84, 0.28);
+  background: rgba(18, 22, 31, 0.85);
+  color: #d6cbb7;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.72rem;
+}
+
+.ostrze-diff-btn strong {
+  color: #f3dcab;
+  font-size: 0.82rem;
+}
+
+.ostrze-diff-btn.active {
+  border-color: #e5b869;
+  background: rgba(68, 49, 22, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(229, 184, 105, 0.35);
+}
+
+.ostrze-summary-card {
+  max-width: 720px;
+}
+
+.ostrze-summary-badge {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(229, 184, 105, 0.55);
+  background: rgba(54, 40, 18, 0.78);
+  color: #f6df9d;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.ostrze-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.ostrze-summary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 720px) {
+  .ostrze-creator-diff-options,
+  .ostrze-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 body.ostrze-attack-cursor #viewport-container canvas {
   cursor: crosshair !important;
 }

@@ -6,6 +6,13 @@ import type {
   SkillId
 } from '../../data/originTypes';
 import { createCharacter } from '../../rules/character';
+import {
+  DIFFICULTY_ORDER,
+  DIFFICULTY_PROFILES,
+  getOstrzeDifficulty,
+  setOstrzeDifficulty,
+  type OstrzeDifficultyId
+} from '../../rules/difficulty';
 import { getStats } from '../../rules/stats';
 import { escapeHtml } from '../escapeHtml';
 
@@ -14,6 +21,7 @@ export interface CharacterCreatorDraftState {
   classId: ClassId;
   attrs: Record<AttributeId, number>;
   tagged: SkillId[];
+  difficulty?: OstrzeDifficultyId;
   error: string | null;
 }
 
@@ -122,6 +130,17 @@ export function renderCharacterCreatorView(params: {
     };
   };
 
+  const activeDifficulty = draft.difficulty ?? getOstrzeDifficulty(state);
+  const difficultyButtons = DIFFICULTY_ORDER.map((id) => {
+    const p = DIFFICULTY_PROFILES[id];
+    return `
+      <button type="button" class="ostrze-diff-btn ${id === activeDifficulty ? 'active' : ''}" data-creator-diff="${id}" title="${escapeHtml(p.shortDesc)}">
+        <strong>${escapeHtml(p.label)}</strong>
+        <span>${escapeHtml(p.shortDesc)}</span>
+      </button>
+    `;
+  }).join('');
+
   const initialStatus = computeStatus(draft.name);
 
   root.innerHTML = `
@@ -152,6 +171,10 @@ export function renderCharacterCreatorView(params: {
               ${skillRows}
             </div>
           </div>
+        </div>
+        <div class="ostrze-creator-diff-bar">
+          <span class="ostrze-creator-diff-label">Poziom trudności:</span>
+          <div class="ostrze-creator-diff-options">${difficultyButtons}</div>
         </div>
         <div class="ostrze-creator-footer">
           <div class="ostrze-creator-status ${initialStatus.canSubmit ? 'ready' : ''}" id="ostrze-creator-status">${escapeHtml(initialStatus.hint)}</div>
@@ -227,8 +250,16 @@ export function renderCharacterCreatorView(params: {
     });
   });
 
+  root.querySelectorAll<HTMLElement>('[data-creator-diff]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      draft.difficulty = btn.dataset.creatorDiff as OstrzeDifficultyId;
+      onRerender();
+    });
+  });
+
   root.querySelector('[data-action="creator-submit"]')?.addEventListener('click', () => {
     try {
+      setOstrzeDifficulty(state, activeDifficulty);
       createCharacter(
         state,
         {
