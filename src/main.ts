@@ -8,6 +8,7 @@ import { ostrzeAudio } from './game/audio/ostrzeAudio';
 import { ORIGIN_DATA } from './game/data/originData';
 import { createCharacter, createEmptyOstrzeState, grantXp, xpRequiredForLevel } from './game/rules/character';
 import { checkNewAchievementUnlocks } from './game/rules/achievements';
+import { tryTriggerAmbientBark } from './game/rules/ambientBarks';
 import { forageWorldProp, performCampRecipe } from './game/rules/campCrafting';
 import { resolveQuickBeltSlots, useCombatBeltItem } from './game/rules/combatConsumables';
 import { rollStealthCheck } from './game/rules/stealth';
@@ -581,6 +582,13 @@ async function bootstrapOstrze(): Promise<void> {
   document.body.appendChild(attackFab);
 
   syncHelpFabAndTips = () => {
+    // Keep hero-card character sheet shortcut label consistent with Ostrze [K] tips
+    hudRoot.querySelectorAll<HTMLButtonElement>('.hero-card button').forEach((btn) => {
+      if (btn.textContent && btn.textContent.includes('Postać [I]')) {
+        btn.textContent = btn.textContent.replace('Postać [I]', 'Postać [K]');
+      }
+    });
+
     const hideFab = engine.combatState.active || modalUi.hasOpenModal();
     helpFab.style.display = hideFab ? 'none' : 'inline-flex';
     const hasLivingHostile = engine.npcs.some((n) => n.combat?.isHostile && n.combat.isAlive);
@@ -650,6 +658,20 @@ async function bootstrapOstrze(): Promise<void> {
       e.preventDefault();
       sceneView.explorationAttackMode = !sceneView.explorationAttackMode;
       refreshUi();
+      return;
+    }
+
+    if (key === 'k' || key === 'i') {
+      if (!prologue.state.character || modalUi.hasOpenModal()) return;
+      e.preventDefault();
+      modalUi.showCharacterSheet(() => {
+        engine.syncFromOstrzeState(prologue.state, prologue.data);
+        if (activeChapter === 'prologue') prologue.refreshObjectiveTracker();
+        else if (activeChapter === 'chapter2') chapter2?.refreshHubPanel();
+        else chapter1.refreshHubPanel();
+        performSave(true);
+        refreshUi();
+      }, 'stats');
       return;
     }
 
@@ -767,6 +789,30 @@ async function bootstrapOstrze(): Promise<void> {
     engine.loadCustomScene('brzezina_dziedziniec');
     showWelcome();
   }
+
+  // Drakensang-style ambient hub barks (Brzezina, Wilczy Bród, Osada Głuszec)
+  let lastAmbientNpcId: string | null = null;
+  let lastAmbientLine: string | null = null;
+  window.setInterval(() => {
+    if (isDevMode || !prologue.state.character) return;
+    const atmosphere = getWorldAtmosphere(prologue.state, prologue.data);
+    const triggered = tryTriggerAmbientBark({
+      sceneId: engine.activeCustomSceneId,
+      playerX: engine.player.tileX,
+      playerY: engine.player.tileY,
+      npcs: engine.npcs,
+      combatActive: engine.combatState.active,
+      modalOpen: modalUi.hasOpenModal(),
+      timeOfDayId: atmosphere.timeOfDay,
+      phenomenonId: atmosphere.phenomenonId,
+      lastNpcId: lastAmbientNpcId,
+      lastLine: lastAmbientLine
+    });
+    if (triggered) {
+      lastAmbientNpcId = triggered.npcId;
+      lastAmbientLine = triggered.text;
+    }
+  }, 7800);
 
   refreshUi();
 }

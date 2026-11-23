@@ -25,6 +25,7 @@ const CONTROL_GROUPS: ReadonlyArray<{
   {
     title: 'Okna i nawigacja',
     items: [
+      { keys: 'K / I', desc: 'Karta Postaci — atrybuty, umiejętności, ekwipunek, pas i talenty' },
       { keys: 'M', desc: 'Interaktywna mapa świata i podróż (w Prologu tryb podglądu)' },
       { keys: 'J', desc: 'Dziennik aktywnych zadań i lista kroków do wykonania' },
       { keys: 'F1 / ?', desc: 'Otwórz lub zamknij to okno Pomocy i skrótów' },

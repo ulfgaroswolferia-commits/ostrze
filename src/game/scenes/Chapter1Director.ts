@@ -440,6 +440,10 @@ export class Chapter1Director {
     this.engine.loadCustomScene('wilczy_brod');
     ostrzeAudio.setAmbience('town');
     this.syncHeroTo25D();
+    this.engine.addLog(
+      '🏰 Strażnica Wilczy Bród — palisada, wieża i błoto po kostki. Czas rozejrzeć się za pracą i tropem.',
+      'important'
+    );
 
     const showHub = (): void => {
       this.engine.addLog(
@@ -474,6 +478,10 @@ export class Chapter1Director {
     this.engine.loadCustomScene('wilczy_brod');
     ostrzeAudio.setAmbience('town');
     this.syncHeroTo25D();
+    this.engine.addLog(
+      '🏰 Strażnica Wilczy Bród — palisada, wieża i błoto po kostki. Czas rozejrzeć się za pracą i tropem.',
+      'important'
+    );
     this.refreshHubPanel();
     this.onAutoSave?.();
   }

@@ -616,7 +616,7 @@ body,
 
 .ostrze-toast-stack {
   position: fixed;
-  bottom: 92px;
+  top: 64px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 1300;
@@ -806,14 +806,14 @@ body,
 
 .ostrze-dialogue-avatar-frame {
   width: 156px;
-  height: 156px;
+  height: 186px;
   padding: 5px;
   border-radius: 6px;
   background: linear-gradient(160deg, #272017 0%, #0d1016 100%);
-  border: 2px solid #8a6d3b;
+  border: 2px solid #9e7d43;
   box-shadow:
-    inset 0 0 0 1px rgba(229, 184, 105, 0.25),
-    0 10px 24px rgba(0, 0, 0, 0.72);
+    inset 0 0 0 1px rgba(240, 200, 120, 0.32),
+    0 12px 26px rgba(0, 0, 0, 0.78);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -821,10 +821,11 @@ body,
 
 .ostrze-dialogue-avatar {
   width: 144px;
-  height: 144px;
+  height: 174px;
   display: block;
   border-radius: 3px;
   object-fit: cover;
+  object-position: top center;
   background: #0b0d12;
 }
 
@@ -1116,7 +1117,7 @@ body:has(.combat-mode-active) .ostrze-hub-bar {
 }
 
 body:has(.combat-mode-active) .ostrze-toast-stack {
-  bottom: 204px;
+  top: 76px;
 }
 
 .ostrze-belt-select {
@@ -2178,10 +2179,15 @@ body:has(.combat-mode-active) .ostrze-toast-stack {
    Help / Controls Modal & Floating '?' Button
    ========================================================================== */
 
+/* Ostrze 2.5D is a grounded low-fantasy blade/spear CRPG without mana spells */
+#hud-root .hero-ap-pill[title^="Mana:"] {
+  display: none !important;
+}
+
 .ostrze-help-fab {
   position: fixed;
   right: 16px;
-  bottom: 16px;
+  top: 62px;
   z-index: 920;
   width: 36px;
   height: 36px;
@@ -2269,7 +2275,7 @@ body:has(.combat-mode-active) .ostrze-toast-stack {
 
 @media (max-width: 720px) {
   .ostrze-help-fab {
-    bottom: 62px;
+    top: 56px;
     right: 12px;
     width: 34px;
     height: 34px;
@@ -2362,7 +2368,7 @@ body:has(.combat-mode-active) .ostrze-toast-stack {
 .ostrze-attack-fab {
   position: fixed;
   right: 60px;
-  bottom: 16px;
+  top: 62px;
   z-index: 920;
   height: 36px;
   padding: 0 12px;
@@ -2394,7 +2400,7 @@ body.ostrze-attack-cursor #viewport-container canvas {
 
 @media (max-width: 720px) {
   .ostrze-attack-fab {
-    bottom: 62px;
+    top: 56px;
     right: 54px;
     height: 34px;
     padding: 0 10px;

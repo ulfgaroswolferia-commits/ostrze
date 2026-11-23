@@ -369,8 +369,16 @@ export function renderCharacterSheetView(params: {
             <h3>Atrybuty ${ch.freeAttributePoints > 0 ? `(wolne: ${ch.freeAttributePoints})` : ''}</h3>
             ${attrsHtml}
             <h3 style="margin-top:14px">Pochodne bojowe</h3>
+            ${(() => {
+              const weaponId = state.inventory?.equipped?.bron;
+              const weapon = weaponId ? data.items.find((it) => it.id === weaponId) : undefined;
+              const wMin = (weapon?.damage?.[0] ?? 2) + stats.derived.bonusDamage;
+              const wMax = (weapon?.damage?.[1] ?? 4) + stats.derived.bonusDamage;
+              const wLabel = weapon ? `${weapon.name}` : 'Walka wręcz';
+              return `<div class="ostrze-row"><span>Broń (${escapeHtml(wLabel)})</span><strong>${wMin}–${wMax} obr.</strong></div>`;
+            })()}
             <div class="ostrze-row"><span>Pancerz / Obrona</span><strong>${stats.derived.armor} / ${stats.derived.defense}</strong></div>
-            <div class="ostrze-row"><span>Premia obrażeń</span><strong>+${stats.derived.bonusDamage} obr.</strong></div>
+            <div class="ostrze-row"><span>Premia obrażeń (atuty/olej)</span><strong>+${stats.derived.bonusDamage} obr.</strong></div>
             <div class="ostrze-row"><span>Trafienie (wręcz / dyst.)</span><strong>+${stats.derived.meleeHitChance}% / +${stats.derived.rangedHitChance}%</strong></div>
             <div class="ostrze-row"><span>Krytyk / Inicjatywa</span><strong>${stats.derived.critChance}% / ${stats.derived.initiative}</strong></div>
             ${

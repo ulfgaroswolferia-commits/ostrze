@@ -576,7 +576,7 @@ export function createGluszecScene(): CustomSceneConfig {
       seed: 2109,
       name: 'Wdowa Jaga (Żona strażnika)',
       title: 'Mieszkanka Głuszca',
-      x: 16,
+      x: 17,
       y: 17,
       z: 0,
       direction: 5,
@@ -2037,7 +2037,7 @@ export function createSpalonaOsadaScene(opts?: { withHunt?: boolean }): CustomSc
   applyWorldDressing(map, {
     seed: 20269,
     spawnX: 11,
-    spawnY: 19,
+    spawnY: 15,
     actors,
     reservedPoints: [
       { x: 11, y: 21, radius: 1 },
@@ -2052,7 +2052,7 @@ export function createSpalonaOsadaScene(opts?: { withHunt?: boolean }): CustomSc
     id: 'spalona_osada',
     map,
     spawnX: 11,
-    spawnY: 19,
+    spawnY: 15,
     actors,
     ambientLightIntensity: 0.65,
     fogOfWarEnabled: false
@@ -2249,7 +2249,7 @@ export function createStaraKopalniaScene(opts?: { withHunt?: boolean }): CustomS
   applyWorldDressing(map, {
     seed: 20270,
     spawnX: 11,
-    spawnY: 19,
+    spawnY: 15,
     actors,
     reservedPoints: [
       { x: 11, y: 21, radius: 1 },
@@ -2264,7 +2264,7 @@ export function createStaraKopalniaScene(opts?: { withHunt?: boolean }): CustomS
     id: 'stara_kopalnia',
     map,
     spawnX: 11,
-    spawnY: 19,
+    spawnY: 15,
     actors,
     ambientLightIntensity: 0.56,
     fogOfWarEnabled: false

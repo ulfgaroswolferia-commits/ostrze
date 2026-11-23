@@ -209,6 +209,10 @@ export class PrologueDirector {
     this.engine.loadCustomScene('brzezina_dziedziniec');
     markOstrzeLocationVisited(this.state, 'brzezina_dziedziniec');
     this.syncHeroTo25D();
+    this.engine.addLog(
+      '⚔️ Brzezina — Dziedziniec Szkoły Ostrzy. Mistrz Gnieworad czeka przy dworze.',
+      'important'
+    );
 
     this.engine.clearAllNpcMarkers();
     this.engine.setNpcMarker('npc_gnieworad', '❗ Mistrz Gnieworad');
@@ -836,6 +840,10 @@ export class PrologueDirector {
     this.engine.loadCustomScene('brzezina_dziedziniec');
     markOstrzeLocationVisited(this.state, 'brzezina_dziedziniec');
     this.syncHeroTo25D();
+    this.engine.addLog(
+      '⚔️ Brzezina — Dziedziniec Szkoły Ostrzy. Mistrz Gnieworad czeka przy dworze.',
+      'important'
+    );
 
     this.showNarrativeScene(
       'prolog_kurier_narracja',

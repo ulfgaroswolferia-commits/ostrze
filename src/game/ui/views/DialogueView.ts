@@ -14,18 +14,133 @@ import {
 } from '../../rules/dialogueEngine';
 import { escapeHtml } from '../escapeHtml';
 
-function resolveFallbackPortraitId(speaker: string): string {
+/**
+ * Optional registry for custom hand-painted portraits (keyed by lowercase speaker fragment).
+ * When custom painterly portraits are added in src/game/assets/portraits/, register them here.
+ */
+export const CUSTOM_PAINTERLY_PORTRAITS: Readonly<Record<string, string>> = {};
+
+export function resolveDialoguePortraitId(speaker: string): string {
   const s = speaker.toLowerCase();
-  if (s.includes('gnieworad')) return 'npc_gniewosz';
-  if (s.includes('wszebor') || s.includes('komendant')) return 'npc_bogusz';
-  if (s.includes('dobrogost') || s.includes('szkarad')) return 'npc_bozydar';
-  if (s.includes('wrzosek') || s.includes('karczmarz')) return 'npc_dobromir';
-  if (s.includes('ostromir') || s.includes('kupiec')) return 'npc_sambor';
-  if (s.includes('kurier') || s.includes('goniec')) return 'npc_milosz_patrol';
-  if (s.includes('ragnosława') || s.includes('wdowa') || s.includes('kobieta')) return 'npc_wislawa';
-  if (s.includes('istota') || s.includes('upiór') || s.includes('szkło')) return 'npc_vaelen';
-  if (s.includes('pielgrzym') || s.includes('wędrowiec') || s.includes('pustelnik')) return 'npc_radogost';
-  return 'npc_gniewko';
+
+  // Mystic / supernatural entities
+  if (s.includes('istota') || s.includes('upiór') || s.includes('zmora') || s.includes('szkło') || s.includes('echo')) {
+    return 'npc_lyra';
+  }
+
+  // Women / herbalists / widows / daughters
+  if (
+    s.includes('ragnosława') ||
+    s.includes('znachorka') ||
+    s.includes('zielarka') ||
+    s.includes('halina') ||
+    s.includes('wdowa') ||
+    s.includes('jaga') ||
+    s.includes('żona') ||
+    s.includes('córka') ||
+    s.includes('kobieta')
+  ) {
+    return 'npc_wislawa';
+  }
+
+  // Blacksmiths / armorers / quartermasters
+  if (s.includes('kowal') || s.includes('zbych') || s.includes('bogdan') || s.includes('dobrogost')) {
+    return 'npc_bozydar';
+  }
+
+  // Shady gunsmiths, bandits, mercenaries, informers
+  if (
+    s.includes('szkarad') ||
+    s.includes('rusznikarz') ||
+    s.includes('najemnik') ||
+    s.includes('bandyt') ||
+    s.includes('maruder') ||
+    s.includes('herszt') ||
+    s.includes('donosiciel')
+  ) {
+    return 'npc_gniewosz';
+  }
+
+  // Foresters, rangers, poachers, scouts (before generic guard so "Gajowy (Strażnik Boru)" gets ranger hood)
+  if (
+    s.includes('gajowy') ||
+    s.includes('leśnicz') ||
+    s.includes('kłusownik') ||
+    s.includes('stach') ||
+    s.includes('zwiadowc') ||
+    s.includes('myśliw')
+  ) {
+    return 'npc_bogusz';
+  }
+
+  // Guards, commanders, instructors, couriers, adepts
+  if (
+    s.includes('wszebor') ||
+    s.includes('komendant') ||
+    s.includes('dozorca') ||
+    s.includes('wincenty') ||
+    s.includes('wartownik') ||
+    s.includes('strażnik') ||
+    s.includes('instruktor') ||
+    s.includes('kurier') ||
+    s.includes('goniec') ||
+    s.includes('skarimir') ||
+    s.includes('wojmir')
+  ) {
+    return 'npc_milosz_patrol';
+  }
+
+  // Innkeepers, merchants, peddlers
+  if (
+    s.includes('wrzosek') ||
+    s.includes('karczmarz') ||
+    s.includes('kogut') ||
+    s.includes('ostromir') ||
+    s.includes('kupiec') ||
+    s.includes('kramarz') ||
+    s.includes('handlarz')
+  ) {
+    return 'npc_dobromir';
+  }
+
+  // Elders, masters, village headmen, pilgrims, hermits, scribes
+  if (
+    s.includes('gnieworad') ||
+    s.includes('mistrz') ||
+    s.includes('sołtys') ||
+    s.includes('pielgrzym') ||
+    s.includes('wędrowiec') ||
+    s.includes('pustelnik') ||
+    s.includes('pisarz')
+  ) {
+    return 'npc_radogost';
+  }
+
+  // Farmers, millers, gravediggers, miners, carters, survivors (default grounded peasant)
+  if (
+    s.includes('młynarz') ||
+    s.includes('radosz') ||
+    s.includes('kopacz') ||
+    s.includes('jerzy') ||
+    s.includes('górnik') ||
+    s.includes('furman') ||
+    s.includes('sieciech') ||
+    s.includes('pogorzelec') ||
+    s.includes('chwalisław') ||
+    s.includes('kmieć')
+  ) {
+    return 'npc_sambor';
+  }
+
+  return 'npc_sambor';
+}
+
+function resolveCustomPainterlyPortrait(speaker: string): string | null {
+  const s = speaker.toLowerCase();
+  for (const [needle, url] of Object.entries(CUSTOM_PAINTERLY_PORTRAITS)) {
+    if (s.includes(needle)) return url;
+  }
+  return null;
 }
 
 export function renderDialogueView(params: {
@@ -43,7 +158,11 @@ export function renderDialogueView(params: {
   const pixMeta = pixPortraitId ? getPixArtMeta(pixPortraitId) : null;
   const isPanoramicScene = Boolean(pixMeta && pixMeta.width > pixMeta.height);
   const isPixPortrait = Boolean(pixMeta);
-  const portraitUrl = pixMeta?.dataUri ?? getSlavicPortrait(resolveFallbackPortraitId(view.speaker));
+  const customPortraitUrl = resolveCustomPainterlyPortrait(view.speaker);
+  const portraitUrl =
+    customPortraitUrl ??
+    pixMeta?.dataUri ??
+    getSlavicPortrait(resolveDialoguePortraitId(view.speaker));
   const speakerRole = resolveSpeakerRole(view.speaker);
 
   const optionsHtml = view.options
