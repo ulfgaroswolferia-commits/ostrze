@@ -37,6 +37,7 @@ const CONTROL_GROUPS: ReadonlyArray<{
     items: [
       { keys: 'Klik na wroga', desc: 'Wybór celu (aktualizuje kartę celu i podgląd obrażeń) lub atak' },
       { keys: '1 / 2', desc: 'Atak podstawowy lub precyzyjny / silny cios' },
+      { keys: 'R', desc: 'Manewr specjalny założonej broni (4 AP, odnowienie 2 tury: Cięcie Łukiem, Pchnięcie, Strzał w Ścięgno, Huk)' },
       { keys: '3', desc: 'Garda — zwiększa obronę i amortyzuje telegrafowane ataki bossów' },
       { keys: '4 – 7', desc: 'Pas Szybkiego Użycia: opatrunki, odtrutki, olej na ostrze i bomby' }
     ]

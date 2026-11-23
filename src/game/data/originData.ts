@@ -52,6 +52,10 @@ import {
   PROLOGUE_COMPANION_DIALOGUES,
   PROLOGUE_COMPANION_ITEMS
 } from './prologueCompanionsData';
+import {
+  ROAD_ENCOUNTER_DIALOGUES,
+  ROAD_ENCOUNTER_TRAVEL_EVENTS
+} from './roadEncounters';
 import type {
   AttributeDef,
   ClassDef,
@@ -97,7 +101,10 @@ export const ORIGIN_DATA: OriginGameData = {
   quests: questsJson as unknown as QuestDef[],
   story: storyJson as unknown as StoryDataDef,
   travelScenes,
-  travelEvents: ((travelJson as { events?: OriginTravelEventDef[] }).events ?? []) as OriginTravelEventDef[],
+  travelEvents: [
+    ...(((travelJson as { events?: OriginTravelEventDef[] }).events ?? []) as OriginTravelEventDef[]),
+    ...ROAD_ENCOUNTER_TRAVEL_EVENTS
+  ],
   rules: rulesJson as unknown as RulesDef,
   prologueDialogues: {
     kurier: dlgKurier as unknown as DialogueFileDef,
@@ -134,7 +141,8 @@ export const ORIGIN_DATA: OriginGameData = {
     po_zwiadowcach: dlgPoZwiadowcach as unknown as DialogueFileDef,
     borek_ruiny: dlgBorekRuiny as unknown as DialogueFileDef,
     ...PROLOGUE_COMPANION_DIALOGUES,
-    ...CHAPTER1_SATELLITE_DIALOGUES
+    ...CHAPTER1_SATELLITE_DIALOGUES,
+    ...ROAD_ENCOUNTER_DIALOGUES
   }
 };
 

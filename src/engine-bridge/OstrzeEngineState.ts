@@ -27,6 +27,18 @@ import {
   isWolfRecipe
 } from '../game/assets/beastSprites';
 import { getPropVisualTransform } from '../game/assets/buildingScaling';
+import {
+  computeActorTacticalCover,
+  findDetonatableOilBarrel,
+  OIL_BARREL_AP_COST,
+  OIL_BARREL_BLAST_RADIUS,
+  type TacticalCoverInfo
+} from '../game/rules/combatArenaTactics';
+import {
+  computeKnockbackTile,
+  resolveActiveWeaponManeuver,
+  type WeaponManeuverDef
+} from '../game/rules/weaponManeuvers';
 import { registerOstrzePainterlyProps } from '../game/assets/painterlyProps';
 import { ostrzeAudio } from '../game/audio/ostrzeAudio';
 import { ORIGIN_DATA } from '../game/data/originData';
@@ -131,6 +143,8 @@ export class OstrzeEngineState extends CrpgGameState {
   private pendingPlayerAttackMultiplier = 1;
   private pendingPlayerFeintActive = false;
   private feintUsedRound = -1;
+  private maneuverCooldownUntilRound = 0;
+  private readonly detonatedOilBarrelIds = new Set<string>();
 
   constructor() {
     ensureOstrzeEngineExtensionsRegistered();
@@ -165,6 +179,8 @@ export class OstrzeEngineState extends CrpgGameState {
     this.combatStatusSession = createCombatStatusSessionState();
     this.enemyBurnTurns.clear();
     this.feintUsedRound = -1;
+    this.maneuverCooldownUntilRound = 0;
+    this.detonatedOilBarrelIds.clear();
     this.pendingPlayerFeintActive = false;
   }
 
@@ -1048,6 +1064,264 @@ export class OstrzeEngineState extends CrpgGameState {
     }
 
     return outcome;
+  }
+
+  public getActorCoverInfo(actor: ActorEntity): TacticalCoverInfo {
+    return computeActorTacticalCover(
+      actor.tileX,
+      actor.tileY,
+      this.map.props,
+      this.detonatedOilBarrelIds
+    );
+  }
+
+  public getWeaponManeuverState(targetId?: string | null): {
+    maneuver: WeaponManeuverDef;
+    cooldownLeft: number;
+    canUse: boolean;
+    reason: string | null;
+  } {
+    const maneuver = resolveActiveWeaponManeuver(this.activeOstrzeState, ORIGIN_DATA);
+    const cooldownLeft = Math.max(0, this.maneuverCooldownUntilRound - this.combatState.round);
+    const pCombat = this.player.combat;
+    if (!this.combatState.active || !pCombat || !pCombat.isAlive) {
+      return { maneuver, cooldownLeft, canUse: false, reason: 'Tylko w walce' };
+    }
+    if (cooldownLeft > 0) {
+      return { maneuver, cooldownLeft, canUse: false, reason: `Odnowienie: ${cooldownLeft} t.` };
+    }
+    if (pCombat.ap < maneuver.apCost) {
+      return { maneuver, cooldownLeft: 0, canUse: false, reason: `Wymaga ${maneuver.apCost} AP` };
+    }
+    const target = this.npcs.find(
+      (n) => n.id === (targetId ?? this.combatState.selectedTargetId) && n.combat?.isHostile && n.combat.isAlive
+    );
+    if (!target) {
+      return { maneuver, cooldownLeft: 0, canUse: false, reason: 'Wybierz cel' };
+    }
+    const dist = Math.hypot(target.tileX - this.player.tileX, target.tileY - this.player.tileY);
+    if (dist > maneuver.rangeTiles) {
+      return { maneuver, cooldownLeft: 0, canUse: false, reason: 'Cel poza zasięgiem' };
+    }
+    return { maneuver, cooldownLeft: 0, canUse: true, reason: null };
+  }
+
+  public performPlayerWeaponManeuver(
+    targetId?: string | null,
+    rng: () => number = Math.random
+  ): { ok: boolean; damage: number; secondaryDamage: number; message: string } {
+    const target = this.npcs.find(
+      (n) => n.id === (targetId ?? this.combatState.selectedTargetId) && n.combat?.isHostile && n.combat.isAlive
+    );
+    const st = this.getWeaponManeuverState(target?.id ?? null);
+    if (!st.canUse || !target || !target.combat || !this.player.combat) {
+      return { ok: false, damage: 0, secondaryDamage: 0, message: st.reason ?? 'Manewr niedostępny' };
+    }
+
+    const { maneuver } = st;
+    const pCombat = this.player.combat;
+    pCombat.ap = Math.max(0, pCombat.ap - maneuver.apCost);
+    this.maneuverCooldownUntilRound = this.combatState.round + maneuver.cooldownRounds;
+
+    const weaponId = this.activeOstrzeState?.inventory?.equipped?.bron;
+    const weapon = weaponId ? ORIGIN_DATA.items.find((it) => it.id === weaponId) : undefined;
+    const baseMin = weapon?.damage?.[0] ?? 4;
+    const baseMax = weapon?.damage?.[1] ?? 7;
+    const rawRoll = baseMin + Math.floor(rng() * Math.max(1, baseMax - baseMin + 1));
+    const damageType = resolvePlayerWeaponDamageType(this.activeOstrzeState, ORIGIN_DATA);
+    const originId = resolveEnemyOriginId(target.id, target.recipe.name);
+    const mult = getEnemyDamageMultiplier(originId, damageType, ORIGIN_DATA);
+    const targetCover = this.getActorCoverInfo(target);
+    const isRangedManeuver = maneuver.id === 'strzal_w_sciegno' || maneuver.id === 'huk_zaporowy';
+    const coverMult = isRangedManeuver && targetCover.hasCover ? 0.85 : 1;
+    const finalDmg = Math.max(1, Math.round(rawRoll * maneuver.damageMultiplier * mult * coverMult));
+
+    target.combat.hp = Math.max(0, target.combat.hp - finalDmg);
+    if (target.combat.hp <= 0) {
+      target.combat.isAlive = false;
+    }
+
+    let secondaryDamage = 0;
+    let extraNote = '';
+
+    if (maneuver.id === 'ciecie_lukiem') {
+      // Bleed on primary + cleave 1 adjacent living hostile
+      this.applyEnemyBurn(target.id, 2);
+      const secondary = this.npcs.find(
+        (n) =>
+          n.id !== target.id &&
+          n.combat?.isHostile &&
+          n.combat.isAlive &&
+          Math.hypot(n.tileX - this.player.tileX, n.tileY - this.player.tileY) <= 1.9
+      );
+      if (secondary && secondary.combat) {
+        secondaryDamage = Math.max(1, Math.round(finalDmg * 0.7));
+        secondary.combat.hp = Math.max(0, secondary.combat.hp - secondaryDamage);
+        if (secondary.combat.hp <= 0) secondary.combat.isAlive = false;
+        this.pushFloatingCombatText(
+          secondary.x,
+          secondary.y,
+          secondary.z + 2.1,
+          `-${secondaryDamage} ⚔️`,
+          0xff8a65
+        );
+        extraNote = ` + cięcie w ${secondary.recipe.name} (-${secondaryDamage})`;
+      } else {
+        extraNote = ' + Krwawienie!';
+      }
+    } else if (maneuver.id === 'pchniecie_zaporowe') {
+      target.combat.ap = Math.max(0, target.combat.ap - 1);
+      if (target.combat.isAlive) {
+        const kb = computeKnockbackTile(
+          this.player.tileX,
+          this.player.tileY,
+          target.tileX,
+          target.tileY,
+          (tx, ty) => {
+            if (tx <= 0 || ty <= 0 || tx >= this.map.width - 1 || ty >= this.map.height - 1) return false;
+            const cell = this.map.tiles[ty]?.[tx];
+            if (!cell || !cell.walkable) return false;
+            const occupied =
+              (this.player.tileX === tx && this.player.tileY === ty) ||
+              this.npcs.some((n) => n.combat?.isAlive !== false && n.tileX === tx && n.tileY === ty);
+            if (occupied) return false;
+            return !this.map.props.some(
+              (p) =>
+                p.blocksMovement &&
+                !this.detonatedOilBarrelIds.has(p.id) &&
+                tx >= p.x &&
+                tx < p.x + Math.max(1, p.sizeX) &&
+                ty >= p.y &&
+                ty < p.y + Math.max(1, p.sizeY)
+            );
+          }
+        );
+        if (kb) {
+          target.tileX = kb.x;
+          target.tileY = kb.y;
+          target.x = kb.x + 0.5;
+          target.y = kb.y + 0.5;
+          extraNote = ' (odepchnięty, -1 AP)';
+        } else {
+          extraNote = ' (-1 AP)';
+        }
+      }
+    } else if (maneuver.id === 'strzal_w_sciegno') {
+      target.combat.crippledLegsTurns = Math.max(target.combat.crippledLegsTurns, 2);
+      extraNote = ' (Okaleczenie nóg 2 t.)';
+    } else if (maneuver.id === 'huk_zaporowy') {
+      target.combat.ap = Math.max(0, target.combat.ap - 1);
+      target.combat.dazedHeadTurns = Math.max(target.combat.dazedHeadTurns, 1);
+      extraNote = ' (Strach i Oszołomienie!)';
+    } else {
+      target.combat.ap = Math.max(0, target.combat.ap - 1);
+      extraNote = ' (-1 AP)';
+    }
+
+    this.onJuicyImpact?.(true);
+    this.pushFloatingCombatText(
+      target.x,
+      target.y,
+      target.z + 2.3,
+      `${maneuver.icon} -${finalDmg}`,
+      0xffd54f
+    );
+    const msg = `${maneuver.icon} ${maneuver.name} w ${target.recipe.name}: -${finalDmg} HP${extraNote}`;
+    this.addCombatLog(msg);
+
+    // Check if all enemies died
+    const anyAlive = this.npcs.some((n) => n.combat?.isHostile && n.combat.isAlive);
+    if (!anyAlive) {
+      this.combatState.active = false;
+      this.resetCombatTacticalSessions();
+      this.onCombatEnded?.('victory');
+    }
+
+    return { ok: true, damage: finalDmg, secondaryDamage, message: msg };
+  }
+
+  public findNearbyOilBarrel() {
+    if (!this.combatState.active) return null;
+    const weaponId = this.activeOstrzeState?.inventory?.equipped?.bron;
+    const weapon = weaponId ? ORIGIN_DATA.items.find((it) => it.id === weaponId) : undefined;
+    const isRanged = weapon?.skill === 'strzelecka' || weapon?.skill === 'proch';
+    const maxRange = isRanged ? 5.0 : 2.8;
+    return findDetonatableOilBarrel(
+      this.player.tileX,
+      this.player.tileY,
+      this.map.props,
+      this.detonatedOilBarrelIds,
+      maxRange
+    );
+  }
+
+  public detonateOilBarrel(
+    barrelId?: string,
+    rng: () => number = Math.random
+  ): { ok: boolean; hitCount: number; totalDamage: number; message: string } {
+    if (!this.combatState.active || !this.player.combat || !this.player.combat.isAlive) {
+      return { ok: false, hitCount: 0, totalDamage: 0, message: 'Tylko podczas walki.' };
+    }
+    if (this.player.combat.ap < OIL_BARREL_AP_COST) {
+      return { ok: false, hitCount: 0, totalDamage: 0, message: `Wymaga ${OIL_BARREL_AP_COST} AP.` };
+    }
+    const barrel = barrelId
+      ? this.map.props.find((p) => p.id === barrelId && !this.detonatedOilBarrelIds.has(p.id))
+      : this.findNearbyOilBarrel();
+    if (!barrel) {
+      return { ok: false, hitCount: 0, totalDamage: 0, message: 'Brak beczki ze smołą w zasięgu.' };
+    }
+
+    this.player.combat.ap = Math.max(0, this.player.combat.ap - OIL_BARREL_AP_COST);
+    this.detonatedOilBarrelIds.add(barrel.id);
+    const idx = this.map.props.findIndex((p) => p.id === barrel.id);
+    if (idx >= 0) {
+      this.map.props.splice(idx, 1);
+    }
+
+    let hitCount = 0;
+    let totalDamage = 0;
+    for (const enemy of this.npcs) {
+      if (!enemy.combat?.isHostile || !enemy.combat.isAlive) continue;
+      const d = Math.hypot(enemy.tileX - barrel.x, enemy.tileY - barrel.y);
+      if (d > OIL_BARREL_BLAST_RADIUS) continue;
+      const baseRoll = 10 + Math.floor(rng() * 5);
+      const originId = resolveEnemyOriginId(enemy.id, enemy.recipe.name);
+      const fireMult = getEnemyDamageMultiplier(originId, 'ogien', ORIGIN_DATA);
+      const dmg = Math.max(1, Math.round(baseRoll * fireMult));
+      enemy.combat.hp = Math.max(0, enemy.combat.hp - dmg);
+      if (enemy.combat.hp <= 0) {
+        enemy.combat.isAlive = false;
+      } else {
+        this.applyEnemyBurn(enemy.id, 2);
+      }
+      hitCount += 1;
+      totalDamage += dmg;
+      this.pushFloatingCombatText(
+        enemy.x,
+        enemy.y,
+        enemy.z + 2.25,
+        `🔥 -${dmg}${fireMult > 1 ? ' (×2!)' : ''}`,
+        0xff7043
+      );
+    }
+
+    this.onJuicyImpact?.(true);
+    this.pushFloatingCombatText(barrel.x + 0.5, barrel.y + 0.5, barrel.z + 1.8, '💥 BUM!', 0xffab40);
+    const msg =
+      hitCount > 0
+        ? `🛢️ Wybuch beczki ze smołą! Trafiono ${hitCount} wrogów (-${totalDamage} HP ognia + Podpalenie).`
+        : `🛢️ Beczka ze smołą eksplodowała ogniem (nikt nie był w polu rażenia).`;
+    this.addCombatLog(msg);
+
+    const anyAlive = this.npcs.some((n) => n.combat?.isHostile && n.combat.isAlive);
+    if (!anyAlive) {
+      this.combatState.active = false;
+      this.resetCombatTacticalSessions();
+      this.onCombatEnded?.('victory');
+    }
+
+    return { ok: true, hitCount, totalDamage, message: msg };
   }
 
   protected override handlePlayerDefeated(): void {

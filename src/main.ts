@@ -651,6 +651,18 @@ async function bootstrapOstrze(): Promise<void> {
       return;
     }
 
+    if (key === 'r' && engine.combatState.active && !modalUi.hasOpenModal()) {
+      e.preventDefault();
+      const res = engine.performPlayerWeaponManeuver();
+      if (res.ok) {
+        ostrzeAudio.playCombatSfx('crit');
+        refreshUi();
+      } else {
+        modalUi.showToast(res.message, 'info');
+      }
+      return;
+    }
+
     if (key === 'a') {
       if (engine.combatState.active || modalUi.hasOpenModal()) return;
       const hasLivingHostile = engine.npcs.some((n) => n.combat?.isHostile && n.combat.isAlive);

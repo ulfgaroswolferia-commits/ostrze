@@ -2394,6 +2394,45 @@ body:has(.combat-mode-active) .ostrze-toast-stack {
   box-shadow: 0 0 18px rgba(239, 68, 68, 0.45), 0 6px 18px rgba(0, 0, 0, 0.55);
 }
 
+.ostrze-combat-tactical-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(229, 184, 105, 0.18);
+}
+
+.ostrze-tactical-action-btn {
+  flex: 1 1 auto;
+  padding: 6px 10px;
+  border-radius: 5px;
+  border: 1px solid #b58c47;
+  background: linear-gradient(180deg, rgba(48, 36, 20, 0.94) 0%, rgba(25, 19, 12, 0.96) 100%);
+  color: #f6e3b8;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.12s ease;
+}
+
+.ostrze-tactical-action-btn:hover:not(:disabled) {
+  border-color: #f5c66c;
+  background: rgba(74, 52, 24, 0.96);
+  transform: translateY(-1px);
+}
+
+.ostrze-tactical-action-btn.is-barrel {
+  border-color: #d97706;
+  background: linear-gradient(180deg, rgba(78, 34, 14, 0.94) 0%, rgba(42, 18, 9, 0.96) 100%);
+  color: #fed7aa;
+}
+
+.ostrze-tactical-action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 body.ostrze-attack-cursor #viewport-container canvas {
   cursor: crosshair !important;
 }

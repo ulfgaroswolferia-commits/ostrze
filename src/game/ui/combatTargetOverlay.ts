@@ -131,6 +131,10 @@ export class CombatTargetOverlay {
     const playerOiled = Boolean(
       ostrzeState?.character?.effects.some((e) => e.id === 'natluszczone_ostrze')
     );
+    const targetCover = this.engine.getActorCoverInfo(target);
+    const playerCover = this.engine.getActorCoverInfo(this.engine.player);
+    const maneuverState = this.engine.getWeaponManeuverState(target.id);
+    const nearbyBarrel = this.engine.findNearbyOilBarrel();
     const stateKey = [
       target.id,
       target.recipe.name,
@@ -142,6 +146,13 @@ export class CombatTargetOverlay {
       c.crippledLegsTurns,
       c.defending ? 1 : 0,
       targetBurnTurns,
+      targetCover.hasCover ? 1 : 0,
+      playerCover.hasCover ? 1 : 0,
+      maneuverState.maneuver.id,
+      maneuverState.cooldownLeft,
+      maneuverState.canUse ? 1 : 0,
+      nearbyBarrel?.id ?? '',
+      this.engine.player.combat?.ap ?? 0,
       isCritFlash ? 1 : 0,
       telegraph ?? '',
       playerWeaponType,
@@ -184,6 +195,9 @@ export class CombatTargetOverlay {
     }
     if (c.defending) {
       statusPills.push(`<span class="ostrze-combat-pill is-defend">🛡️ Obrona</span>`);
+    }
+    if (targetCover.hasCover) {
+      statusPills.push(`<span class="ostrze-combat-pill is-defend">🧱 Osłona (-20% dyst.)</span>`);
     }
     for (const tag of resistances) {
       statusPills.push(
@@ -292,6 +306,9 @@ export class CombatTargetOverlay {
     if (playerDefending) {
       playerPills.push(`<span class="ostrze-combat-pill is-defend">🛡️ Garda aktywna</span>`);
     }
+    if (playerCover.hasCover) {
+      playerPills.push(`<span class="ostrze-combat-pill is-defend">🧱 Osłona (-20% dyst.)</span>`);
+    }
     if (playerOiled) {
       playerPills.push(`<span class="ostrze-combat-pill is-status">✨ Natłuszczone ostrze</span>`);
     }
@@ -303,6 +320,28 @@ export class CombatTargetOverlay {
       playerPills.length > 0
         ? `<div class="ostrze-combat-pills" data-player-combat-status="true">${playerPills.join('')}</div>`
         : '';
+
+    const maneuverBtnLabel =
+      maneuverState.cooldownLeft > 0
+        ? `${maneuverState.maneuver.icon} ${this.escape(maneuverState.maneuver.shortLabel)} (${maneuverState.cooldownLeft} t.)`
+        : `${maneuverState.maneuver.icon} [R] ${this.escape(maneuverState.maneuver.shortLabel)} (${maneuverState.maneuver.apCost} AP)`;
+    const canDetonateBarrel = Boolean(
+      nearbyBarrel && (this.engine.player.combat?.ap ?? 0) >= 3
+    );
+    const barrelBtnHtml = nearbyBarrel
+      ? `<button class="ostrze-tactical-action-btn is-barrel" data-combat-barrel="${this.escape(nearbyBarrel.id)}" ${canDetonateBarrel ? '' : 'disabled'} title="Wysadź beczkę ze smołą w promieniu 2 kafli (ogień + Podpalenie)">🛢️ Wysadź beczkę (3 AP)</button>`
+      : '';
+    const tacticalActionsHtml = `
+      <div class="ostrze-combat-tactical-actions">
+        <button
+          class="ostrze-tactical-action-btn"
+          data-combat-maneuver="true"
+          ${maneuverState.canUse ? '' : 'disabled'}
+          title="${this.escape(maneuverState.maneuver.description)}"
+        >${maneuverBtnLabel}</button>
+        ${barrelBtnHtml}
+      </div>
+    `;
 
     this.root.innerHTML = `
       <aside class="ostrze-combat-target-card ${isCritFlash ? 'is-crit-flash' : ''}">
@@ -331,8 +370,38 @@ export class CombatTargetOverlay {
         </div>
         ${statusPills.length > 0 ? `<div class="ostrze-combat-pills">${statusPills.join('')}</div>` : ''}
         ${playerStripHtml}
+        ${tacticalActionsHtml}
       </aside>
     `;
+
+    this.root.querySelectorAll<HTMLElement>('[data-combat-maneuver]').forEach((btn) => {
+      btn.addEventListener(
+        'click',
+        () => {
+          const res = this.engine.performPlayerWeaponManeuver(target.id);
+          if (res.ok) {
+            ostrzeAudio.playCombatSfx('crit');
+            this.sync();
+          }
+        },
+        { signal: this.abortController.signal }
+      );
+    });
+
+    this.root.querySelectorAll<HTMLElement>('[data-combat-barrel]').forEach((btn) => {
+      btn.addEventListener(
+        'click',
+        () => {
+          const bId = btn.dataset.combatBarrel;
+          const res = this.engine.detonateOilBarrel(bId);
+          if (res.ok) {
+            ostrzeAudio.playCombatSfx('crit');
+            this.sync();
+          }
+        },
+        { signal: this.abortController.signal }
+      );
+    });
 
     this.root.querySelectorAll<HTMLElement>('[data-combat-target]').forEach((btn) => {
       btn.addEventListener(

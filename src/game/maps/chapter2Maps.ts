@@ -1909,6 +1909,20 @@ export function createSpalonaOsadaScene(opts?: { withHunt?: boolean }): CustomSc
         interactive: false
       },
       {
+        id: 'oil_barrel_spalona_1',
+        name: 'Beczka ze smołą (wybuchowa)',
+        kind: 'dungeon_barrel',
+        x: 11,
+        y: 9,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: false
+      },
+      {
         id: 'spalona_martwe_drzewo_1',
         name: 'Osmalone drzewo',
         kind: 'dead_tree',
@@ -2155,6 +2169,20 @@ export function createStaraKopalniaScene(opts?: { withHunt?: boolean }): CustomS
         sizeX: 1,
         sizeY: 1,
         heightZ: 2,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: false
+      },
+      {
+        id: 'oil_barrel_kopalnia_1',
+        name: 'Beczka z olejem górniczym (wybuchowa)',
+        kind: 'dungeon_barrel',
+        x: 11,
+        y: 9,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
         blocksMovement: true,
         blocksSight: false,
         interactive: false
