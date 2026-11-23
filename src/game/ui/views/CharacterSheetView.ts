@@ -1,4 +1,5 @@
 import { ostrzeAudio } from '../../audio/ostrzeAudio';
+import { getPixArtMeta } from '../../assets/pixArt';
 import type {
   AttributeId,
   OriginGameData,
@@ -9,6 +10,10 @@ import {
   evaluateAchievements,
   evaluateCampaignProgress
 } from '../../rules/achievements';
+import {
+  evaluateBestiaryEntries,
+  HUNTER_LORE_KILL_THRESHOLD
+} from '../../rules/bestiary';
 import {
   getAvailablePerks,
   pickPerk,
@@ -21,11 +26,12 @@ import {
   pinItemToQuickBelt
 } from '../../rules/combatConsumables';
 import type { SeededRng } from '../../rules/dice';
+import { renderItemStatPillsHtml } from '../../rules/itemComparison';
 import { getStats } from '../../rules/stats';
 import { getOstrzeLocationMeta } from '../../rules/travel';
 import { escapeHtml } from '../escapeHtml';
 
-export type CharacterSheetTab = 'stats' | 'gear' | 'journal' | 'chronicle';
+export type CharacterSheetTab = 'stats' | 'gear' | 'journal' | 'bestiary' | 'chronicle';
 
 export function renderCharacterSheetView(params: {
   root: HTMLElement;
@@ -165,16 +171,21 @@ export function renderCharacterSheetView(params: {
                     <option value="3">Slot [7]</option>
                   </select>`
               : '';
+            const statPillsHtml = renderItemStatPillsHtml(item, state, data);
             return `
               <div class="ostrze-row">
-                <span>
-                  ${escapeHtml(item?.name ?? entry.id)} ×${entry.qty}
-                  ${isEquipped ? '<span style="color:#6fd18e;font-size:0.75rem"> [Założono]</span>' : ''}
-                  ${pinnedSlotIdx >= 0 ? `<span style="color:#e5b869;font-size:0.75rem"> [Pas ${pinnedSlotIdx + 4}]</span>` : ''}
-                </span>
+                <div style="flex:1;min-width:0;">
+                  <div>
+                    ${escapeHtml(item?.name ?? entry.id)} ×${entry.qty}
+                    ${isEquipped ? '<span style="color:#6fd18e;font-size:0.75rem"> [Założono]</span>' : ''}
+                    ${pinnedSlotIdx >= 0 ? `<span style="color:#e5b869;font-size:0.75rem"> [Pas ${pinnedSlotIdx + 4}]</span>` : ''}
+                  </div>
+                  ${statPillsHtml}
+                </div>
                 <span class="ostrze-stepper">
                   ${beltPinHtml}
                   ${canEquip ? `<button class="ostrze-hub-btn" data-cs-equip="${escapeHtml(entry.id)}">Załóż</button>` : ''}
+                  ${isEquipped && equipSlot ? `<button class="ostrze-hub-btn" data-cs-unequip="${escapeHtml(equipSlot)}">Zdejmij</button>` : ''}
                   ${canUse ? `<button class="ostrze-hub-btn" data-cs-use="${escapeHtml(entry.id)}">${useLabel}</button>` : ''}
                 </span>
               </div>
@@ -197,7 +208,16 @@ export function renderCharacterSheetView(params: {
       ? equippedEntries
           .map(([slot, itemId]) => {
             const item = data.items.find((i) => i.id === itemId);
-            return `<div class="ostrze-row"><span style="text-transform:capitalize;color:#9e9689">${escapeHtml(slot)}</span><strong>${escapeHtml(item?.name ?? itemId)}</strong></div>`;
+            const pills = renderItemStatPillsHtml(item, null, data);
+            return `
+              <div class="ostrze-row">
+                <div style="flex:1;min-width:0;">
+                  <div><span style="text-transform:capitalize;color:#9e9689">${escapeHtml(slot)}:</span> <strong>${escapeHtml(item?.name ?? itemId)}</strong></div>
+                  ${pills}
+                </div>
+                <button class="ostrze-hub-btn" data-cs-unequip="${escapeHtml(slot)}">Zdejmij</button>
+              </div>
+            `;
           })
           .join('')
       : '<div class="ostrze-subtitle" style="margin-bottom:0">Brak założonego ekwipunku.</div>';
@@ -342,6 +362,62 @@ export function renderCharacterSheetView(params: {
     )
   );
 
+  const bestiaryEntries = evaluateBestiaryEntries(state, data);
+  const unlockedBestiaryCount = bestiaryEntries.filter((b) => b.unlocked).length;
+  const bestiaryCardsHtml = bestiaryEntries
+    .map((entry) => {
+      if (!entry.unlocked) {
+        return `
+          <div class="ostrze-bestiary-card is-locked">
+            <div class="ostrze-bestiary-head">
+              <strong>❓ Nieznany przeciwnik</strong>
+              <span class="ostrze-shop-tag">${escapeHtml(entry.archetypeLabel)}</span>
+            </div>
+            <div class="ostrze-shop-desc">Spotkaj lub pokonaj tego wroga na szlaku, aby poznać jego słabości i taktykę.</div>
+          </div>
+        `;
+      }
+      const pixMeta = entry.pixArtId ? getPixArtMeta(entry.pixArtId) : null;
+      const portraitHtml = pixMeta
+        ? `<img class="ostrze-bestiary-portrait ostrze-pix-art" src="${escapeHtml(pixMeta.dataUri)}" width="${pixMeta.width}" height="${pixMeta.height}" alt="${escapeHtml(entry.name)}" />`
+        : '';
+      const resistHtml = entry.resistances
+        .map(
+          (r) =>
+            `<span class="ostrze-combat-pill ${r.kind === 'resist' ? 'is-resist' : 'is-weak'}">${escapeHtml(r.label)}</span>`
+        )
+        .join('');
+      const hunterBadge = entry.hunterLoreActive
+        ? `<span class="ostrze-combat-pill is-defend" title="Pokonano co najmniej ${HUNTER_LORE_KILL_THRESHOLD} szt. — stała premia +1 obr. przeciwko temu wrogowi">🎯 Wiedza Łowiecka (+1 obr.)</span>`
+        : `<span class="ostrze-shop-tag">Pokonano: ${entry.killCount}/${HUNTER_LORE_KILL_THRESHOLD} do premii +1 obr.</span>`;
+      return `
+        <div class="ostrze-bestiary-card is-unlocked">
+          <div class="ostrze-bestiary-top">
+            ${portraitHtml}
+            <div class="ostrze-bestiary-meta">
+              <div class="ostrze-bestiary-head">
+                <strong>${escapeHtml(entry.name)}</strong>
+                <span class="ostrze-shop-tag">${escapeHtml(entry.archetypeLabel)}</span>
+              </div>
+              <div class="ostrze-bestiary-stats">
+                <span>HP: <strong>${entry.hp}</strong></span>
+                <span>AP: <strong>${entry.ap}</strong></span>
+                <span>Obrona: <strong>${entry.defense}</strong></span>
+                <span>Pokonano: <strong>${entry.killCount}</strong></span>
+              </div>
+              <div class="ostrze-combat-pills" style="margin-top:4px;">
+                ${hunterBadge}
+                ${resistHtml}
+              </div>
+            </div>
+          </div>
+          <div class="ostrze-shop-desc" style="margin-top:6px;">${escapeHtml(entry.loreText)}</div>
+          <div class="ostrze-bestiary-tip">💡 <strong>Taktyka:</strong> ${escapeHtml(entry.tacticalTip)}</div>
+        </div>
+      `;
+    })
+    .join('');
+
   const achievementsGridHtml = achievements
     .map(
       (ach) => `
@@ -443,7 +519,17 @@ export function renderCharacterSheetView(params: {
             </div>
           </div>
         `
-          : `
+          : activeTab === 'bestiary'
+            ? `
+          <div class="ostrze-panel" data-cs-bestiary="true">
+            <h3>Bestiariusz i Wiedza Łowiecka (${unlockedBestiaryCount} / ${bestiaryEntries.length})</h3>
+            <p class="ostrze-subtitle" style="margin-bottom:10px;">Pokonanie <strong>${HUNTER_LORE_KILL_THRESHOLD} sztuk</strong> danego gatunku odblokowuje <strong>Wiedzę Łowiecką (+1 obr. przeciwko temu wrogowi)</strong>.</p>
+            <div class="ostrze-bestiary-grid">
+              ${bestiaryCardsHtml}
+            </div>
+          </div>
+        `
+            : `
           <div class="ostrze-creator-grid" data-cs-chronicle="true">
             <div class="ostrze-panel">
               <h3>Postęp kampanii</h3>
@@ -511,6 +597,9 @@ export function renderCharacterSheetView(params: {
           <button class="ostrze-cs-tab ${activeTab === 'journal' ? 'is-active' : ''}" data-cs-tab="journal">
             Dziennik i Pamiątki
           </button>
+          <button class="ostrze-cs-tab ${activeTab === 'bestiary' ? 'is-active' : ''}" data-cs-tab="bestiary">
+            🐺 Bestiariusz (${unlockedBestiaryCount}/${bestiaryEntries.length})
+          </button>
           <button class="ostrze-cs-tab ${activeTab === 'chronicle' ? 'is-active' : ''}" data-cs-tab="chronicle">
             🏆 Kronika (${progress.unlockedAchievements}/${progress.totalAchievements})
           </button>
@@ -577,6 +666,24 @@ export function renderCharacterSheetView(params: {
           state.character.hp = Math.max(1, Math.min(maxHp, state.character.hp));
         }
         onShowToast(`Założono: ${item.name}`, 'info');
+        onUpdated();
+        onRerender();
+      }
+    });
+  });
+
+  root.querySelectorAll<HTMLElement>('[data-cs-unequip]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const slot = btn.dataset.csUnequip ?? '';
+      const prevId = state.inventory.equipped[slot];
+      if (slot && prevId) {
+        const prevItem = data.items.find((i) => i.id === prevId);
+        delete state.inventory.equipped[slot];
+        if (state.character) {
+          const maxHp = getStats(state, data).derived.hpMax;
+          state.character.hp = Math.max(1, Math.min(maxHp, state.character.hp));
+        }
+        onShowToast(`Zdjęto: ${prevItem?.name ?? prevId}`, 'info');
         onUpdated();
         onRerender();
       }

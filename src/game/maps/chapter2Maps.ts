@@ -700,6 +700,20 @@ export function createBorKlusownikowScene(opts?: { withHunt?: boolean }): Custom
         interactive: true
       },
       {
+        id: 'skrytka_bor_klusownikow',
+        name: '🗝️ Dziupla z łupem kłusowników',
+        kind: 'chest',
+        x: 6,
+        y: 8,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true
+      },
+      {
         id: 'bor_drogowskaz',
         name: '🚪 Powrót do Głuszca',
         kind: 'exit_path',
@@ -1459,6 +1473,20 @@ export function createBagnaSzarejWodyScene(opts?: { withHunt?: boolean }): Custo
         interactive: true
       },
       {
+        id: 'skrytka_bagna_szarej_wody',
+        name: '🗝️ Zatopiona szkatuła w korzeniach',
+        kind: 'chest',
+        x: 15,
+        y: 12,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true
+      },
+      {
         id: 'bagna_topiel',
         name: 'Topiel (legowisko utopców)',
         kind: 'campfire',
@@ -2186,6 +2214,20 @@ export function createStaraKopalniaScene(opts?: { withHunt?: boolean }): CustomS
         blocksMovement: true,
         blocksSight: false,
         interactive: false
+      },
+      {
+        id: 'skrytka_stara_kopalnia',
+        name: '🗝️ Kuta skrzynia dawnego sztygara',
+        kind: 'chest',
+        x: 7,
+        y: 10,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true
       }
     ],
     lights: [

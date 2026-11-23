@@ -28,6 +28,11 @@ import {
 } from '../game/assets/beastSprites';
 import { getPropVisualTransform } from '../game/assets/buildingScaling';
 import {
+  getHunterLoreBonusDamage,
+  recordBestiaryEncounter,
+  recordBestiaryKill
+} from '../game/rules/bestiary';
+import {
   getDifficultyProfile,
   getOstrzeDifficulty
 } from '../game/rules/difficulty';
@@ -150,6 +155,7 @@ export class OstrzeEngineState extends CrpgGameState {
   private maneuverCooldownUntilRound = 0;
   private readonly detonatedOilBarrelIds = new Set<string>();
   private readonly enemyBaseMaxHp = new Map<string, number>();
+  private readonly countedBestiaryKillActorIds = new Set<string>();
 
   constructor() {
     ensureOstrzeEngineExtensionsRegistered();
@@ -506,6 +512,7 @@ export class OstrzeEngineState extends CrpgGameState {
     this.resetRuntimeStateForCustomMap();
     this.resetCombatTacticalSessions();
     this.enemyBaseMaxHp.clear();
+    this.countedBestiaryKillActorIds.clear();
     this.persistentMarkers.clear();
     this.wasCombatActive = false;
     this.activeCustomSceneId = sceneId;
@@ -1030,6 +1037,8 @@ export class OstrzeEngineState extends CrpgGameState {
 
     const enemy = this.npcs.find((n) => n.id === targetId);
     const originId = enemy ? resolveEnemyOriginId(enemy.id, enemy.recipe.name) : null;
+    recordBestiaryEncounter(this.activeOstrzeState, originId);
+    const hunterBonus = getHunterLoreBonusDamage(this.activeOstrzeState, originId);
     const damageType = resolvePlayerWeaponDamageType(this.activeOstrzeState, ORIGIN_DATA);
     const mult = getEnemyDamageMultiplier(originId, damageType, ORIGIN_DATA);
 
@@ -1073,6 +1082,17 @@ export class OstrzeEngineState extends CrpgGameState {
       this.pendingPlayerAttackMultiplier = 1;
       this.pendingPlayerFeintActive = false;
       this.pendingSurpriseAttack = false;
+    }
+
+    if (outcome?.hit && enemy?.combat) {
+      if (hunterBonus > 0 && enemy.combat.isAlive) {
+        enemy.combat.hp = Math.max(0, enemy.combat.hp - hunterBonus);
+        outcome.damageDealt += hunterBonus;
+        if (enemy.combat.hp <= 0) {
+          enemy.combat.isAlive = false;
+        }
+      }
+      this.checkAndRecordEnemyKill(enemy, originId);
     }
 
     if (outcome?.hit && (outcome.critical || isSurprise)) {
@@ -1171,16 +1191,19 @@ export class OstrzeEngineState extends CrpgGameState {
     const rawRoll = baseMin + Math.floor(rng() * Math.max(1, baseMax - baseMin + 1));
     const damageType = resolvePlayerWeaponDamageType(this.activeOstrzeState, ORIGIN_DATA);
     const originId = resolveEnemyOriginId(target.id, target.recipe.name);
+    recordBestiaryEncounter(this.activeOstrzeState, originId);
+    const hunterBonus = getHunterLoreBonusDamage(this.activeOstrzeState, originId);
     const mult = getEnemyDamageMultiplier(originId, damageType, ORIGIN_DATA);
     const targetCover = this.getActorCoverInfo(target);
     const isRangedManeuver = maneuver.id === 'strzal_w_sciegno' || maneuver.id === 'huk_zaporowy';
     const coverMult = isRangedManeuver && targetCover.hasCover ? 0.85 : 1;
-    const finalDmg = Math.max(1, Math.round(rawRoll * maneuver.damageMultiplier * mult * coverMult));
+    const finalDmg = Math.max(1, Math.round(rawRoll * maneuver.damageMultiplier * mult * coverMult) + hunterBonus);
 
     target.combat.hp = Math.max(0, target.combat.hp - finalDmg);
     if (target.combat.hp <= 0) {
       target.combat.isAlive = false;
     }
+    this.checkAndRecordEnemyKill(target, originId);
 
     let secondaryDamage = 0;
     let extraNote = '';
@@ -1336,6 +1359,7 @@ export class OstrzeEngineState extends CrpgGameState {
       } else {
         this.applyEnemyBurn(enemy.id, 2);
       }
+      this.checkAndRecordEnemyKill(enemy, originId);
       hitCount += 1;
       totalDamage += dmg;
       this.pushFloatingCombatText(
@@ -1363,6 +1387,18 @@ export class OstrzeEngineState extends CrpgGameState {
     }
 
     return { ok: true, hitCount, totalDamage, message: msg };
+  }
+
+  private checkAndRecordEnemyKill(enemy: ActorEntity, originId: string | null): void {
+    if (!enemy.combat || enemy.combat.isAlive) return;
+    if (this.countedBestiaryKillActorIds.has(enemy.id)) return;
+    this.countedBestiaryKillActorIds.add(enemy.id);
+    const res = recordBestiaryKill(this.activeOstrzeState, originId);
+    if (res.justUnlockedHunterLore) {
+      this.addCombatLog(
+        `🎯 Wiedza Łowiecka odblokowana (${enemy.recipe.name}): stałe +1 obrażeń przeciwko temu gatunkowi!`
+      );
+    }
   }
 
   protected override handlePlayerDefeated(): void {

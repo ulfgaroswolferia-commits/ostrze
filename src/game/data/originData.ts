@@ -56,6 +56,7 @@ import {
   ROAD_ENCOUNTER_DIALOGUES,
   ROAD_ENCOUNTER_TRAVEL_EVENTS
 } from './roadEncounters';
+import { RELIKTY_ITEMS } from './secretCachesAndRelics';
 import type {
   AttributeDef,
   ClassDef,
@@ -95,7 +96,7 @@ export const ORIGIN_DATA: OriginGameData = {
   perks: perksJson as unknown as PerkDef[],
   effects: effectsJson as unknown as EffectDef[],
   phenomena: phenomenaJson as unknown as PhenomenonDef[],
-  items: [...(itemsJson as unknown as ItemDef[]), ...PROLOGUE_COMPANION_ITEMS],
+  items: [...(itemsJson as unknown as ItemDef[]), ...PROLOGUE_COMPANION_ITEMS, ...RELIKTY_ITEMS],
   enemies: enemiesJson as unknown as EnemyDef[],
   shops: shopsJson as unknown as ShopDef[],
   quests: questsJson as unknown as QuestDef[],

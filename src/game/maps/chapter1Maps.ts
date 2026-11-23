@@ -804,6 +804,20 @@ export function createWilczaNoraScene(): CustomSceneConfig {
         blocksMovement: true,
         blocksSight: false,
         interactive: false
+      },
+      {
+        id: 'skrytka_wilcza_nora',
+        name: '🗝️ Ukryty schowek myśliwego pod nawisem',
+        kind: 'chest',
+        x: 7,
+        y: 6,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true
       }
     ],
     lights: [
@@ -1534,6 +1548,20 @@ export function createStaryMlynScene(opts?: { isNight?: boolean }): CustomSceneC
         blocksMovement: true,
         blocksSight: false,
         interactive: false
+      },
+      {
+        id: 'skrytka_stary_mlyn',
+        name: '🗝️ Skrytka pod kamieniem młyńskim',
+        kind: 'chest',
+        x: 6,
+        y: 10,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true
       },
       {
         id: 'mlyn_drogowskaz',
@@ -2341,6 +2369,20 @@ export function createRuinyStraznicyScene(opts?: { withHunt?: boolean }): Custom
         z: 0,
         sizeX: 1,
         sizeY: 2,
+        heightZ: 1,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: true
+      },
+      {
+        id: 'skrytka_ruiny_straznicy',
+        name: '🗝️ Zamurowana nisza zbrojowni',
+        kind: 'chest',
+        x: 16,
+        y: 9,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
         heightZ: 1,
         blocksMovement: true,
         blocksSight: false,

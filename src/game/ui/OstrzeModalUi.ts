@@ -15,6 +15,7 @@ import {
   getShopMerchantPortraitId,
   sellInventoryItemToShop
 } from '../rules/shopEconomy';
+import { renderItemStatPillsHtml } from '../rules/itemComparison';
 import { getStats } from '../rules/stats';
 import { getWorldAtmosphere } from '../rules/worldCycle';
 import { escapeHtml } from './escapeHtml';
@@ -639,11 +640,13 @@ export class OstrzeModalUi {
         const desc = item?.description
           ? `<div class="ostrze-shop-desc">${this.escape(item.description)}</div>`
           : '';
+        const statPills = renderItemStatPillsHtml(item, this.state, this.data);
         return `
           <div class="ostrze-row">
             <div style="flex:1;min-width:0;">
               <strong>${this.escape(item?.name ?? entry.id)}</strong>
               <span class="ostrze-shop-qty"> (szt: ${remainingQty})</span>
+              ${statPills}
               ${desc}
             </div>
             <button class="ostrze-btn ostrze-shop-btn" data-buy="${this.escape(entry.id)}" ${canBuy ? '' : 'disabled'}>
@@ -658,11 +661,13 @@ export class OstrzeModalUi {
       .map((entry) => {
         const item = this.data.items.find((i) => i.id === entry.id);
         const check = canSellItemToShop(entry.id, shopId, this.state, this.data);
+        const statPills = renderItemStatPillsHtml(item, this.state, this.data);
         return `
           <div class="ostrze-row">
             <div style="flex:1;min-width:0;">
               <strong>${this.escape(item?.name ?? entry.id)}</strong>
               <span class="ostrze-shop-qty"> ×${entry.qty}</span>
+              ${statPills}
             </div>
             ${
               check.ok

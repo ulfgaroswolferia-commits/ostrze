@@ -6,6 +6,7 @@ import { HudOverlay } from '@ulf/ui/hudOverlay';
 import { OstrzeEngineState } from './engine-bridge/OstrzeEngineState';
 import { ostrzeAudio } from './game/audio/ostrzeAudio';
 import { ORIGIN_DATA } from './game/data/originData';
+import { tryOpenSecretCache } from './game/data/secretCachesAndRelics';
 import { createCharacter, createEmptyOstrzeState, grantXp, xpRequiredForLevel } from './game/rules/character';
 import { checkNewAchievementUnlocks } from './game/rules/achievements';
 import { tryTriggerAmbientBark } from './game/rules/ambientBarks';
@@ -229,6 +230,18 @@ async function bootstrapOstrze(): Promise<void> {
   modalUi.onOpenCampfire = openCampfirePanel;
 
   engine.onFallbackPropInteract = (propId) => {
+    const cacheRes = tryOpenSecretCache(propId, prologue.state, prologue.data);
+    if (cacheRes.handled) {
+      engine.addLog(cacheRes.message, cacheRes.opened ? 'important' : 'info');
+      modalUi.showToast(cacheRes.message, cacheRes.opened ? 'gold' : 'info');
+      if (cacheRes.opened) {
+        ostrzeAudio.playQuestEvent('complete');
+        engine.syncFromOstrzeState(prologue.state, prologue.data);
+        performSave(true);
+      }
+      refreshUi();
+      return true;
+    }
     const prop = engine.map.props.find((p) => p.id === propId);
     if (!prop) return false;
     if (prop.kind === 'campfire') {
@@ -703,6 +716,20 @@ async function bootstrapOstrze(): Promise<void> {
         performSave(true);
         refreshUi();
       }, 'stats');
+      return;
+    }
+
+    if (key === 'b') {
+      if (!prologue.state.character || modalUi.hasOpenModal()) return;
+      e.preventDefault();
+      modalUi.showCharacterSheet(() => {
+        engine.syncFromOstrzeState(prologue.state, prologue.data);
+        if (activeChapter === 'prologue') prologue.refreshObjectiveTracker();
+        else if (activeChapter === 'chapter2') chapter2?.refreshHubPanel();
+        else chapter1.refreshHubPanel();
+        performSave(true);
+        refreshUi();
+      }, 'bestiary');
       return;
     }
 
