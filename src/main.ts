@@ -655,7 +655,7 @@ async function bootstrapOstrze(): Promise<void> {
       e.preventDefault();
       const res = engine.performPlayerWeaponManeuver();
       if (res.ok) {
-        ostrzeAudio.playCombatSfx('crit');
+        ostrzeAudio.playManeuverSfx();
         refreshUi();
       } else {
         modalUi.showToast(res.message, 'info');

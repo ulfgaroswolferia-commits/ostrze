@@ -3,7 +3,16 @@ import { describe, expect, it } from 'vitest';
 import { OstrzeEngineState } from '../src/engine-bridge/OstrzeEngineState';
 import { ORIGIN_DATA } from '../src/game/data/originData';
 import { createKamiennaPrzeleczScene, createWilczaNoraScene } from '../src/game/maps/chapter1Maps';
+import {
+  createBagnaSzarejWodyScene,
+  createBorKlusownikowScene,
+  createSpalonaOsadaScene,
+  createStaraKopalniaScene,
+  createStaryTraktScene,
+  createWzgorzeWartowniczeScene
+} from '../src/game/maps/chapter2Maps';
 import { createBrzezinaYardScene, createTraktZasadzkaScene } from '../src/game/maps/prologueMaps';
+import { ostrzeAudio } from '../src/game/audio/ostrzeAudio';
 import { createCharacter, createEmptyOstrzeState, grantXp } from '../src/game/rules/character';
 
 function createLevel2PlayerState() {
@@ -131,5 +140,57 @@ describe('Combat balance (Prologue & Chapter 1 early encounters)', () => {
     expect(state.character!.effects.some((e) => ['krwawienie', 'zatrucie', 'strach'].includes(e.id))).toBe(false);
     // Player survives the round comfortably
     expect(engine.player.combat!.hp).toBeGreaterThan(Math.round(hpBefore * 0.4));
+  });
+
+  it('audits all Act II combat encounters for a Level 4-5 hero (no unfair one-shots, bounded AP/crit)', () => {
+    const act2Scenes = [
+      createBorKlusownikowScene({ withHunt: true }),
+      createStaryTraktScene({ withHunt: true }),
+      createBagnaSzarejWodyScene({ withHunt: true }),
+      createSpalonaOsadaScene({ withHunt: true }),
+      createStaraKopalniaScene({ withHunt: true }),
+      createWzgorzeWartowniczeScene({ withHunt: true })
+    ];
+
+    for (const scene of act2Scenes) {
+      const { engine, state } = createLevel2PlayerState();
+      // Advance to Level 4-5 Act II gear & stats
+      grantXp(state, 900, ORIGIN_DATA);
+      state.inventory.equipped.zbroja = 'skorzana_zbroja';
+      engine.registerCustomScene(scene);
+      engine.loadCustomScene(scene.id);
+      engine.syncFromOstrzeState(state, ORIGIN_DATA);
+
+      const playerSnap = engine.getActorCombatant(engine.player);
+      const hostiles = engine.npcs.filter((n) => n.combat?.isHostile);
+      expect(hostiles.length, `Hostiles in ${scene.id}`).toBeGreaterThan(0);
+
+      for (const enemy of hostiles) {
+        const eSnap = engine.getActorCombatant(enemy);
+        const preview = computeAttackPreview(eSnap, playerSnap, 1, 'quick');
+        const critOutcome = simulateGuaranteedMaxCrit(eSnap, playerSnap);
+        const isBoss = enemy.combat?.difficulty === 'very_hard';
+
+        expect(eSnap.derived.maxAp, `${scene.id}:${enemy.id} AP`).toBeLessThanOrEqual(isBoss ? 8 : 7);
+        expect(preview.critChancePct, `${scene.id}:${enemy.id} crit%`).toBeLessThanOrEqual(isBoss ? 15 : 12);
+        expect(
+          critOutcome.damageDealt,
+          `${scene.id}:${enemy.id} max crit dmg`
+        ).toBeLessThanOrEqual(Math.round(playerSnap.combat.maxHp * (isBoss ? 0.6 : 0.45)));
+      }
+    }
+  });
+
+  it('safely transitions procedural Slavic music themes and tactical SFX in Node', () => {
+    ostrzeAudio.setMusicTheme('town');
+    expect(ostrzeAudio.getMusicTheme()).toBe('town');
+    ostrzeAudio.setMusicTheme('combat');
+    expect(ostrzeAudio.getMusicTheme()).toBe('combat');
+    ostrzeAudio.restoreExplorationMusic();
+    expect(ostrzeAudio.getMusicTheme()).toBe('town');
+    expect(() => ostrzeAudio.playManeuverSfx()).not.toThrow();
+    expect(() => ostrzeAudio.playExplosionSfx()).not.toThrow();
+    ostrzeAudio.stopMusic();
+    expect(ostrzeAudio.getMusicTheme()).toBe('none');
   });
 });

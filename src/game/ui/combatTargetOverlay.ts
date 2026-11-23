@@ -63,6 +63,7 @@ export class CombatTargetOverlay {
     // Combat start / end audio transitions
     if (isActive && !this.wasCombatActive) {
       ostrzeAudio.playCombatSfx('start');
+      ostrzeAudio.setMusicTheme('combat');
       this.lastSeenLogHead = this.engine.logs[0] ?? null;
     } else if (!isActive && this.wasCombatActive) {
       const playerAlive = (this.engine.player.combat?.hp ?? 1) > 0;
@@ -72,6 +73,7 @@ export class CombatTargetOverlay {
       } else if (!anyLivingEnemy) {
         ostrzeAudio.playCombatSfx('victory');
       }
+      ostrzeAudio.restoreExplorationMusic();
       this.selectedEnemyId = null;
       this.critFlashUntil = 0;
     }
@@ -380,7 +382,7 @@ export class CombatTargetOverlay {
         () => {
           const res = this.engine.performPlayerWeaponManeuver(target.id);
           if (res.ok) {
-            ostrzeAudio.playCombatSfx('crit');
+            ostrzeAudio.playManeuverSfx();
             this.sync();
           }
         },
@@ -395,7 +397,7 @@ export class CombatTargetOverlay {
           const bId = btn.dataset.combatBarrel;
           const res = this.engine.detonateOilBarrel(bId);
           if (res.ok) {
-            ostrzeAudio.playCombatSfx('crit');
+            ostrzeAudio.playExplosionSfx();
             this.sync();
           }
         },

@@ -33,7 +33,10 @@ export default defineConfig({
             normalizedId.includes('/engine/src/') &&
             !normalizedId.endsWith('/engine/src/ui/inspectorPanel.ts')
           ) {
-            return 'engine-runtime';
+            if (normalizedId.includes('/engine/src/renderer/')) {
+              return 'engine-renderer';
+            }
+            return 'engine-core';
           }
           if (normalizedId.includes('/origin/data/art/')) {
             const assetName = normalizedId.split('/').pop()?.split('?')[0] ?? '';

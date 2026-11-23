@@ -5,6 +5,7 @@
  * Respects `ulf_crpg_audio_muted`.
  */
 export type OstrzeAmbienceMood = 'none' | 'town' | 'dawn' | 'forest' | 'creepy_forest' | 'night_storm';
+export type OstrzeMusicTheme = 'none' | 'town' | 'forest' | 'creepy' | 'combat';
 
 export type OstrzeCreatureSoundKind =
   | 'witch_cackle'
@@ -40,6 +41,11 @@ class OstrzeAudioManager {
   private phenomenonOsc: OscillatorNode | null = null;
   private phenomenonAccentTimer: ReturnType<typeof setInterval> | null = null;
   private currentPhenomenonId: string | null = null;
+
+  private musicTimer: ReturnType<typeof setInterval> | null = null;
+  private currentMusicTheme: OstrzeMusicTheme = 'none';
+  private explorationMusicTheme: OstrzeMusicTheme = 'none';
+  private musicStep = 0;
 
   private isMuted(): boolean {
     try {
@@ -367,6 +373,20 @@ class OstrzeAudioManager {
   }
 
   public setAmbience(mood: OstrzeAmbienceMood): void {
+    const mappedMusic: OstrzeMusicTheme =
+      mood === 'none'
+        ? 'none'
+        : mood === 'town'
+          ? 'town'
+          : mood === 'creepy_forest' || mood === 'night_storm'
+            ? 'creepy'
+            : 'forest';
+    if (this.currentMusicTheme !== 'combat') {
+      this.setMusicTheme(mappedMusic);
+    } else {
+      this.explorationMusicTheme = mappedMusic;
+    }
+
     if (this.currentMood === mood && (mood === 'none' || this.ambienceSource)) return;
     this.currentMood = mood;
     if (mood === 'none') {
@@ -549,6 +569,7 @@ class OstrzeAudioManager {
     if (muted) {
       this.clearAmbienceNodes();
       this.clearPhenomenonNodes();
+      this.clearMusicNodes();
     } else {
       if (this.currentMood !== 'none') {
         const mood = this.currentMood;
@@ -560,12 +581,108 @@ class OstrzeAudioManager {
         this.currentPhenomenonId = null;
         this.setPhenomenonAudio(ph);
       }
+      if (this.currentMusicTheme !== 'none') {
+        const theme = this.currentMusicTheme;
+        this.currentMusicTheme = 'none';
+        this.setMusicTheme(theme);
+      }
     }
+  }
+
+  private clearMusicNodes(): void {
+    if (this.musicTimer) {
+      clearInterval(this.musicTimer);
+      this.musicTimer = null;
+    }
+  }
+
+  public getMusicTheme(): OstrzeMusicTheme {
+    return this.currentMusicTheme;
+  }
+
+  /**
+   * Subtle procedural Slavic Dorian/pentatonic Web Audio music bed
+   * (town lute/harp, forest flute-harp, creepy drone, combat war drums).
+   */
+  public setMusicTheme(theme: OstrzeMusicTheme): void {
+    if (theme !== 'combat') {
+      this.explorationMusicTheme = theme;
+    }
+    if (this.currentMusicTheme === theme && this.musicTimer !== null) return;
+    this.clearMusicNodes();
+    this.currentMusicTheme = theme;
+    this.musicStep = 0;
+    if (theme === 'none') return;
+    if (!this.ensureContext()) return;
+
+    // D Dorian medieval Slavic motifs (Hz)
+    const townLute = [293.66, 329.63, 349.23, 440.0, 392.0, 349.23, 329.63, 293.66];
+    const forestHarp = [220.0, 293.66, 349.23, 440.0, 523.25, 440.0, 349.23, 293.66];
+    const creepyDrone = [146.83, 155.56, 146.83, 130.81];
+    const combatBass = [110.0, 110.0, 130.81, 98.0, 110.0, 146.83, 130.81, 98.0];
+
+    const stepMs =
+      theme === 'combat' ? 460 : theme === 'creepy' ? 1850 : theme === 'forest' ? 1150 : 880;
+
+    this.musicTimer = setInterval(() => {
+      if (this.isMuted() || this.currentMusicTheme !== theme) return;
+      const idx = this.musicStep++;
+      if (theme === 'town') {
+        const note = townLute[idx % townLute.length];
+        this.playTone(note, 0.52, 'triangle', 0.018, 0, note * 0.996);
+        if (idx % 4 === 0) {
+          this.playTone(note / 2, 1.1, 'sine', 0.015, 0.02);
+        }
+      } else if (theme === 'forest') {
+        const note = forestHarp[idx % forestHarp.length];
+        this.playTone(note, 0.78, 'sine', 0.015, 0);
+        if (idx % 3 === 0) {
+          this.playTone(note * 1.5, 0.42, 'triangle', 0.009, 0.18);
+        }
+      } else if (theme === 'creepy') {
+        const note = creepyDrone[idx % creepyDrone.length];
+        this.playTone(note, 1.55, 'sine', 0.016, 0, note * 0.985);
+      } else if (theme === 'combat') {
+        const bass = combatBass[idx % combatBass.length];
+        // War drum pulse + low string bass
+        this.playTone(96, 0.16, 'sine', 0.042, 0, 44);
+        if (idx % 2 === 0) {
+          this.playTone(bass, 0.36, 'sawtooth', 0.014, 0.03);
+        } else {
+          this.playNoiseBurst(0.04, 'bandpass', 920, 1.8, 0.018, 0.02);
+        }
+      }
+    }, stepMs);
+  }
+
+  public restoreExplorationMusic(): void {
+    this.setMusicTheme(this.explorationMusicTheme);
+  }
+
+  public stopMusic(): void {
+    this.currentMusicTheme = 'none';
+    this.explorationMusicTheme = 'none';
+    this.clearMusicNodes();
+  }
+
+  public playManeuverSfx(): void {
+    // Steel whoosh + sharp resonant chime for [R] weapon maneuvers
+    this.playNoiseBurst(0.14, 'bandpass', 1800, 1.4, 0.055, 0);
+    this.playTone(520, 0.14, 'triangle', 0.06, 0.02, 780);
+    this.playTone(220, 0.18, 'sawtooth', 0.04, 0.05, 110);
+  }
+
+  public playExplosionSfx(): void {
+    // Deep barrel blast + fiery crackle
+    this.playTone(130, 0.42, 'sine', 0.11, 0, 36);
+    this.playNoiseBurst(0.38, 'lowpass', 720, 0.9, 0.09, 0);
+    this.playNoiseBurst(0.24, 'bandpass', 2400, 1.8, 0.045, 0.08);
   }
 
   public stopAmbience(): void {
     this.currentMood = 'none';
     this.clearAmbienceNodes();
+    this.stopMusic();
   }
 
   public stopPhenomenonAudio(): void {
