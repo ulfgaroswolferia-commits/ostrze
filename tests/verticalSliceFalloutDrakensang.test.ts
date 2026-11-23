@@ -32,6 +32,46 @@ describe('Drakensang × Fallout Vertical Slice (Brzezina + Trakt)', () => {
     );
   });
 
+  it('registers painterly 2.5D prop sprites across Act I and Act II landmarks', () => {
+    new OstrzeEngineState();
+    expect(PAINTERLY_PROP_SPECS.length).toBeGreaterThanOrEqual(25);
+
+    // Act I landmarks
+    expect(resolveCustomPropSprite({ id: 'wb_karczma', kind: 'slavic_cottage' })?.url).toContain('karczma');
+    expect(resolveCustomPropSprite({ id: 'wb_kuznia', kind: 'slavic_cottage' })?.url).toContain('brzezina_kuznia');
+    expect(resolveCustomPropSprite({ id: 'wb_koszary_straznicy', kind: 'slavic_cottage' })?.url).toContain(
+      'brzezina_dwor'
+    );
+    expect(resolveCustomPropSprite({ id: 'wb_kramik', kind: 'market_stall' })?.url).toContain('stragan_kupiecki');
+    expect(resolveCustomPropSprite({ id: 'wb_woz_ostromira', kind: 'market_stall' })?.url).toContain('trakt_woz');
+    expect(resolveCustomPropSprite({ id: 'wb_studnia', kind: 'slavic_well' })?.url).toContain('studnia_slowianska');
+    expect(resolveCustomPropSprite({ id: 'wb_namiot_zwiadowcow', kind: 'ranger_tent' })?.url).toContain(
+      'namiot_zwiadowcow'
+    );
+    expect(resolveCustomPropSprite({ id: 'mlyn_budynek', kind: 'slavic_cottage' })?.url).toContain('stary_mlyn');
+    expect(resolveCustomPropSprite({ id: 'lesniczowka_chata', kind: 'slavic_cottage' })?.url).toContain('chata_lesna');
+    expect(resolveCustomPropSprite({ id: 'ruiny_mur_znak', kind: 'runic_altar' })?.url).toContain('oltarz_runiczny');
+
+    // Act II landmarks
+    expect(resolveCustomPropSprite({ id: 'gluszec_karczma', kind: 'slavic_cottage' })?.url).toContain('karczma');
+    expect(resolveCustomPropSprite({ id: 'gluszec_dom_soltysa', kind: 'slavic_cottage' })?.url).toContain(
+      'brzezina_dwor'
+    );
+    expect(resolveCustomPropSprite({ id: 'kapliczka_oltarz', kind: 'travel_signpost' })?.url).toContain(
+      'trakt_kapliczka'
+    );
+    expect(resolveCustomPropSprite({ id: 'spalona_chata_zachod', kind: 'slavic_cottage' })?.url).toContain(
+      'ruiny_spalone'
+    );
+    expect(resolveCustomPropSprite({ id: 'kopalnia_wejscie_glowne', kind: 'rock_cliff' })?.url).toContain(
+      'wejscie_kopalni'
+    );
+    expect(resolveCustomPropSprite({ id: 'kamieniolom_wejscie_sztolni', kind: 'rock_cliff' })?.url).toContain(
+      'wejscie_kopalni'
+    );
+    expect(resolveCustomPropSprite({ id: 'wzgorze_wieza', kind: 'watchtower' })?.url).toContain('brzezina_brama');
+  });
+
   it('opens combat with a Surprise Attack bonus from real-time exploration while protecting Prologue allies', () => {
     const state = createEmptyOstrzeState(ORIGIN_DATA, 33);
     createCharacter(

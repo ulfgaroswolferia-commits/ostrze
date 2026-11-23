@@ -366,6 +366,50 @@ export function createGluszecScene(): CustomSceneConfig {
         blocksSight: false,
         interactive: false,
         linkedLightId: 'light_gluszec_gate_r'
+      },
+      {
+        id: 'gluszec_latarnia_karczma',
+        name: 'Pochodnia przed karczmą',
+        kind: 'torch_sconce',
+        x: 7,
+        y: 9,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: false,
+        linkedLightId: 'light_gluszec_inn'
+      },
+      {
+        id: 'gluszec_latarnia_kuznia',
+        name: 'Pochodnia przy kuźni Bogdana',
+        kind: 'torch_sconce',
+        x: 19,
+        y: 16,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: false,
+        linkedLightId: 'light_gluszec_smithy'
+      },
+      {
+        id: 'gluszec_dab_plac',
+        name: 'Stara Brzoza na skraju Głuszca',
+        kind: 'ancient_oak',
+        x: 22,
+        y: 20,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 3,
+        blocksMovement: true,
+        blocksSight: true,
+        interactive: false
       }
     ],
     lights: [
@@ -378,6 +422,28 @@ export function createGluszecScene(): CustomSceneConfig {
         intensity: 1.45,
         radius: 7,
         flickerSpeed: 4.1,
+        enabled: true
+      },
+      {
+        id: 'light_gluszec_inn',
+        x: 7,
+        y: 9,
+        z: 1.1,
+        color: { r: 255, g: 175, b: 92 },
+        intensity: 1.15,
+        radius: 5.5,
+        flickerSpeed: 3.1,
+        enabled: true
+      },
+      {
+        id: 'light_gluszec_smithy',
+        x: 19,
+        y: 16,
+        z: 1.0,
+        color: { r: 255, g: 138, b: 64 },
+        intensity: 1.15,
+        radius: 5.0,
+        flickerSpeed: 3.6,
         enabled: true
       },
       {
@@ -1042,9 +1108,64 @@ export function createKapliczkaRozstajeScene(): CustomSceneConfig {
         blocksMovement: false,
         blocksSight: false,
         interactive: true
+      },
+      {
+        id: 'kapliczka_pochodnia',
+        name: 'Latarnia wotywna przy kapliczce',
+        kind: 'torch_sconce',
+        x: 10,
+        y: 8,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: false,
+        linkedLightId: 'light_kapliczka_shrine'
+      },
+      {
+        id: 'kapliczka_dab_w',
+        name: 'Stara Brzoza nad Rozstajami',
+        kind: 'ancient_oak',
+        x: 6,
+        y: 6,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 3,
+        blocksMovement: true,
+        blocksSight: true,
+        interactive: false
+      },
+      {
+        id: 'kapliczka_dab_e',
+        name: 'Stara Brzoza nad Rozstajami',
+        kind: 'ancient_oak',
+        x: 17,
+        y: 6,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 3,
+        blocksMovement: true,
+        blocksSight: true,
+        interactive: false
       }
     ],
-    lights: []
+    lights: [
+      {
+        id: 'light_kapliczka_shrine',
+        x: 11,
+        y: 8,
+        z: 1.1,
+        color: { r: 255, g: 198, b: 120 },
+        intensity: 1.2,
+        radius: 6,
+        flickerSpeed: 2.4,
+        enabled: true
+      }
+    ]
   };
 
   const actors: ActorEntity[] = [
@@ -1158,6 +1279,34 @@ export function createKamieniolomScene(opts?: { withHunt?: boolean }): CustomSce
         blocksMovement: false,
         blocksSight: false,
         interactive: true
+      },
+      {
+        id: 'kamieniolom_wejscie_sztolni',
+        name: 'Wejście do sztolni kamieniołomu',
+        kind: 'rock_cliff',
+        x: 11,
+        y: 4,
+        z: 0,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 3,
+        blocksMovement: true,
+        blocksSight: true,
+        interactive: false
+      },
+      {
+        id: 'kamieniolom_namiot_gornikow',
+        name: 'Namiot górników',
+        kind: 'ranger_tent',
+        x: 5,
+        y: 13,
+        z: 0,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: false
       }
     ],
     lights: [
@@ -1337,6 +1486,62 @@ export function createBagnaSzarejWodyScene(opts?: { withHunt?: boolean }): Custo
         blocksMovement: false,
         blocksSight: false,
         interactive: true
+      },
+      {
+        id: 'bagna_szalas_zielarki',
+        name: 'Szałas Bagiennej Zielarki',
+        kind: 'slavic_cottage',
+        x: 5,
+        y: 15,
+        z: 0,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true,
+        interactive: false
+      },
+      {
+        id: 'bagna_martwe_drzewo_1',
+        name: 'Zbutwiała wierzba nad topielą',
+        kind: 'dead_tree',
+        x: 6,
+        y: 7,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 3,
+        blocksMovement: true,
+        blocksSight: true,
+        interactive: false
+      },
+      {
+        id: 'bagna_martwe_drzewo_2',
+        name: 'Suchy pień na moczarach',
+        kind: 'dead_tree',
+        x: 17,
+        y: 9,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 3,
+        blocksMovement: true,
+        blocksSight: true,
+        interactive: false
+      },
+      {
+        id: 'bagna_martwe_drzewo_3',
+        name: 'Obumarła olsza',
+        kind: 'dead_tree',
+        x: 16,
+        y: 15,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true,
+        interactive: false
       }
     ],
     lights: [
@@ -1349,6 +1554,17 @@ export function createBagnaSzarejWodyScene(opts?: { withHunt?: boolean }): Custo
         intensity: 1.25,
         radius: 5.5,
         flickerSpeed: 2.6,
+        enabled: true
+      },
+      {
+        id: 'light_bagna_wisp_2',
+        x: 7,
+        y: 12,
+        z: 0.7,
+        color: { r: 105, g: 210, b: 185 },
+        intensity: 0.95,
+        radius: 4.5,
+        flickerSpeed: 2.1,
         enabled: true
       }
     ]
@@ -1663,6 +1879,62 @@ export function createSpalonaOsadaScene(opts?: { withHunt?: boolean }): CustomSc
         blocksMovement: false,
         blocksSight: false,
         interactive: true
+      },
+      {
+        id: 'spalona_chata_zachod',
+        name: 'Spalone ruiny chaty',
+        kind: 'slavic_cottage',
+        x: 5,
+        y: 8,
+        z: 0,
+        sizeX: 2,
+        sizeY: 2,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true,
+        interactive: false
+      },
+      {
+        id: 'spalona_chata_wschod',
+        name: 'Zgliszcza stodoły',
+        kind: 'slavic_cottage',
+        x: 16,
+        y: 10,
+        z: 0,
+        sizeX: 2,
+        sizeY: 2,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true,
+        interactive: false
+      },
+      {
+        id: 'spalona_martwe_drzewo_1',
+        name: 'Osmalone drzewo',
+        kind: 'dead_tree',
+        x: 6,
+        y: 15,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 3,
+        blocksMovement: true,
+        blocksSight: true,
+        interactive: false
+      },
+      {
+        id: 'spalona_martwe_drzewo_2',
+        name: 'Wypalony pień',
+        kind: 'dead_tree',
+        x: 17,
+        y: 5,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: true,
+        interactive: false
       }
     ],
     lights: [
@@ -1675,6 +1947,17 @@ export function createSpalonaOsadaScene(opts?: { withHunt?: boolean }): CustomSc
         intensity: 1.25,
         radius: 6,
         flickerSpeed: 3.4,
+        enabled: true
+      },
+      {
+        id: 'light_spalona_ember_2',
+        x: 16,
+        y: 11,
+        z: 0.6,
+        color: { r: 245, g: 108, b: 48 },
+        intensity: 0.95,
+        radius: 4.5,
+        flickerSpeed: 2.9,
         enabled: true
       }
     ]
@@ -1847,6 +2130,34 @@ export function createStaraKopalniaScene(opts?: { withHunt?: boolean }): CustomS
         blocksMovement: false,
         blocksSight: false,
         interactive: true
+      },
+      {
+        id: 'kopalnia_wejscie_glowne',
+        name: 'Stary szyb kopalniany',
+        kind: 'rock_cliff',
+        x: 11,
+        y: 4,
+        z: 0,
+        sizeX: 2,
+        sizeY: 1,
+        heightZ: 3,
+        blocksMovement: true,
+        blocksSight: true,
+        interactive: false
+      },
+      {
+        id: 'kopalnia_oltarz_rudy',
+        name: 'Pradawny kamień runiczny w szybie',
+        kind: 'runic_altar',
+        x: 17,
+        y: 8,
+        z: 0,
+        sizeX: 1,
+        sizeY: 1,
+        heightZ: 2,
+        blocksMovement: true,
+        blocksSight: false,
+        interactive: false
       }
     ],
     lights: [
@@ -1859,6 +2170,17 @@ export function createStaraKopalniaScene(opts?: { withHunt?: boolean }): CustomS
         intensity: 1.4,
         radius: 6,
         flickerSpeed: 2.2,
+        enabled: true
+      },
+      {
+        id: 'light_kopalnia_lantern',
+        x: 11,
+        y: 5,
+        z: 1.2,
+        color: { r: 255, g: 170, b: 82 },
+        intensity: 1.15,
+        radius: 5.5,
+        flickerSpeed: 3.2,
         enabled: true
       }
     ]

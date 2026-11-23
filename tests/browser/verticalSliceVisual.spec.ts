@@ -38,3 +38,46 @@ test('Brzezina + Trakt Vertical Slice loads painterly 2.5D props and toggles Fal
   expect(pageErrors).toEqual([]);
   expect(consoleErrors).toEqual([]);
 });
+
+test('Act I and Act II Drakensang painterly 2.5D vistas render cleanly with zero errors', async ({
+  page
+}, testInfo) => {
+  test.setTimeout(90_000);
+  const pageErrors: string[] = [];
+  const consoleErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') {
+      const txt = msg.text();
+      if (!txt.toLowerCase().includes('audiocontext')) {
+        consoleErrors.push(txt);
+      }
+    }
+  });
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/?dev=1');
+  await expect(page.locator('#viewport-container canvas')).toBeVisible();
+
+  const scenes = [
+    'wilczy_brod',
+    'stary_mlyn',
+    'gluszec',
+    'bagna_szarej_wody',
+    'spalona_osada',
+    'stara_kopalnia'
+  ];
+
+  const selector = page.locator('[data-action="dev-scene-select"]');
+  for (const sceneId of scenes) {
+    if (!(await selector.isVisible())) {
+      await page.locator('[data-action="toggle-dev-selector"]').click();
+    }
+    await selector.selectOption(sceneId);
+    await page.waitForTimeout(1100);
+    await page.screenshot({ path: testInfo.outputPath(`drakensang-${sceneId}.png`) });
+  }
+
+  expect(pageErrors).toEqual([]);
+  expect(consoleErrors).toEqual([]);
+});
