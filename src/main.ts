@@ -87,6 +87,8 @@ async function bootstrapOstrze(): Promise<void> {
 
   const sceneView = new IsoSceneView(engine, refreshUi);
   sceneView.getTelegraphedIntent = (actorId) => engine.getTelegraphedIntent(actorId);
+  sceneView.getActorStatuses = (actorId) => engine.getActorVisualStatuses(actorId);
+  engine.onPropReaction = (propId, kind) => sceneView.triggerPropReaction(propId, kind);
   sceneView.organicTerrainBlending = true;
   sceneView.showGridInExploration = isDevMode;
   sceneView.zoom = 0.88;
@@ -710,7 +712,7 @@ async function bootstrapOstrze(): Promise<void> {
       return;
     }
 
-    if (key === 'k' || key === 'i') {
+    if (key === 'k') {
       if (!prologue.state.character || modalUi.hasOpenModal()) return;
       e.preventDefault();
       modalUi.showCharacterSheet(() => {
@@ -721,6 +723,20 @@ async function bootstrapOstrze(): Promise<void> {
         performSave(true);
         refreshUi();
       }, 'stats');
+      return;
+    }
+
+    if (key === 'i') {
+      if (!prologue.state.character || modalUi.hasOpenModal()) return;
+      e.preventDefault();
+      modalUi.showCharacterSheet(() => {
+        engine.syncFromOstrzeState(prologue.state, prologue.data);
+        if (activeChapter === 'prologue') prologue.refreshObjectiveTracker();
+        else if (activeChapter === 'chapter2') chapter2?.refreshHubPanel();
+        else chapter1.refreshHubPanel();
+        performSave(true);
+        refreshUi();
+      }, 'gear');
       return;
     }
 

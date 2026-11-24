@@ -91,6 +91,29 @@ describe('Drakensang × Fallout Vertical Slice (Brzezina + Trakt)', () => {
       'wejscie_kopalni'
     );
     expect(resolveCustomPropSprite({ id: 'wzgorze_wieza', kind: 'watchtower' })?.url).toContain('wieza_straznicza');
+
+    // Phase 2 global kind painterly props
+    expect(resolveCustomPropSprite({ id: 'oboz_ognisko', kind: 'campfire' })?.url).toContain('ognisko');
+    expect(resolveCustomPropSprite({ id: 'skrzynia_1', kind: 'chest', isOpen: false })?.url).toContain(
+      'skrzynia_zamknieta'
+    );
+    expect(resolveCustomPropSprite({ id: 'brzezina_manekin_1', kind: 'training_dummy' })?.url).toContain(
+      'manekin_treningowy'
+    );
+    expect(resolveCustomPropSprite({ id: 'brzezina_sztandar', kind: 'school_banner' })?.url).toContain(
+      'sztandar_szkoly'
+    );
+    expect(resolveCustomPropSprite({ id: 'las_pniak', kind: 'tree_stump' })?.url).toContain('pien_drzewa');
+    expect(resolveCustomPropSprite({ id: 'las_pniak', kind: 'tree_stump' })?.allowMirrorX).toBe(true);
+    expect(resolveCustomPropSprite({ id: 'las_zwalony', kind: 'fallen_log' })?.url).toContain('zwalony_pien');
+    expect(resolveCustomPropSprite({ id: 'las_zwalony', kind: 'fallen_log' })?.allowMirrorX).toBe(true);
+    expect(resolveCustomPropSprite({ id: 'las_krzak', kind: 'berry_bush' })?.url).toContain('krzak_jagod');
+    expect(resolveCustomPropSprite({ id: 'las_krzak', kind: 'berry_bush' })?.allowMirrorX).toBe(true);
+    expect(resolveCustomPropSprite({ id: 'krypta_krysztal', kind: 'arcane_crystal' })?.url).toContain(
+      'krysztal_runiczny'
+    );
+    expect(resolveCustomPropSprite({ id: 'krypta_krysztal', kind: 'arcane_crystal' })?.allowMirrorX).toBe(true);
+    expect(resolveCustomPropSprite({ id: 'cmentarz_plot', kind: 'graveyard_fence' })?.url).toContain('plot_cmentarny');
   });
 
   it('keys out both outer white margins and enclosed white pockets while preserving warm highlights', () => {

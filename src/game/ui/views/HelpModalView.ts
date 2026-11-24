@@ -25,7 +25,9 @@ const CONTROL_GROUPS: ReadonlyArray<{
   {
     title: 'Okna i nawigacja',
     items: [
-      { keys: 'K / I', desc: 'Karta Postaci — atrybuty, umiejętności, ekwipunek, pas i talenty' },
+      { keys: 'K', desc: 'Karta Postaci — atrybuty, umiejętności i talenty' },
+      { keys: 'I', desc: 'Ekwipunek i Pas — plecak z filtrami kategorii i przypinaniem do pasa [4–7]' },
+      { keys: 'C', desc: 'Skradanie — ciche podejście i przygotowanie ataku z zaskoczenia' },
       { keys: 'B', desc: 'Bestiariusz i Wiedza Łowiecka (+1 obr. po pokonaniu 3 szt. danego gatunku)' },
       { keys: 'M', desc: 'Interaktywna mapa świata i podróż (w Prologu tryb podglądu)' },
       { keys: 'J', desc: 'Dziennik aktywnych zadań i lista kroków do wykonania' },
@@ -37,9 +39,9 @@ const CONTROL_GROUPS: ReadonlyArray<{
     title: 'Walka turowa 2.5D',
     items: [
       { keys: 'Klik na wroga', desc: 'Wybór celu (aktualizuje kartę celu i podgląd obrażeń) lub atak' },
-      { keys: '1 / 2', desc: 'Atak podstawowy lub precyzyjny / silny cios' },
-      { keys: 'R', desc: 'Manewr specjalny założonej broni (4 AP, odnowienie 2 tury: Cięcie Łukiem, Pchnięcie, Strzał w Ścięgno, Huk)' },
-      { keys: '3', desc: 'Garda — zwiększa obronę i amortyzuje telegrafowane ataki bossów' },
+      { keys: '1 / 2', desc: 'Atak podstawowy lub silny cios (silny cios przełamuje Gardę wroga: +25% obr., -1 AP)' },
+      { keys: 'R', desc: 'Manewr specjalny broni (4 AP, 2 t. odnowienia — przełamuje Gardę i aktywuje synergie statusów)' },
+      { keys: '3', desc: 'Garda — wzmacnia obronę, amortyzuje ciosy bossów i daje Ripostę (1×/rundę w zwarciu przy uniku/bloku)' },
       { keys: '4 – 7', desc: 'Pas Szybkiego Użycia: opatrunki, odtrutki, olej na ostrze i bomby' }
     ]
   }
@@ -53,8 +55,13 @@ const GUIDE_SECTIONS: ReadonlyArray<{ icon: string; title: string; body: string 
   },
   {
     icon: '🛡️',
-    title: 'Telegrafy bossów i Garda [3]',
-    body: 'Gdy boss szykuje potężny cios, nad kartą celu pojawia się ostrzeżenie. Włączenie Gardy [3] wyraźnie zmniejsza otrzymane obrażenia. Perk Mistrz finty pozwala raz na rundę przełamać Gardę wroga i daje +15% trafienia.'
+    title: 'Garda [3], Riposta i Przełamanie Gardy',
+    body: 'Gdy boss szykuje potężny cios, nad kartą celu pojawia się ostrzeżenie. Włączenie Gardy [3] zmniejsza obrażenia, a przy uniku lub mocnym bloku w zwarciu uruchamia darmową Ripostę (1× na rundę). Ciężki cios [2], Manewr [R] lub perk Mistrz finty przełamują Gardę wroga (+25% obr., -1 AP).'
+  },
+  {
+    icon: '⚔️',
+    title: 'Synergie statusów (Ustaw → Dobij)',
+    body: 'Łącz efekty w walce: Krwawienie + cios w zwarciu daje Krwawą Rzeź (+20% obr., +10% kryt), Podpalenie + silny cios/manewr wywołuje Wybuch Żaru (+5 obr. ognia i +1 t. podpalenia), a Oszołomienie lub Okaleczenie nóg odsłania Lukę w Obronie (+15% trafienia i +15% obr.).'
   },
   {
     icon: '⛺',
@@ -150,7 +157,7 @@ export function renderHelpModalView(params: HelpModalViewParams): void {
 
           <div class="ostrze-worldmap-footer">
             <span class="ostrze-worldmap-region-caption">Wskazówka: naciśnij F1 lub ? w dowolnym momencie poza polem tekstowym.</span>
-            <button type="button" class="ostrze-hub-btn" id="ostrze-help-close">Zamknij [ESC / F1]</button>
+            <button type="button" class="ostrze-hub-btn" id="ostrze-help-close">Zamknij <kbd class="ostrze-kbd">ESC</kbd></button>
           </div>
         </div>
       </div>

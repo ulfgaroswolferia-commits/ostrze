@@ -596,7 +596,7 @@ export class OstrzeModalUi {
       .map(
         (act) => `
           <button class="ostrze-hub-btn ${act.alert ? 'is-alert' : ''}" data-hub-act="${this.escape(act.id)}" ${act.disabled ? 'disabled' : ''}>
-            ${this.escape(act.label)}
+            ${this.formatActionLabelWithKbd(act.label)}
           </button>
         `
       )
@@ -1228,5 +1228,10 @@ export class OstrzeModalUi {
 
   private escape(str: string): string {
     return escapeHtml(str);
+  }
+
+  private formatActionLabelWithKbd(label: string): string {
+    const escaped = this.escape(label);
+    return escaped.replace(/\[([A-Za-z0-9–\-]{1,4})\]/g, '<kbd class="ostrze-kbd">$1</kbd>');
   }
 }

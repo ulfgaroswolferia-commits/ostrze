@@ -26,12 +26,19 @@ import {
   pinItemToQuickBelt
 } from '../../rules/combatConsumables';
 import type { SeededRng } from '../../rules/dice';
+import {
+  countInventoryByCategory,
+  filterAndSortInventoryEntries,
+  type InventoryCategoryFilter
+} from '../../rules/inventoryFilter';
 import { renderItemStatPillsHtml } from '../../rules/itemComparison';
 import { getStats } from '../../rules/stats';
 import { getOstrzeLocationMeta } from '../../rules/travel';
 import { escapeHtml } from '../escapeHtml';
 
 export type CharacterSheetTab = 'stats' | 'gear' | 'journal' | 'bestiary' | 'chronicle';
+
+let activeGearCategoryFilter: InventoryCategoryFilter = 'all';
 
 export function renderCharacterSheetView(params: {
   root: HTMLElement;
@@ -133,9 +140,45 @@ export function renderCharacterSheetView(params: {
           .join('')
       : '';
 
+  const gearCounts = countInventoryByCategory(state.inventory.items, data);
+  if (activeGearCategoryFilter !== 'all' && gearCounts[activeGearCategoryFilter] === 0) {
+    activeGearCategoryFilter = 'all';
+  }
+  const visibleInventoryEntries = filterAndSortInventoryEntries(
+    state.inventory.items,
+    state.inventory.equipped,
+    data,
+    activeGearCategoryFilter
+  );
+  const gearFilterMeta: ReadonlyArray<{ id: InventoryCategoryFilter; label: string }> = [
+    { id: 'all', label: 'Wszystkie' },
+    { id: 'weapon', label: '⚔️ Broń' },
+    { id: 'armor', label: '🛡️ Pancerz' },
+    { id: 'consumable', label: '🧪 Zużywalne' },
+    { id: 'other', label: '📦 Inne' }
+  ];
+  const gearFiltersHtml = `
+    <div class="ostrze-gear-filters" role="tablist" aria-label="Filtr kategorii ekwipunku">
+      ${gearFilterMeta
+        .map(
+          (f) => `
+          <button
+            type="button"
+            class="ostrze-gear-filter-btn ${activeGearCategoryFilter === f.id ? 'is-active' : ''}"
+            data-cs-gear-filter="${f.id}"
+            ${f.id !== 'all' && gearCounts[f.id] === 0 ? 'disabled' : ''}
+          >
+            ${f.label} <span class="ostrze-gear-filter-count">${gearCounts[f.id]}</span>
+          </button>
+        `
+        )
+        .join('')}
+    </div>
+  `;
+
   const itemsHtml =
-    state.inventory.items.length > 0
-      ? state.inventory.items
+    visibleInventoryEntries.length > 0
+      ? visibleInventoryEntries
           .map((entry) => {
             const item = data.items.find((i) => i.id === entry.id);
             const equipSlot = item?.slot ?? (item?.type === 'weapon' ? 'bron' : undefined);
@@ -494,7 +537,8 @@ export function renderCharacterSheetView(params: {
               ${equippedHtml}
             </div>
             <div class="ostrze-panel">
-              <h3>Plecak i Pas Szybkiego Użycia [4–7]</h3>
+              <h3>Plecak i Pas Szybkiego Użycia <kbd class="ostrze-kbd">4–7</kbd></h3>
+              ${gearFiltersHtml}
               ${itemsHtml}
             </div>
           </div>
@@ -589,16 +633,16 @@ export function renderCharacterSheetView(params: {
 
         <div class="ostrze-cs-tabs">
           <button class="ostrze-cs-tab ${activeTab === 'stats' ? 'is-active' : ''}" data-cs-tab="stats">
-            Postać i Rozwój ${pendingPts > 0 ? `<span class="ostrze-cs-tab-badge">+${pendingPts}</span>` : ''}
+            Postać i Rozwój <kbd class="ostrze-kbd">K</kbd> ${pendingPts > 0 ? `<span class="ostrze-cs-tab-badge">+${pendingPts}</span>` : ''}
           </button>
           <button class="ostrze-cs-tab ${activeTab === 'gear' ? 'is-active' : ''}" data-cs-tab="gear">
-            Ekwipunek i Pas (${state.inventory.items.length})
+            Ekwipunek i Pas (${state.inventory.items.length}) <kbd class="ostrze-kbd">I</kbd>
           </button>
           <button class="ostrze-cs-tab ${activeTab === 'journal' ? 'is-active' : ''}" data-cs-tab="journal">
-            Dziennik i Pamiątki
+            Dziennik i Pamiątki <kbd class="ostrze-kbd">J</kbd>
           </button>
           <button class="ostrze-cs-tab ${activeTab === 'bestiary' ? 'is-active' : ''}" data-cs-tab="bestiary">
-            🐺 Bestiariusz (${unlockedBestiaryCount}/${bestiaryEntries.length})
+            🐺 Bestiariusz (${unlockedBestiaryCount}/${bestiaryEntries.length}) <kbd class="ostrze-kbd">B</kbd>
           </button>
           <button class="ostrze-cs-tab ${activeTab === 'chronicle' ? 'is-active' : ''}" data-cs-tab="chronicle">
             🏆 Kronika (${progress.unlockedAchievements}/${progress.totalAchievements})
@@ -608,7 +652,7 @@ export function renderCharacterSheetView(params: {
         ${tabContentHtml}
 
         <div style="display:flex;justify-content:flex-end;margin-top:8px">
-          <button class="ostrze-btn" id="ostrze-cs-close">Zamknij [ESC]</button>
+          <button class="ostrze-btn" id="ostrze-cs-close">Zamknij <kbd class="ostrze-kbd">ESC</kbd></button>
         </div>
       </div>
     </div>
@@ -620,6 +664,17 @@ export function renderCharacterSheetView(params: {
       if (nextTab && nextTab !== activeTab) {
         ostrzeAudio.playUiClick();
         onSelectTab(nextTab);
+      }
+    });
+  });
+
+  root.querySelectorAll<HTMLElement>('[data-cs-gear-filter]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const nextFilter = btn.dataset.csGearFilter as InventoryCategoryFilter | undefined;
+      if (nextFilter && nextFilter !== activeGearCategoryFilter) {
+        ostrzeAudio.playUiClick();
+        activeGearCategoryFilter = nextFilter;
+        onRerender();
       }
     });
   });

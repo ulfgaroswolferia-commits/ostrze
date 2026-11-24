@@ -12,20 +12,29 @@ import drzewoMartweUrl from './props/drzewo_martwe.jpg';
 import drzewoSosnaUrl from './props/drzewo_sosna.jpg';
 import karczmaUrl from './props/karczma.jpg';
 import koszaryDrewnianeUrl from './props/koszary_drewniane.jpg';
+import krysztalRunicznyUrl from './props/krysztal_runiczny.jpg';
+import krzakJagodUrl from './props/krzak_jagod.jpg';
+import manekinTreningowyUrl from './props/manekin_treningowy.jpg';
 import namiotZwiadowcowUrl from './props/namiot_zwiadowcow.jpg';
+import ogniskoUrl from './props/ognisko.jpg';
 import oltarzRunicznyUrl from './props/oltarz_runiczny.jpg';
+import pienDrzewaUrl from './props/pien_drzewa.jpg';
+import plotCmentarnyUrl from './props/plot_cmentarny.jpg';
 import plotPlecionyUrl from './props/plot_pleciony.jpg';
 import ruinySpaloneUrl from './props/ruiny_spalone.jpg';
 import sarkofagUrl from './props/sarkofag.jpg';
 import skalaKlifUrl from './props/skala_klif.jpg';
+import skrzyniaZamknietaUrl from './props/skrzynia_zamknieta.jpg';
 import staryMlynUrl from './props/stary_mlyn.jpg';
 import straganKupieckiUrl from './props/stragan_kupiecki.jpg';
 import studniaSlowianskaUrl from './props/studnia_slowianska.jpg';
+import sztandarSzkolyUrl from './props/sztandar_szkoly.jpg';
 import traktKapliczkaUrl from './props/trakt_kapliczka.jpg';
 import traktWozUrl from './props/trakt_woz.jpg';
 import wejscieKopalniUrl from './props/wejscie_kopalni.jpg';
 import wiezaStrazniczaUrl from './props/wieza_straznicza.jpg';
 import wozKupieckiUrl from './props/woz_kupiecki.jpg';
+import zwalonyPienUrl from './props/zwalony_pien.jpg';
 
 /**
  * Painterly 2.5D isometric dark Slavic fantasy prop sprites covering Prologue, Act I, and Act II.
@@ -386,6 +395,85 @@ export const PAINTERLY_PROP_SPECS: readonly CustomPropSpriteSpec[] = [
     anchorX: 0.5,
     anchorY: 0.84,
     targetWidthPx: 120,
+    keyOutWhiteBackground: true
+  },
+
+  // === PHASE 2 — CAMP, SCHOOL, NATURE, ARCANE & CEMETERY PROPS ===
+  {
+    kind: 'campfire',
+    url: ogniskoUrl,
+    anchorX: 0.5,
+    anchorY: 0.68,
+    targetWidthPx: 96,
+    keyOutWhiteBackground: true
+  },
+  {
+    kind: 'chest',
+    isOpen: false,
+    url: skrzyniaZamknietaUrl,
+    anchorX: 0.5,
+    anchorY: 0.84,
+    targetWidthPx: 88,
+    keyOutWhiteBackground: true
+  },
+  {
+    kind: 'training_dummy',
+    url: manekinTreningowyUrl,
+    anchorX: 0.5,
+    anchorY: 0.89,
+    targetWidthPx: 108,
+    keyOutWhiteBackground: true
+  },
+  {
+    kind: 'school_banner',
+    url: sztandarSzkolyUrl,
+    anchorX: 0.5,
+    anchorY: 0.91,
+    targetWidthPx: 135,
+    keyOutWhiteBackground: true
+  },
+  {
+    kind: 'tree_stump',
+    url: pienDrzewaUrl,
+    anchorX: 0.5,
+    anchorY: 0.82,
+    targetWidthPx: 98,
+    keyOutWhiteBackground: true,
+    allowMirrorX: true
+  },
+  {
+    kind: 'fallen_log',
+    url: zwalonyPienUrl,
+    anchorX: 0.5,
+    anchorY: 0.78,
+    targetWidthPx: 145,
+    keyOutWhiteBackground: true,
+    allowMirrorX: true
+  },
+  {
+    kind: 'berry_bush',
+    url: krzakJagodUrl,
+    anchorX: 0.5,
+    anchorY: 0.84,
+    targetWidthPx: 94,
+    keyOutWhiteBackground: true,
+    allowMirrorX: true
+  },
+  {
+    kind: 'arcane_crystal',
+    url: krysztalRunicznyUrl,
+    anchorX: 0.5,
+    anchorY: 0.88,
+    targetWidthPx: 112,
+    keyOutWhiteBackground: true,
+    allowMirrorX: true
+  },
+  {
+    kind: 'graveyard_fence',
+    url: plotCmentarnyUrl,
+    anchorX: 0.5,
+    anchorY: 0.84,
+    targetWidthPx: 130,
     keyOutWhiteBackground: true
   }
 ];

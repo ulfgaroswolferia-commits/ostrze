@@ -48,6 +48,11 @@ import {
   resolveActiveWeaponManeuver,
   type WeaponManeuverDef
 } from '../game/rules/weaponManeuvers';
+import {
+  evaluateGuardBreak,
+  evaluateGuardRiposte,
+  evaluateStatusSynergies
+} from '../game/rules/combatSynergies';
 import { registerOstrzePainterlyProps } from '../game/assets/painterlyProps';
 import { ostrzeAudio } from '../game/audio/ostrzeAudio';
 import { ORIGIN_DATA } from '../game/data/originData';
@@ -144,14 +149,19 @@ export class OstrzeEngineState extends CrpgGameState {
   public onFallbackPropInteract?: (propId: string) => boolean;
   public onSceneLoaded?: (sceneId: string) => void;
   public onJuicyImpact?: (isBigImpact: boolean) => void;
+  public onPropReaction?: (propId: string, kind: 'rock' | 'pop') => void;
   private readonly persistentMarkers = new Map<string, string>();
   private activeOstrzeState: OstrzeGameState | null = null;
   private combatAiSession = createCombatAiSessionState();
   private combatStatusSession = createCombatStatusSessionState();
   private readonly enemyBurnTurns = new Map<string, number>();
+  private readonly enemyBleedTurns = new Map<string, number>();
   private pendingPlayerAttackMultiplier = 1;
+  private pendingPlayerHitBonusPct = 0;
+  private pendingPlayerCritBonusPct = 0;
   private pendingPlayerFeintActive = false;
   private feintUsedRound = -1;
+  private riposteUsedRound = -1;
   private maneuverCooldownUntilRound = 0;
   private readonly detonatedOilBarrelIds = new Set<string>();
   private readonly enemyBaseMaxHp = new Map<string, number>();
@@ -168,8 +178,12 @@ export class OstrzeEngineState extends CrpgGameState {
         const originId = resolveEnemyOriginId(event.attacker.id, event.attacker.recipe.name);
         ostrzeAudio.playEnemyAttackVoice(originId);
       }
-      if (event.target.id !== this.player.id || !event.outcome.hit) return;
-      this.handleEnemyHitStatusEffects(event.attacker);
+      if (event.target.id === this.player.id && event.attacker.id !== this.player.id) {
+        if (event.outcome.hit) {
+          this.handleEnemyHitStatusEffects(event.attacker);
+        }
+        this.tryTriggerPlayerGuardRiposte(event.attacker, event.outcome);
+      }
     });
   }
 
@@ -189,10 +203,14 @@ export class OstrzeEngineState extends CrpgGameState {
     this.combatAiSession = createCombatAiSessionState();
     this.combatStatusSession = createCombatStatusSessionState();
     this.enemyBurnTurns.clear();
+    this.enemyBleedTurns.clear();
     this.feintUsedRound = -1;
+    this.riposteUsedRound = -1;
     this.maneuverCooldownUntilRound = 0;
     this.detonatedOilBarrelIds.clear();
     this.pendingPlayerFeintActive = false;
+    this.pendingPlayerHitBonusPct = 0;
+    this.pendingPlayerCritBonusPct = 0;
   }
 
   public applyEnemyBurn(enemyId: string, turns = 2): void {
@@ -204,8 +222,35 @@ export class OstrzeEngineState extends CrpgGameState {
     return this.enemyBurnTurns.get(enemyId) ?? 0;
   }
 
+  public applyEnemyBleed(enemyId: string, turns = 2): void {
+    const prev = this.enemyBleedTurns.get(enemyId) ?? 0;
+    this.enemyBleedTurns.set(enemyId, Math.max(prev, turns));
+  }
+
+  public getEnemyBleedTurns(enemyId: string): number {
+    return this.enemyBleedTurns.get(enemyId) ?? 0;
+  }
+
   public getPlayerActiveStatusTurns(): Partial<Record<'krwawienie' | 'zatrucie' | 'strach', number>> {
     return { ...this.combatStatusSession.activeTurns };
+  }
+
+  public getActorVisualStatuses(actorId: string): string[] {
+    if (actorId === this.player.id) {
+      const result: string[] = [];
+      for (const [id, turns] of Object.entries(this.combatStatusSession.activeTurns)) {
+        if ((turns ?? 0) > 0) result.push(id);
+      }
+      return result;
+    }
+    const enemyStatuses: string[] = [];
+    if ((this.enemyBleedTurns.get(actorId) ?? 0) > 0) {
+      enemyStatuses.push('krwawienie');
+    }
+    if ((this.enemyBurnTurns.get(actorId) ?? 0) > 0) {
+      enemyStatuses.push('podpalenie');
+    }
+    return enemyStatuses;
   }
 
   public isPlayerFeintReady(): boolean {
@@ -255,6 +300,124 @@ export class OstrzeEngineState extends CrpgGameState {
       }
     }
     return dmg;
+  }
+
+  public tickEnemyBleed(enemy: ActorEntity, rng: () => number = Math.random): number {
+    const rem = this.enemyBleedTurns.get(enemy.id) ?? 0;
+    if (rem <= 0 || !enemy.combat?.isAlive) {
+      this.enemyBleedTurns.delete(enemy.id);
+      return 0;
+    }
+    const dmg = 2 + Math.floor(rng() * 2); // 2–3 bleed damage
+    enemy.combat.hp = Math.max(0, enemy.combat.hp - dmg);
+    enemy.damageFlashTimer = 0.2;
+
+    if (rem - 1 <= 0) this.enemyBleedTurns.delete(enemy.id);
+    else this.enemyBleedTurns.set(enemy.id, rem - 1);
+
+    this.pushFloatingCombatText(
+      enemy.x,
+      enemy.y,
+      enemy.z + 2.05,
+      `🩸 -${dmg} KRWAWIENIE!`,
+      0xef4444
+    );
+    this.addCombatLog(`🩸 Krwawienie osłabia ${enemy.recipe.name}: -${dmg} HP.`);
+
+    if (enemy.combat.hp <= 0) {
+      enemy.combat.isAlive = false;
+      this.enemyBleedTurns.delete(enemy.id);
+      this.enemyBurnTurns.delete(enemy.id);
+      const originId = resolveEnemyOriginId(enemy.id, enemy.recipe.name);
+      this.checkAndRecordEnemyKill(enemy, originId);
+      this.addCombatLog(`🩸 ${enemy.recipe.name} wykrwawia się na polu bitwy!`);
+      const remainingHostiles = this.npcs.filter((n) => n.combat?.isHostile && n.combat.isAlive);
+      if (remainingHostiles.length === 0) {
+        this.combatState.active = false;
+        this.resetCombatTacticalSessions();
+        this.addLog(`Zwycięstwo w walce! Pokonano: ${enemy.recipe.name}.`, 'important');
+        this.onCombatEnded?.('victory');
+      } else if (this.combatState.selectedTargetId === enemy.id) {
+        this.combatState.selectedTargetId = remainingHostiles[0].id;
+      }
+    }
+    return dmg;
+  }
+
+  private isPlayerEquippedMelee(): boolean {
+    const weaponId = this.activeOstrzeState?.inventory?.equipped?.bron;
+    const weapon = weaponId ? ORIGIN_DATA.items.find((it) => it.id === weaponId) : undefined;
+    if (!weapon?.skill) return true;
+    return weapon.skill !== 'strzelecka' && weapon.skill !== 'proch';
+  }
+
+  private tryTriggerPlayerGuardRiposte(
+    attacker: ActorEntity,
+    outcome: Pick<
+      import('@ulf/rpg/combatSystem').CombatAttackOutcome,
+      'hit' | 'rawDamage' | 'mitigatedByArmor' | 'damageDealt'
+    >
+  ): void {
+    const pCombat = this.player.combat;
+    const aCombat = attacker.combat;
+    if (!this.combatState.active || !pCombat || !aCombat) return;
+
+    const weaponId = this.activeOstrzeState?.inventory?.equipped?.bron;
+    const weapon = weaponId ? ORIGIN_DATA.items.find((it) => it.id === weaponId) : undefined;
+    const avgDmg = weapon?.damage ? (weapon.damage[0] + weapon.damage[1]) * 0.5 : 5.5;
+    const dist = Math.hypot(attacker.tileX - this.player.tileX, attacker.tileY - this.player.tileY);
+
+    const riposte = evaluateGuardRiposte({
+      playerDefending: Boolean(pCombat.defending),
+      playerAlive: pCombat.isAlive,
+      playerWeaponIsMelee: this.isPlayerEquippedMelee(),
+      attackerAlive: aCombat.isAlive,
+      distanceTiles: dist,
+      currentRound: this.combatState.round,
+      riposteUsedRound: this.riposteUsedRound,
+      playerBaseAvgDamage: avgDmg,
+      outcome
+    });
+    if (!riposte.triggered) return;
+
+    this.riposteUsedRound = this.combatState.round;
+    aCombat.hp = Math.max(0, aCombat.hp - riposte.damage);
+    this.player.attackAnimTimer = 0.18;
+    this.player.attackAnimMaxTimer = 0.18;
+    this.player.attackTargetX = attacker.x;
+    this.player.attackTargetY = attacker.y;
+    attacker.hitRecoilTimer = 0.18;
+    attacker.hitRecoilMaxTimer = 0.18;
+    attacker.hitFromX = this.player.x;
+    attacker.hitFromY = this.player.y;
+    attacker.damageFlashTimer = 0.22;
+
+    this.onJuicyImpact?.(false);
+    this.pushFloatingCombatText(
+      attacker.x,
+      attacker.y,
+      attacker.z + 2.35,
+      `⚔️ RIPOSTA! -${riposte.damage}`,
+      0xfde047
+    );
+    this.addCombatLog(
+      `⚔️ RIPOSTA Z GARDY! ${this.player.recipe.name} kontruje ${attacker.recipe.name} za ${riposte.damage} HP.`
+    );
+
+    if (aCombat.hp <= 0) {
+      aCombat.isAlive = false;
+      const originId = resolveEnemyOriginId(attacker.id, attacker.recipe.name);
+      this.checkAndRecordEnemyKill(attacker, originId);
+      const remainingHostiles = this.npcs.filter((n) => n.combat?.isHostile && n.combat.isAlive);
+      if (remainingHostiles.length === 0) {
+        this.combatState.active = false;
+        this.resetCombatTacticalSessions();
+        this.addLog(`Zwycięstwo w walce! Riposta powaliła: ${attacker.recipe.name}.`, 'important');
+        this.onCombatEnded?.('victory');
+      } else if (this.combatState.selectedTargetId === attacker.id) {
+        this.combatState.selectedTargetId = remainingHostiles[0].id;
+      }
+    }
   }
 
   private handleEnemyHitStatusEffects(attacker: ActorEntity): void {
@@ -340,6 +503,12 @@ export class OstrzeEngineState extends CrpgGameState {
   }
 
   public override togglePropInteraction(propId: string): void {
+    const prop = this.map.props.find((p) => p.id === propId);
+    if (prop?.kind === 'training_dummy') {
+      this.onPropReaction?.(prop.id, 'rock');
+    } else if (prop?.kind === 'chest') {
+      this.onPropReaction?.(prop.id, 'pop');
+    }
     if (this.onPropInteract?.(propId)) {
       return;
     }
@@ -616,19 +785,25 @@ export class OstrzeEngineState extends CrpgGameState {
       );
       const mult = this.pendingPlayerAttackMultiplier;
       const feintBonus = this.pendingPlayerFeintActive ? 15 : 0;
+      const synergyHitBonus = this.pendingPlayerHitBonusPct;
       const diffHitBonus = diffProfile.playerHitBonusPct;
       const surpriseCritBonus = this.pendingSurpriseAttack ? 15 : 0;
+      const synergyCritBonus = this.pendingPlayerCritBonusPct;
       const ostrzeCrit = this.activeOstrzeState?.character
         ? getStats(this.activeOstrzeState, ORIGIN_DATA).derived.critChance
         : null;
       const nextCrit =
         ostrzeCrit !== null
-          ? Math.max(base.derived.critChancePct, Math.min(75, ostrzeCrit + surpriseCritBonus))
-          : Math.min(75, base.derived.critChancePct + surpriseCritBonus);
+          ? Math.max(
+              base.derived.critChancePct,
+              Math.min(75, ostrzeCrit + surpriseCritBonus + synergyCritBonus)
+            )
+          : Math.min(75, base.derived.critChancePct + surpriseCritBonus + synergyCritBonus);
       if (
         hitPenalty <= 0 &&
         mult === 1 &&
         feintBonus === 0 &&
+        synergyHitBonus === 0 &&
         diffHitBonus === 0 &&
         nextCrit === base.derived.critChancePct
       ) {
@@ -645,7 +820,10 @@ export class OstrzeEngineState extends CrpgGameState {
           critChancePct: nextCrit,
           activeProficiency: Math.min(
             98,
-            Math.max(10, base.derived.activeProficiency - hitPenalty + feintBonus + diffHitBonus)
+            Math.max(
+              10,
+              base.derived.activeProficiency - hitPenalty + feintBonus + synergyHitBonus + diffHitBonus
+            )
           )
         }
       };
@@ -963,6 +1141,10 @@ export class OstrzeEngineState extends CrpgGameState {
     if (!ec.isAlive || !this.combatState.active) {
       return;
     }
+    this.tickEnemyBleed(enemy);
+    if (!ec.isAlive || !this.combatState.active) {
+      return;
+    }
 
     if (willGuard && ec.defending && (archetype === 'melee_cautious' || lowHp)) {
       this.addCombatLog(`🛡️ ${enemy.recipe.name} przechodzi w gardę (+20% Unik, +15% DR).`);
@@ -1046,19 +1228,42 @@ export class OstrzeEngineState extends CrpgGameState {
       this.activeOstrzeState?.character?.perks.includes('finta') &&
         this.feintUsedRound !== this.combatState.round
     );
+    const guardBreak = evaluateGuardBreak({
+      targetDefending: Boolean(enemy?.combat?.defending),
+      attackMode: mode,
+      isFeint: hasFeint
+    });
     if (hasFeint && enemy?.combat) {
       this.feintUsedRound = this.combatState.round;
       this.pendingPlayerFeintActive = true;
-      const brokeGuard = enemy.combat.defending;
-      if (brokeGuard) {
-        enemy.combat.defending = false;
-      }
       this.addCombatLog(
-        brokeGuard
+        guardBreak.triggered
           ? `⚔️ Mistrz finty! Zmyłka przełamuje gardę ${enemy.recipe.name} (+15% trafienia).`
           : `⚔️ Mistrz finty! Pierwszy cios w rundzie (+15% trafienia).`
       );
     }
+    if (guardBreak.triggered && enemy?.combat) {
+      enemy.combat.defending = false;
+    }
+
+    const isMelee = this.isPlayerEquippedMelee();
+    const synergies = enemy?.combat
+      ? evaluateStatusSynergies({
+          targetBleeding: this.getEnemyBleedTurns(enemy.id) > 0,
+          targetBurning: this.getEnemyBurnTurns(enemy.id) > 0,
+          targetDazedOrCrippled:
+            (enemy.combat.dazedHeadTurns ?? 0) > 0 || (enemy.combat.crippledLegsTurns ?? 0) > 0,
+          isMeleeAttack: isMelee,
+          isHeavyOrManeuver: mode === 'power'
+        })
+      : {
+          damageMultiplier: 1,
+          hitBonusPct: 0,
+          critBonusPct: 0,
+          bonusFireDamage: 0,
+          extraBurnTurns: 0,
+          tags: []
+        };
 
     const isSurprise = this.pendingSurpriseAttack;
     if (isSurprise && enemy) {
@@ -1074,17 +1279,69 @@ export class OstrzeEngineState extends CrpgGameState {
       );
     }
 
-    this.pendingPlayerAttackMultiplier = isSurprise ? mult * 1.2 : mult;
+    this.pendingPlayerAttackMultiplier =
+      mult *
+      (isSurprise ? 1.2 : 1) *
+      guardBreak.damageMultiplier *
+      synergies.damageMultiplier;
+    this.pendingPlayerHitBonusPct = synergies.hitBonusPct;
+    this.pendingPlayerCritBonusPct = synergies.critBonusPct;
     let outcome;
     try {
       outcome = super.performPlayerCombatAttack(targetId, mode, rng);
     } finally {
       this.pendingPlayerAttackMultiplier = 1;
+      this.pendingPlayerHitBonusPct = 0;
+      this.pendingPlayerCritBonusPct = 0;
       this.pendingPlayerFeintActive = false;
       this.pendingSurpriseAttack = false;
     }
 
     if (outcome?.hit && enemy?.combat) {
+      if (guardBreak.triggered) {
+        enemy.combat.ap = Math.max(0, enemy.combat.ap - guardBreak.apPenalty);
+        this.addCombatLog(
+          `💥 PRZEŁAMANIE GARDY na ${enemy.recipe.name}! (+25% obr., -${guardBreak.apPenalty} AP)`
+        );
+        this.pushFloatingCombatText(
+          enemy.x,
+          enemy.y,
+          enemy.z + 2.45,
+          '💥 PRZEŁAMANIE GARDY!',
+          0xf59e0b
+        );
+      }
+
+      if (synergies.bonusFireDamage > 0 && enemy.combat.isAlive) {
+        enemy.combat.hp = Math.max(0, enemy.combat.hp - synergies.bonusFireDamage);
+        outcome.damageDealt += synergies.bonusFireDamage;
+        if (synergies.extraBurnTurns > 0) {
+          this.applyEnemyBurn(
+            enemy.id,
+            this.getEnemyBurnTurns(enemy.id) + synergies.extraBurnTurns
+          );
+        }
+        if (enemy.combat.hp <= 0) {
+          enemy.combat.isAlive = false;
+        }
+      }
+
+      if (synergies.tags.length > 0) {
+        const tagSummary = synergies.tags.join(' • ');
+        this.addCombatLog(`✨ SYNERGIA (${enemy.recipe.name}): ${tagSummary}`);
+        this.pushFloatingCombatText(
+          enemy.x,
+          enemy.y,
+          enemy.z + 2.55,
+          synergies.tags[0],
+          0xfb923c
+        );
+      }
+
+      if (outcome.critical && isMelee && enemy.combat.isAlive) {
+        this.applyEnemyBleed(enemy.id, 2);
+      }
+
       if (hunterBonus > 0 && enemy.combat.isAlive) {
         enemy.combat.hp = Math.max(0, enemy.combat.hp - hunterBonus);
         outcome.damageDealt += hunterBonus;
@@ -1095,7 +1352,7 @@ export class OstrzeEngineState extends CrpgGameState {
       this.checkAndRecordEnemyKill(enemy, originId);
     }
 
-    if (outcome?.hit && (outcome.critical || isSurprise)) {
+    if (outcome?.hit && (outcome.critical || isSurprise || guardBreak.triggered)) {
       this.onJuicyImpact?.(true);
     }
 
@@ -1197,7 +1454,38 @@ export class OstrzeEngineState extends CrpgGameState {
     const targetCover = this.getActorCoverInfo(target);
     const isRangedManeuver = maneuver.id === 'strzal_w_sciegno' || maneuver.id === 'huk_zaporowy';
     const coverMult = isRangedManeuver && targetCover.hasCover ? 0.85 : 1;
-    const finalDmg = Math.max(1, Math.round(rawRoll * maneuver.damageMultiplier * mult * coverMult) + hunterBonus);
+    const guardBreak = evaluateGuardBreak({
+      targetDefending: Boolean(target.combat.defending),
+      isWeaponManeuver: true
+    });
+    if (guardBreak.triggered) {
+      target.combat.defending = false;
+      target.combat.ap = Math.max(0, target.combat.ap - guardBreak.apPenalty);
+    }
+    const synergies = evaluateStatusSynergies({
+      targetBleeding: this.getEnemyBleedTurns(target.id) > 0,
+      targetBurning: this.getEnemyBurnTurns(target.id) > 0,
+      targetDazedOrCrippled:
+        (target.combat.dazedHeadTurns ?? 0) > 0 || (target.combat.crippledLegsTurns ?? 0) > 0,
+      isMeleeAttack: !isRangedManeuver,
+      isHeavyOrManeuver: true
+    });
+    const finalDmg =
+      Math.max(
+        1,
+        Math.round(
+          rawRoll *
+            maneuver.damageMultiplier *
+            mult *
+            coverMult *
+            guardBreak.damageMultiplier *
+            synergies.damageMultiplier
+        ) + hunterBonus
+      ) + synergies.bonusFireDamage;
+
+    if (synergies.extraBurnTurns > 0) {
+      this.applyEnemyBurn(target.id, this.getEnemyBurnTurns(target.id) + synergies.extraBurnTurns);
+    }
 
     target.combat.hp = Math.max(0, target.combat.hp - finalDmg);
     if (target.combat.hp <= 0) {
@@ -1210,7 +1498,7 @@ export class OstrzeEngineState extends CrpgGameState {
 
     if (maneuver.id === 'ciecie_lukiem') {
       // Bleed on primary + cleave 1 adjacent living hostile
-      this.applyEnemyBurn(target.id, 2);
+      this.applyEnemyBleed(target.id, 2);
       const secondary = this.npcs.find(
         (n) =>
           n.id !== target.id &&
@@ -1283,6 +1571,26 @@ export class OstrzeEngineState extends CrpgGameState {
     }
 
     this.onJuicyImpact?.(true);
+    if (guardBreak.triggered) {
+      this.pushFloatingCombatText(
+        target.x,
+        target.y,
+        target.z + 2.55,
+        '💥 PRZEŁAMANIE GARDY!',
+        0xf59e0b
+      );
+      extraNote += ' + Przełamanie Gardy!';
+    }
+    if (synergies.tags.length > 0) {
+      this.pushFloatingCombatText(
+        target.x,
+        target.y,
+        target.z + 2.75,
+        synergies.tags[0],
+        0xfb923c
+      );
+      extraNote += ` + ${synergies.tags.join(', ')}`;
+    }
     this.pushFloatingCombatText(
       target.x,
       target.y,

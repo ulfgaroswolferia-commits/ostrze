@@ -66,7 +66,7 @@ describe('Tactical Combat (Weapon Maneuvers, Oil Barrels, Cover) & Road Encounte
     expect(res.ok).toBe(true);
     expect(enemies[0].combat!.hp).toBeLessThan(beforeHp0);
     expect(enemies[1].combat!.hp).toBeLessThan(beforeHp1);
-    expect(engine.getEnemyBurnTurns(enemies[0].id)).toBeGreaterThan(0);
+    expect(engine.getEnemyBleedTurns(enemies[0].id)).toBeGreaterThan(0);
 
     // Cooldown prevents immediate reuse on same round
     const second = engine.performPlayerWeaponManeuver(enemies[0].id, () => 0.5);
