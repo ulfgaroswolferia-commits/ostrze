@@ -6,6 +6,14 @@
  */
 export type OstrzeAmbienceMood = 'none' | 'town' | 'dawn' | 'forest' | 'creepy_forest' | 'night_storm';
 export type OstrzeMusicTheme = 'none' | 'town' | 'forest' | 'creepy' | 'combat';
+export type FootstepSurfaceKind = 'grass' | 'dirt' | 'stone' | 'water';
+
+export function classifyFootstepSurface(terrain: string): FootstepSurfaceKind {
+  if (terrain === 'forest_grass' || terrain === 'forest_soil') return 'grass';
+  if (terrain === 'dirt_path') return 'dirt';
+  if (terrain === 'abyss_water') return 'water';
+  return 'stone';
+}
 
 export type OstrzeCreatureSoundKind =
   | 'witch_cackle'
@@ -46,6 +54,7 @@ class OstrzeAudioManager {
   private currentMusicTheme: OstrzeMusicTheme = 'none';
   private explorationMusicTheme: OstrzeMusicTheme = 'none';
   private musicStep = 0;
+  private lastFootstepMs = 0;
 
   private isMuted(): boolean {
     try {
@@ -677,6 +686,55 @@ class OstrzeAudioManager {
     this.playTone(130, 0.42, 'sine', 0.11, 0, 36);
     this.playNoiseBurst(0.38, 'lowpass', 720, 0.9, 0.09, 0);
     this.playNoiseBurst(0.24, 'bandpass', 2400, 1.8, 0.045, 0.08);
+  }
+
+  public playFootstep(terrain: string, isStealth = false): void {
+    if (this.isMuted()) return;
+    const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (nowMs - this.lastFootstepMs < 290) return;
+    this.lastFootstepMs = nowMs;
+
+    const surface = classifyFootstepSurface(terrain);
+    const vol = isStealth ? 0.42 : 1.0;
+    const jitter = 0.92 + Math.random() * 0.16;
+
+    if (surface === 'grass') {
+      this.playNoiseBurst(0.055, 'bandpass', 1050 * jitter, 1.4, 0.022 * vol, 0);
+      this.playTone(95 * jitter, 0.04, 'sine', 0.014 * vol, 0, 62);
+    } else if (surface === 'dirt') {
+      this.playNoiseBurst(0.05, 'bandpass', 1750 * jitter, 1.8, 0.026 * vol, 0);
+      this.playTone(112 * jitter, 0.042, 'triangle', 0.015 * vol, 0, 70);
+    } else if (surface === 'water') {
+      this.playNoiseBurst(0.085, 'bandpass', 680 * jitter, 2.2, 0.028 * vol, 0);
+    } else {
+      // stone / cobble / marble / dungeon
+      this.playNoiseBurst(0.032, 'highpass', 1900 * jitter, 1.2, 0.026 * vol, 0);
+      this.playTone(155 * jitter, 0.048, 'triangle', 0.02 * vol, 0, 76);
+    }
+  }
+
+  public playCampfireCrackle(proximity01 = 1): void {
+    if (this.isMuted()) return;
+    const scale = Math.max(0.15, Math.min(1, proximity01));
+    const f1 = 2600 + Math.random() * 1600;
+    this.playNoiseBurst(0.022, 'bandpass', f1, 3.2, 0.022 * scale, 0);
+    if (Math.random() < 0.65) {
+      const f2 = 2200 + Math.random() * 1900;
+      this.playNoiseBurst(0.018, 'bandpass', f2, 3.6, 0.016 * scale, 0.08 + Math.random() * 0.14);
+    }
+  }
+
+  public playNocturnalAccent(kind: 'owl' | 'crickets'): void {
+    if (this.isMuted()) return;
+    if (kind === 'owl') {
+      this.playTone(368, 0.24, 'sine', 0.022, 0, 338);
+      this.playTone(352, 0.36, 'sine', 0.02, 0.34, 286);
+      return;
+    }
+    // crickets: 3 soft rapid high-pitched chirps
+    this.playTone(4180, 0.028, 'sine', 0.01, 0, 4240);
+    this.playTone(4210, 0.028, 'sine', 0.01, 0.06, 4260);
+    this.playTone(4170, 0.03, 'sine', 0.009, 0.12, 4220);
   }
 
   public stopAmbience(): void {

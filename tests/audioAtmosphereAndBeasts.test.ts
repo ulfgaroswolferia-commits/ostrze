@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ostrzeAudio } from '../src/game/audio/ostrzeAudio';
+import { classifyFootstepSurface, ostrzeAudio } from '../src/game/audio/ostrzeAudio';
 import { ORIGIN_DATA } from '../src/game/data/originData';
 
 function createFakeAudioContext() {
@@ -162,5 +162,25 @@ describe('OstrzeAudioManager atmospheric phenomena & beast SFX', () => {
     const afterStop = fake.counts().startedOscillators;
     vi.advanceTimersByTime(20000);
     expect(fake.counts().startedOscillators).toBe(afterStop);
+  });
+
+  it('classifies terrain surfaces and synthesizes footsteps, campfire crackle, and nocturnal accents', () => {
+    expect(classifyFootstepSurface('forest_grass')).toBe('grass');
+    expect(classifyFootstepSurface('forest_soil')).toBe('grass');
+    expect(classifyFootstepSurface('dirt_path')).toBe('dirt');
+    expect(classifyFootstepSurface('dungeon_stone')).toBe('stone');
+    expect(classifyFootstepSurface('abyss_water')).toBe('water');
+
+    const before = fake.counts();
+    ostrzeAudio.playFootstep('forest_grass', false);
+    vi.advanceTimersByTime(350);
+    ostrzeAudio.playFootstep('dungeon_stone', true);
+    ostrzeAudio.playCampfireCrackle(0.8);
+    ostrzeAudio.playNocturnalAccent('owl');
+    ostrzeAudio.playNocturnalAccent('crickets');
+
+    const after = fake.counts();
+    expect(after.startedSources).toBeGreaterThan(before.startedSources);
+    expect(after.startedOscillators).toBeGreaterThan(before.startedOscillators);
   });
 });

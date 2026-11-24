@@ -1,7 +1,7 @@
 import '@ulf/styles/main.css';
 import './game/styles/ostrze.css';
 import { CombatAudioEngine } from '@ulf/audio/combatAudio';
-import { IsoSceneView } from '@ulf/renderer/isoSceneView';
+import { IsoSceneView, isOutdoorMap } from '@ulf/renderer/isoSceneView';
 import { HudOverlay } from '@ulf/ui/hudOverlay';
 import { OstrzeEngineState } from './engine-bridge/OstrzeEngineState';
 import { ostrzeAudio } from './game/audio/ostrzeAudio';
@@ -86,6 +86,7 @@ async function bootstrapOstrze(): Promise<void> {
   };
 
   const sceneView = new IsoSceneView(engine, refreshUi);
+  sceneView.getTelegraphedIntent = (actorId) => engine.getTelegraphedIntent(actorId);
   sceneView.organicTerrainBlending = true;
   sceneView.showGridInExploration = isDevMode;
   sceneView.zoom = 0.88;
@@ -155,6 +156,10 @@ async function bootstrapOstrze(): Promise<void> {
   let devPhenomenonSelect: HTMLSelectElement | null = null;
   syncPhenomenonUi = () => {
     const atmosphere = getWorldAtmosphere(prologue.state, prologue.data);
+    sceneView.timeOfDay = atmosphere.timeOfDay;
+    viewportContainer.dataset.tod = atmosphere.timeOfDay;
+    viewportContainer.dataset.outdoor = isOutdoorMap(engine.map) ? 'true' : 'false';
+    viewportContainer.dataset.phenomenonActive = atmosphere.phenomenonId ? 'true' : 'false';
     phenomenonOverlay.sync(atmosphere);
     ostrzeAudio.setPhenomenonAudio(atmosphere.phenomenonId);
     if (devPhenomenonSelect) {
@@ -847,6 +852,57 @@ async function bootstrapOstrze(): Promise<void> {
     engine.loadCustomScene('brzezina_dziedziniec');
     showWelcome();
   }
+
+  // Surface-aware footsteps & proximity environmental audio (campfire crackle, nocturnal accents)
+  let lastFootstepTileX = engine.player.tileX;
+  let lastFootstepTileY = engine.player.tileY;
+  let lastFootstepMapId = engine.map.id;
+  window.setInterval(() => {
+    if ((typeof document !== 'undefined' && document.hidden) || modalUi.hasOpenModal()) return;
+    if (engine.map.id !== lastFootstepMapId) {
+      lastFootstepMapId = engine.map.id;
+      lastFootstepTileX = engine.player.tileX;
+      lastFootstepTileY = engine.player.tileY;
+      return;
+    }
+    if (engine.player.tileX !== lastFootstepTileX || engine.player.tileY !== lastFootstepTileY) {
+      lastFootstepTileX = engine.player.tileX;
+      lastFootstepTileY = engine.player.tileY;
+      const tile = engine.map.tiles[engine.player.tileY]?.[engine.player.tileX];
+      if (tile) {
+        ostrzeAudio.playFootstep(tile.terrain, engine.isStealthActive);
+      }
+    }
+  }, 240);
+
+  window.setInterval(() => {
+    if (
+      (typeof document !== 'undefined' && document.hidden) ||
+      modalUi.hasOpenModal() ||
+      ostrzeAudio.getMuted()
+    ) {
+      return;
+    }
+    // Proximity campfire crackle (<= 4.5 tiles from an active campfire)
+    let bestCampfireDist = Infinity;
+    for (const p of engine.map.props) {
+      if (p.kind === 'campfire' && p.isOpen) {
+        const d = Math.hypot(engine.player.x - (p.x + 0.5), engine.player.y - (p.y + 0.5));
+        if (d < bestCampfireDist) bestCampfireDist = d;
+      }
+    }
+    if (bestCampfireDist <= 4.5) {
+      ostrzeAudio.playCampfireCrackle(1 - bestCampfireDist / 4.8);
+    }
+
+    // Subtle nocturnal outdoor accents (owl / crickets) during dusk & night outside combat
+    if (!engine.combatState.active && isOutdoorMap(engine.map)) {
+      const tod = getWorldAtmosphere(prologue.state, prologue.data).timeOfDay;
+      if ((tod === 'noc' || tod === 'zmierzch') && Math.random() < 0.16) {
+        ostrzeAudio.playNocturnalAccent(Math.random() < 0.35 ? 'owl' : 'crickets');
+      }
+    }
+  }, 1900);
 
   // Drakensang-style ambient hub barks (Brzezina, Wilczy Bród, Osada Głuszec)
   let lastAmbientNpcId: string | null = null;

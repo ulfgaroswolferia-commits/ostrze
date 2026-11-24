@@ -6,17 +6,26 @@ import brzezinaBramaUrl from './props/brzezina_brama.jpg';
 import brzezinaDworUrl from './props/brzezina_dwor.jpg';
 import brzezinaKuzniaUrl from './props/brzezina_kuznia.jpg';
 import chataLesnaUrl from './props/chata_lesna.jpg';
+import drogowskazUrl from './props/drogowskaz.jpg';
 import drzewoBrzozaUrl from './props/drzewo_brzoza.jpg';
+import drzewoMartweUrl from './props/drzewo_martwe.jpg';
+import drzewoSosnaUrl from './props/drzewo_sosna.jpg';
 import karczmaUrl from './props/karczma.jpg';
+import koszaryDrewnianeUrl from './props/koszary_drewniane.jpg';
 import namiotZwiadowcowUrl from './props/namiot_zwiadowcow.jpg';
 import oltarzRunicznyUrl from './props/oltarz_runiczny.jpg';
+import plotPlecionyUrl from './props/plot_pleciony.jpg';
 import ruinySpaloneUrl from './props/ruiny_spalone.jpg';
+import sarkofagUrl from './props/sarkofag.jpg';
+import skalaKlifUrl from './props/skala_klif.jpg';
 import staryMlynUrl from './props/stary_mlyn.jpg';
 import straganKupieckiUrl from './props/stragan_kupiecki.jpg';
 import studniaSlowianskaUrl from './props/studnia_slowianska.jpg';
 import traktKapliczkaUrl from './props/trakt_kapliczka.jpg';
 import traktWozUrl from './props/trakt_woz.jpg';
 import wejscieKopalniUrl from './props/wejscie_kopalni.jpg';
+import wiezaStrazniczaUrl from './props/wieza_straznicza.jpg';
+import wozKupieckiUrl from './props/woz_kupiecki.jpg';
 
 /**
  * Painterly 2.5D isometric dark Slavic fantasy prop sprites covering Prologue, Act I, and Act II.
@@ -35,7 +44,7 @@ export const PAINTERLY_PROP_SPECS: readonly CustomPropSpriteSpec[] = [
   },
   {
     id: 'brzezina_dormitorium_1',
-    url: brzezinaDworUrl,
+    url: koszaryDrewnianeUrl,
     anchorX: 0.5,
     anchorY: 0.84,
     targetWidthPx: 235,
@@ -43,10 +52,10 @@ export const PAINTERLY_PROP_SPECS: readonly CustomPropSpriteSpec[] = [
   },
   {
     id: 'brzezina_dormitorium_2',
-    url: brzezinaKuzniaUrl,
+    url: koszaryDrewnianeUrl,
     anchorX: 0.5,
-    anchorY: 0.85,
-    targetWidthPx: 225,
+    anchorY: 0.84,
+    targetWidthPx: 230,
     keyOutWhiteBackground: true
   },
   {
@@ -59,9 +68,9 @@ export const PAINTERLY_PROP_SPECS: readonly CustomPropSpriteSpec[] = [
   },
   {
     id: 'brzezina_chata',
-    url: brzezinaKuzniaUrl,
+    url: chataLesnaUrl,
     anchorX: 0.5,
-    anchorY: 0.85,
+    anchorY: 0.79,
     targetWidthPx: 215,
     keyOutWhiteBackground: true
   },
@@ -77,7 +86,7 @@ export const PAINTERLY_PROP_SPECS: readonly CustomPropSpriteSpec[] = [
     id: 'trakt_barykada_skrzynie',
     url: traktWozUrl,
     anchorX: 0.5,
-    anchorY: 0.86,
+    anchorY: 0.8,
     targetWidthPx: 195,
     keyOutWhiteBackground: true
   },
@@ -85,7 +94,7 @@ export const PAINTERLY_PROP_SPECS: readonly CustomPropSpriteSpec[] = [
     idPrefix: 'trakt_woz',
     url: traktWozUrl,
     anchorX: 0.5,
-    anchorY: 0.86,
+    anchorY: 0.8,
     targetWidthPx: 195,
     keyOutWhiteBackground: true
   },
@@ -109,7 +118,7 @@ export const PAINTERLY_PROP_SPECS: readonly CustomPropSpriteSpec[] = [
   },
   {
     id: 'wb_koszary_straznicy',
-    url: brzezinaDworUrl,
+    url: koszaryDrewnianeUrl,
     anchorX: 0.5,
     anchorY: 0.84,
     targetWidthPx: 265,
@@ -159,7 +168,7 @@ export const PAINTERLY_PROP_SPECS: readonly CustomPropSpriteSpec[] = [
     id: 'lesniczowka_chata',
     url: chataLesnaUrl,
     anchorX: 0.5,
-    anchorY: 0.85,
+    anchorY: 0.79,
     targetWidthPx: 240,
     keyOutWhiteBackground: true
   },
@@ -167,7 +176,7 @@ export const PAINTERLY_PROP_SPECS: readonly CustomPropSpriteSpec[] = [
     id: 'lesniczowka_szopa',
     url: chataLesnaUrl,
     anchorX: 0.5,
-    anchorY: 0.86,
+    anchorY: 0.8,
     targetWidthPx: 165,
     keyOutWhiteBackground: true
   },
@@ -175,7 +184,7 @@ export const PAINTERLY_PROP_SPECS: readonly CustomPropSpriteSpec[] = [
     id: 'mlyn_spichlerz',
     url: chataLesnaUrl,
     anchorX: 0.5,
-    anchorY: 0.85,
+    anchorY: 0.79,
     targetWidthPx: 230,
     keyOutWhiteBackground: true
   },
@@ -183,17 +192,17 @@ export const PAINTERLY_PROP_SPECS: readonly CustomPropSpriteSpec[] = [
   // === ACT I & ACT II — WAGONS, SHRINES, RUINS, MINE PORTALS ===
   {
     id: 'wb_woz_ostromira',
-    url: traktWozUrl,
+    url: wozKupieckiUrl,
     anchorX: 0.5,
-    anchorY: 0.86,
+    anchorY: 0.8,
     targetWidthPx: 195,
     keyOutWhiteBackground: true
   },
   {
     id: 'przelecz_woz_ostromira',
-    url: traktWozUrl,
+    url: wozKupieckiUrl,
     anchorX: 0.5,
-    anchorY: 0.86,
+    anchorY: 0.8,
     targetWidthPx: 195,
     keyOutWhiteBackground: true
   },
@@ -201,7 +210,7 @@ export const PAINTERLY_PROP_SPECS: readonly CustomPropSpriteSpec[] = [
     id: 'trakt_k_woz',
     url: traktWozUrl,
     anchorX: 0.5,
-    anchorY: 0.86,
+    anchorY: 0.8,
     targetWidthPx: 195,
     keyOutWhiteBackground: true
   },
@@ -209,7 +218,7 @@ export const PAINTERLY_PROP_SPECS: readonly CustomPropSpriteSpec[] = [
     id: 'stary_trakt_rozbity_woz',
     url: traktWozUrl,
     anchorX: 0.5,
-    anchorY: 0.86,
+    anchorY: 0.8,
     targetWidthPx: 195,
     keyOutWhiteBackground: true
   },
@@ -267,15 +276,15 @@ export const PAINTERLY_PROP_SPECS: readonly CustomPropSpriteSpec[] = [
     kind: 'slavic_cottage',
     url: chataLesnaUrl,
     anchorX: 0.5,
-    anchorY: 0.85,
+    anchorY: 0.79,
     targetWidthPx: 215,
     keyOutWhiteBackground: true
   },
   {
     kind: 'watchtower',
-    url: brzezinaBramaUrl,
+    url: wiezaStrazniczaUrl,
     anchorX: 0.5,
-    anchorY: 0.86,
+    anchorY: 0.88,
     targetWidthPx: 225,
     keyOutWhiteBackground: true
   },
@@ -312,6 +321,14 @@ export const PAINTERLY_PROP_SPECS: readonly CustomPropSpriteSpec[] = [
     keyOutWhiteBackground: true
   },
   {
+    kind: 'travel_signpost',
+    url: drogowskazUrl,
+    anchorX: 0.5,
+    anchorY: 0.88,
+    targetWidthPx: 135,
+    keyOutWhiteBackground: true
+  },
+  {
     kind: 'runic_altar',
     url: oltarzRunicznyUrl,
     anchorX: 0.5,
@@ -321,10 +338,10 @@ export const PAINTERLY_PROP_SPECS: readonly CustomPropSpriteSpec[] = [
   },
   {
     kind: 'sarcophagus',
-    url: oltarzRunicznyUrl,
+    url: sarkofagUrl,
     anchorX: 0.5,
-    anchorY: 0.87,
-    targetWidthPx: 165,
+    anchorY: 0.86,
+    targetWidthPx: 175,
     keyOutWhiteBackground: true
   },
   {
@@ -333,6 +350,42 @@ export const PAINTERLY_PROP_SPECS: readonly CustomPropSpriteSpec[] = [
     anchorX: 0.5,
     anchorY: 0.88,
     targetWidthPx: 220,
+    keyOutWhiteBackground: true,
+    allowMirrorX: true
+  },
+  {
+    kind: 'dead_tree',
+    url: drzewoMartweUrl,
+    anchorX: 0.5,
+    anchorY: 0.88,
+    targetWidthPx: 220,
+    keyOutWhiteBackground: true,
+    allowMirrorX: true
+  },
+  {
+    kind: 'pine_tree',
+    url: drzewoSosnaUrl,
+    anchorX: 0.5,
+    anchorY: 0.89,
+    targetWidthPx: 215,
+    keyOutWhiteBackground: true,
+    allowMirrorX: true
+  },
+  {
+    kind: 'rock_cliff',
+    url: skalaKlifUrl,
+    anchorX: 0.5,
+    anchorY: 0.86,
+    targetWidthPx: 165,
+    keyOutWhiteBackground: true,
+    allowMirrorX: true
+  },
+  {
+    kind: 'wattle_fence',
+    url: plotPlecionyUrl,
+    anchorX: 0.5,
+    anchorY: 0.84,
+    targetWidthPx: 120,
     keyOutWhiteBackground: true
   }
 ];

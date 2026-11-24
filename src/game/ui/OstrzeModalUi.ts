@@ -153,6 +153,42 @@ export class OstrzeModalUi {
     this.hubRoot = this.createOrReuseRoot('ostrze-hub-root');
     this.toastRoot = this.createOrReuseRoot('ostrze-toast-root', 'ostrze-toast-stack');
 
+    // Isolate pointer, mouse, and wheel events while any Ostrze modal overlay is open
+    // (leave pointermove/mousemove bubbling so IsoSceneView's window handler immediately
+    // clears hoveredWorldTile, edge-pan, and canvas cursor under BLOCKING_MODAL_SELECTOR)
+    if (typeof this.root.addEventListener === 'function') {
+      const { signal } = this.abortController;
+      const isolateIfOverlayOpen = (e: Event): void => {
+        if (this.root.querySelector('.ostrze-overlay')) {
+          e.stopPropagation();
+        }
+      };
+      this.root.addEventListener('pointerdown', isolateIfOverlayOpen, { signal });
+      this.root.addEventListener('mousedown', isolateIfOverlayOpen, { signal });
+      this.root.addEventListener(
+        'wheel',
+        (e) => {
+          const overlay = this.root.querySelector<HTMLElement>('.ostrze-overlay');
+          if (!overlay) return;
+          e.stopPropagation();
+          const candidates = [
+            overlay.querySelector<HTMLElement>('.ostrze-help-body'),
+            overlay.querySelector<HTMLElement>('.ostrze-dialogue-body'),
+            overlay.querySelector<HTMLElement>('.ostrze-card'),
+            overlay
+          ];
+          const scrollTarget =
+            candidates.find((el): el is HTMLElement => Boolean(el && el.scrollHeight > el.clientHeight)) ??
+            overlay;
+          if (scrollTarget && !scrollTarget.contains(e.target as Node)) {
+            e.preventDefault();
+            scrollTarget.scrollTop += e.deltaY;
+          }
+        },
+        { passive: false, signal }
+      );
+    }
+
     this.draftAttrs = buildInitialCreatorAttrs(this.data);
     activeModalUi = this;
 

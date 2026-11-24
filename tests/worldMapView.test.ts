@@ -9,7 +9,7 @@ import {
 } from '../src/game/data/worldMapData';
 import { createEmptyOstrzeState } from '../src/game/rules/character';
 import { OSTRZE_LOCATIONS } from '../src/game/rules/travel';
-import { renderWorldMapView } from '../src/game/ui/views/WorldMapView';
+import { computeTravelForecast, renderWorldMapView } from '../src/game/ui/views/WorldMapView';
 
 describe('WorldMapData & WorldMapView', () => {
   it('defines coordinates for all 21 Ostrze locations and valid road endpoints', () => {
@@ -95,5 +95,21 @@ describe('WorldMapData & WorldMapView', () => {
     });
     expect(fakeRoot.innerHTML).toContain('Tryb podglądu mapy (Prolog)');
     expect(fakeRoot.innerHTML).not.toContain('data-travel-dest=');
+  });
+
+  it('computes arrival time forecast and warns about night arrival, fatigue, and hunger', () => {
+    const state = createEmptyOstrzeState(ORIGIN_DATA, 19);
+    // 21:00 -> 90 min march arrives at 22:30 (Noc)
+    state.time.minutes = 21 * 60;
+    state.vars.hours_without_sleep = 15.5;
+    state.vars.hours_without_food = 15.5;
+
+    const forecast = computeTravelForecast(state, ORIGIN_DATA, 90);
+    expect(forecast.arrivalClockText).toBe('22:30');
+    expect(forecast.arrivalTimeLabel).toBe('Noc');
+    expect(forecast.isNightArrival).toBe(true);
+    expect(forecast.warnings.some((w) => w.includes('po zmroku'))).toBe(true);
+    expect(forecast.warnings.some((w) => w.includes('zmęczenie'))).toBe(true);
+    expect(forecast.warnings.some((w) => w.includes('głód'))).toBe(true);
   });
 });

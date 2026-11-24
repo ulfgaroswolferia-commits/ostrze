@@ -1657,6 +1657,41 @@ body:has(.combat-mode-active) .ostrze-toast-stack {
   overflow: hidden;
 }
 
+/* Subtle everyday time-of-day atmospheric color grading (outdoor maps only, yields to special phenomena) */
+#viewport-container::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.8s ease, background 0.8s ease;
+}
+
+#viewport-container[data-outdoor='true'][data-phenomenon-active='false'][data-tod='swit']::after {
+  opacity: 1;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 198, 134, 0.11) 0%,
+    rgba(226, 200, 178, 0.04) 52%,
+    rgba(30, 41, 59, 0.08) 100%
+  );
+}
+
+#viewport-container[data-outdoor='true'][data-phenomenon-active='false'][data-tod='zmierzch']::after {
+  opacity: 1;
+  background:
+    radial-gradient(ellipse at center, rgba(235, 132, 62, 0.03) 42%, rgba(49, 24, 58, 0.22) 100%),
+    linear-gradient(180deg, rgba(235, 132, 62, 0.12) 0%, rgba(30, 27, 75, 0.08) 100%);
+}
+
+#viewport-container[data-outdoor='true'][data-phenomenon-active='false'][data-tod='noc']::after {
+  opacity: 1;
+  background:
+    radial-gradient(ellipse at center, rgba(30, 58, 138, 0.05) 38%, rgba(8, 15, 36, 0.34) 100%),
+    linear-gradient(180deg, rgba(24, 48, 96, 0.16) 0%, rgba(9, 14, 30, 0.14) 100%);
+}
+
 .ostrze-phenomenon-tint {
   position: absolute;
   inset: 0;
@@ -2047,6 +2082,38 @@ body:has(.combat-mode-active) .ostrze-toast-stack {
 .ostrze-worldmap-stat {
   font-size: 0.8rem;
   color: #dfd6c3;
+}
+
+.ostrze-worldmap-stat.is-night {
+  color: #93c5fd;
+  font-weight: 600;
+}
+
+.ostrze-worldmap-warnings {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 5px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.ostrze-worldmap-warning-line {
+  font-size: 0.76rem;
+  line-height: 1.35;
+  color: #fde68a;
+}
+
+.ostrze-worldmap-tab-quest {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(220, 38, 38, 0.85);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
 }
 
 .ostrze-worldmap-status {

@@ -9,6 +9,7 @@ import {
   type WorldMapNode,
   type WorldMapRegionId
 } from '../../data/worldMapData';
+import { clockOf, timeOfDay } from '../../rules/time';
 import { getOstrzeLocationMeta } from '../../rules/travel';
 import { getWorldAtmosphere } from '../../rules/worldCycle';
 import { escapeHtml } from '../escapeHtml';
@@ -26,6 +27,67 @@ export interface WorldMapViewParams {
   initialSelectedNodeId?: string;
   onSelectDestination: (destId: string) => void;
   onClose: () => void;
+}
+
+export interface TravelForecast {
+  arrivalClockText: string;
+  arrivalTimeLabel: string;
+  isNightArrival: boolean;
+  warnings: string[];
+}
+
+const ARRIVAL_TOD_LABELS: Record<'swit' | 'dzien' | 'zmierzch' | 'noc', string> = {
+  swit: 'Świt',
+  dzien: 'Dzień',
+  zmierzch: 'Zmierzch',
+  noc: 'Noc'
+};
+
+/**
+ * Computes arrival clock, time-of-day, and survival/night route warnings for a planned march.
+ */
+export function computeTravelForecast(
+  state: OstrzeGameState,
+  data: OriginGameData,
+  travelMinutes: number
+): TravelForecast {
+  const arrivalTotalMinutes = state.time.minutes + Math.max(0, Math.round(travelMinutes));
+  const { hour, minute } = clockOf(arrivalTotalMinutes);
+  const arrivalClockText = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  const arrivalTod = timeOfDay(arrivalTotalMinutes, data.rules);
+  const isNightArrival = arrivalTod === 'noc';
+
+  const warnings: string[] = [];
+  const addedHours = Math.max(0, travelMinutes / 60);
+  const ch = state.character;
+
+  if (isNightArrival) {
+    warnings.push('🌙 Dotrzesz po zmroku — nocą na traktach łatwiej o zasadzki.');
+  }
+
+  const hasFatigue = Boolean(ch?.effects.some((e) => e.id === 'zmeczenie'));
+  const projectedNoSleep = (state.vars.hours_without_sleep ?? 0) + addedHours;
+  if (hasFatigue) {
+    warnings.push('😴 Bohater jest już zmęczony (-1 AP, -1 Bystrość) — rozważ odpoczynek.');
+  } else if (projectedNoSleep > 16) {
+    warnings.push('😴 Marsz wywoła zmęczenie po drodze (>16h bez snu).');
+  }
+
+  const isWellFed = Boolean(ch?.effects.some((e) => e.id === 'najedzony'));
+  const hasHunger = Boolean(ch?.effects.some((e) => e.id === 'glod_lekki' || e.id === 'glod'));
+  const projectedNoFood = (state.vars.hours_without_food ?? 0) + addedHours;
+  if (hasHunger) {
+    warnings.push('🍖 Bohater jest głodny (-1 Siła) — zjedz posiłek przed drogą.');
+  } else if (!isWellFed && projectedNoFood > 16) {
+    warnings.push('🍖 W trakcie marszu dopadnie cię głód (>16h bez jedzenia).');
+  }
+
+  return {
+    arrivalClockText,
+    arrivalTimeLabel: ARRIVAL_TOD_LABELS[arrivalTod],
+    isNightArrival,
+    warnings
+  };
 }
 
 function renderDangerStars(danger: number): string {
@@ -180,6 +242,34 @@ export function renderWorldMapView(params: WorldMapViewParams): void {
       selectedDests[0]?.travelMinutes ?? selectedMeta?.travelMinutes ?? 75;
     const adjustedMinutes =
       travelEffect === 'slow' ? Math.round(baseMinutes * 1.3) : baseMinutes;
+    const forecast = !isSelectedCurrent
+      ? computeTravelForecast(state, data, adjustedMinutes)
+      : null;
+
+    const forecastHtml = forecast
+      ? `
+        <span class="ostrze-worldmap-stat ${forecast.isNightArrival ? 'is-night' : ''}" data-worldmap-arrival="true">
+          ${forecast.isNightArrival ? '🌙' : '🕒'} Przybycie: ok. ${escapeHtml(forecast.arrivalClockText)} (${escapeHtml(forecast.arrivalTimeLabel)})
+        </span>
+      `
+      : '';
+
+    const routeWarningsHtml =
+      forecast && forecast.warnings.length > 0
+        ? `
+          <div class="ostrze-worldmap-warnings" data-worldmap-warnings="true">
+            ${forecast.warnings.map((w) => `<div class="ostrze-worldmap-warning-line">${escapeHtml(w)}</div>`).join('')}
+          </div>
+        `
+        : '';
+
+    const questCountByRegion: Record<WorldMapRegionId, number> = { pogorze: 0, glusz: 0 };
+    for (const [nodeId, list] of questPins.entries()) {
+      if (list.length > 0) {
+        const reg = getRegionForLocation(nodeId);
+        questCountByRegion[reg] += list.length;
+      }
+    }
 
     const statusBadge = isSelectedCurrent
       ? '<span class="ostrze-badge">Tu jesteś</span>'
@@ -247,13 +337,14 @@ export function renderWorldMapView(params: WorldMapViewParams): void {
               ${(['pogorze', 'glusz'] as WorldMapRegionId[])
                 .map((regId) => {
                   const reg = WORLD_MAP_REGIONS[regId];
+                  const qCount = questCountByRegion[regId];
                   return `
                     <button type="button"
                       class="ostrze-cs-tab ${activeRegion === regId ? 'is-active' : ''}"
                       data-map-region="${regId}"
                       role="tab"
                       aria-selected="${activeRegion === regId ? 'true' : 'false'}">
-                      ${escapeHtml(reg.label)}
+                      ${escapeHtml(reg.label)}${qCount > 0 ? ` <span class="ostrze-worldmap-tab-quest" title="Aktywne zadania w regionie">!${qCount}</span>` : ''}
                     </button>
                   `;
                 })
@@ -300,7 +391,9 @@ export function renderWorldMapView(params: WorldMapViewParams): void {
                 ${statusBadge}
                 <span class="ostrze-worldmap-stat">⚔️ Zagrożenie: ${renderDangerStars(selectedMeta?.danger ?? 2)}</span>
                 <span class="ostrze-worldmap-stat">🥾 Marsz: ok. ${adjustedMinutes} min${travelEffect === 'slow' ? ' (pogoda)' : ''}</span>
+                ${forecastHtml}
               </div>
+              ${routeWarningsHtml}
               ${questsHtml}
               ${actionsHtml}
             </aside>
@@ -357,6 +450,12 @@ export function renderWorldMapView(params: WorldMapViewParams): void {
 
     root.querySelector<HTMLButtonElement>('#ostrze-travel-close')?.addEventListener('click', () => {
       onClose();
+    });
+
+    root.querySelector<HTMLElement>('.ostrze-overlay')?.addEventListener('click', (ev) => {
+      if (ev.target === ev.currentTarget) {
+        onClose();
+      }
     });
   };
 

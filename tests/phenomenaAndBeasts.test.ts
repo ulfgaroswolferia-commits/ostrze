@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { isOutdoorMap } from '@ulf/renderer/isoSceneView';
 import type { CharacterVisualRecipe } from '@ulf/rpg/characterData';
 import {
   bakeBlednikCharacterBuffers,
@@ -188,5 +189,29 @@ describe('PhenomenonOverlay atmospheric layer & HUD badge', () => {
     } finally {
       (globalThis as unknown as { document?: unknown }).document = prevDoc;
     }
+  });
+
+  it('distinguishes outdoor maps from underground stone crypts/mines for ambient particles', () => {
+    const outdoorMap = {
+      width: 2,
+      height: 2,
+      tiles: [
+        [{ terrain: 'forest_grass' as const }, { terrain: 'dirt_path' as const }],
+        [{ terrain: 'forest_grass' as const }, { terrain: 'forest_soil' as const }]
+      ],
+      props: [{ kind: 'ancient_oak' as const }]
+    };
+    const dungeonMap = {
+      width: 2,
+      height: 2,
+      tiles: [
+        [{ terrain: 'dungeon_stone' as const }, { terrain: 'dungeon_stone' as const }],
+        [{ terrain: 'dungeon_stone' as const }, { terrain: 'dungeon_stone' as const }]
+      ],
+      props: [{ kind: 'sarcophagus' as const }]
+    };
+
+    expect(isOutdoorMap(outdoorMap)).toBe(true);
+    expect(isOutdoorMap(dungeonMap)).toBe(false);
   });
 });
