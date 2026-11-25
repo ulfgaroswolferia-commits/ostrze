@@ -2,6 +2,9 @@ import {
   registerCustomPropSprite,
   type CustomPropSpriteSpec
 } from '@ulf/renderer/isoSceneView';
+import beczkaDrewnianaUrl from './props/beczka_drewniana.jpg';
+import beczkaWybuchowaUrl from './props/beczka_wybuchowa.jpg';
+import bramaSzlakuUrl from './props/brama_szlaku.jpg';
 import brzezinaBramaUrl from './props/brzezina_brama.jpg';
 import brzezinaDworUrl from './props/brzezina_dwor.jpg';
 import brzezinaKuzniaUrl from './props/brzezina_kuznia.jpg';
@@ -24,7 +27,9 @@ import plotPlecionyUrl from './props/plot_pleciony.jpg';
 import ruinySpaloneUrl from './props/ruiny_spalone.jpg';
 import sarkofagUrl from './props/sarkofag.jpg';
 import skalaKlifUrl from './props/skala_klif.jpg';
+import skrzyniaOtwartaUrl from './props/skrzynia_otwarta.jpg';
 import skrzyniaZamknietaUrl from './props/skrzynia_zamknieta.jpg';
+import skrzynkiDrewnianeUrl from './props/skrzynki_drewniane.jpg';
 import staryMlynUrl from './props/stary_mlyn.jpg';
 import straganKupieckiUrl from './props/stragan_kupiecki.jpg';
 import studniaSlowianskaUrl from './props/studnia_slowianska.jpg';
@@ -417,6 +422,15 @@ export const PAINTERLY_PROP_SPECS: readonly CustomPropSpriteSpec[] = [
     keyOutWhiteBackground: true
   },
   {
+    kind: 'chest',
+    isOpen: true,
+    url: skrzyniaOtwartaUrl,
+    anchorX: 0.5,
+    anchorY: 0.84,
+    targetWidthPx: 88,
+    keyOutWhiteBackground: true
+  },
+  {
     kind: 'training_dummy',
     url: manekinTreningowyUrl,
     anchorX: 0.5,
@@ -475,6 +489,42 @@ export const PAINTERLY_PROP_SPECS: readonly CustomPropSpriteSpec[] = [
     anchorY: 0.84,
     targetWidthPx: 130,
     keyOutWhiteBackground: true
+  },
+
+  // === PHASE 3 — TRAIL GATEWAYS, CRATES, BARRELS & EXPLOSIVE HAZARDS ===
+  {
+    idPrefix: 'oil_barrel',
+    url: beczkaWybuchowaUrl,
+    anchorX: 0.5,
+    anchorY: 0.86,
+    targetWidthPx: 74,
+    keyOutWhiteBackground: true
+  },
+  {
+    kind: 'exit_path',
+    url: bramaSzlakuUrl,
+    anchorX: 0.5,
+    anchorY: 0.86,
+    targetWidthPx: 190,
+    keyOutWhiteBackground: true
+  },
+  {
+    kind: 'dungeon_crate',
+    url: skrzynkiDrewnianeUrl,
+    anchorX: 0.5,
+    anchorY: 0.85,
+    targetWidthPx: 88,
+    keyOutWhiteBackground: true,
+    allowMirrorX: true
+  },
+  {
+    kind: 'dungeon_barrel',
+    url: beczkaDrewnianaUrl,
+    anchorX: 0.5,
+    anchorY: 0.86,
+    targetWidthPx: 72,
+    keyOutWhiteBackground: true,
+    allowMirrorX: true
   }
 ];
 

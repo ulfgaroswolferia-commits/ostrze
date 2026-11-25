@@ -111,5 +111,15 @@ export function getPropVisualTransform(
     };
   }
 
+  if (prop.kind === 'exit_path') {
+    return {
+      scaleX: 1,
+      scaleY: 1,
+      centerOnFootprint: true,
+      offsetY: 6,
+      aoScale: 1.05
+    };
+  }
+
   return IDENTITY_TRANSFORM;
 }

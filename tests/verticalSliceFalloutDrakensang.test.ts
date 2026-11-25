@@ -97,6 +97,9 @@ describe('Drakensang × Fallout Vertical Slice (Brzezina + Trakt)', () => {
     expect(resolveCustomPropSprite({ id: 'skrzynia_1', kind: 'chest', isOpen: false })?.url).toContain(
       'skrzynia_zamknieta'
     );
+    expect(resolveCustomPropSprite({ id: 'skrzynia_1', kind: 'chest', isOpen: true })?.url).toContain(
+      'skrzynia_otwarta'
+    );
     expect(resolveCustomPropSprite({ id: 'brzezina_manekin_1', kind: 'training_dummy' })?.url).toContain(
       'manekin_treningowy'
     );
@@ -114,6 +117,18 @@ describe('Drakensang × Fallout Vertical Slice (Brzezina + Trakt)', () => {
     );
     expect(resolveCustomPropSprite({ id: 'krypta_krysztal', kind: 'arcane_crystal' })?.allowMirrorX).toBe(true);
     expect(resolveCustomPropSprite({ id: 'cmentarz_plot', kind: 'graveyard_fence' })?.url).toContain('plot_cmentarny');
+
+    // Phase 3 global kind painterly props & tactical explosive barrel
+    expect(resolveCustomPropSprite({ id: 'brzezina_drogowskaz', kind: 'exit_path' })?.url).toContain('brama_szlaku');
+    expect(resolveCustomPropSprite({ id: 'brzezina_skrzynki', kind: 'dungeon_crate' })?.url).toContain(
+      'skrzynki_drewniane'
+    );
+    expect(resolveCustomPropSprite({ id: 'brzezina_beczki', kind: 'dungeon_barrel' })?.url).toContain(
+      'beczka_drewniana'
+    );
+    expect(resolveCustomPropSprite({ id: 'oil_barrel_spalona_1', kind: 'dungeon_barrel' })?.url).toContain(
+      'beczka_wybuchowa'
+    );
   });
 
   it('keys out both outer white margins and enclosed white pockets while preserving warm highlights', () => {

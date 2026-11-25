@@ -5,9 +5,11 @@ import {
   computeDeathCollapsePose,
   computeDodgeGhostOffset,
   computeFearTrembleOffset,
+  computeFloatingTextMotion,
   computeIdleBreathingTransform,
   computePropReactionTransform,
   computeWindSwaySkew,
+  isNpcNameCoveredBySpeechMarker,
   resolveNonOverlappingLabelPosition,
   type LabelRect
 } from '@ulf/renderer/sceneMotion';
@@ -210,5 +212,29 @@ describe('2.5D Living World & Combat Game Feel (sceneMotion)', () => {
     // First NPC candidate (335 - 79 = 256) collides with prop label (258), so it shifts cleanly upward
     expect(npcPos).toEqual({ x: 195, y: 230 });
     expect(placed).toHaveLength(2);
+  });
+
+  it('punches floating combat numbers with pop-in scale, late fade, and reducedMotion safety', () => {
+    const critPeak = computeFloatingTextMotion(0.11, 1.0, true, false);
+    const hitPeak = computeFloatingTextMotion(0.11, 1.0, false, false);
+    const lateFade = computeFloatingTextMotion(0.9, 1.0, false, false);
+    const reduced = computeFloatingTextMotion(0.11, 1.0, true, true);
+
+    expect(critPeak.scale).toBeGreaterThan(hitPeak.scale);
+    expect(critPeak.alpha).toBe(1);
+    expect(lateFade.alpha).toBeLessThan(0.5);
+    expect(lateFade.offsetY).toBeLessThan(-10);
+    expect(reduced.offsetY).toBe(0);
+    expect(reduced.scale).toBeCloseTo(1.12, 2);
+  });
+
+  it('deduplicates NPC nameplates when persistent speech markers already show the NPC name', () => {
+    expect(isNpcNameCoveredBySpeechMarker('💬 Czcibor', 'Wartownik Czcibor')).toBe(true);
+    expect(isNpcNameCoveredBySpeechMarker('🌿 Zielarka', 'Bagienna Zielarka')).toBe(true);
+    expect(isNpcNameCoveredBySpeechMarker('💬 Pustelnik Rudy', 'Pustelnik Rudy (Pielgrzym)')).toBe(true);
+    expect(isNpcNameCoveredBySpeechMarker('❗ Mistrz Gnieworad', 'Mistrz Gnieworad')).toBe(true);
+    // Pure icon markers or unrelated barks must NOT hide the nameplate
+    expect(isNpcNameCoveredBySpeechMarker('❗', 'Kupiec Ostromir')).toBe(false);
+    expect(isNpcNameCoveredBySpeechMarker('Dzisiaj chłodno w lesie.', 'Wojmir Cienki')).toBe(false);
   });
 });

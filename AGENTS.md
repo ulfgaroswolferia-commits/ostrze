@@ -1,11 +1,14 @@
-# Przypomnienie projektowe (tymczasowe)
+# Tymczasowe przypomnienie — Faza 3 malarskich propów (4 pozostałe grafiki z 8)
 
-## Faza 2 malarskich propów (1 pozostała grafika z 10)
-- **Status:** 9/10 ZROBIONE i podpięte w `src/game/assets/painterlyProps.ts`. Pozostał **1 brakujący sprite** (`skrzynia_otwarta.jpg`) — oczekuje na reset limitu generatora obrazów (`HTTP 429 RESOURCE_EXHAUSTED`, reset ok. 4h59m od 2026-11-24 21:18, tj. ~02:17 2026-11-25).
-- **Co już jest gotowe w silniku i grze:**
-  - Obsługa `isOpen?: boolean` w `CustomPropSpriteSpec` / `resolveCustomPropSprite` / `getPropTexturePair` w `engine/src/renderer/isoSceneView.ts` oraz 512-px supersampled `keyOutWhiteBackgroundRgba` i `allowMirrorX`.
-  - Wygenerowane, zweryfikowane na ciemnym tle i podpięte: `ognisko.jpg`, `skrzynia_zamknieta.jpg`, `manekin_treningowy.jpg`, `sztandar_szkoly.jpg`, `pien_drzewa.jpg`, `zwalony_pien.jpg`, `krzak_jagod.jpg`, `krysztal_runiczny.jpg`, `plot_cmentarny.jpg`.
-- **Zasada dla agenta:** Dopóki poniższy ostatni plik nie zostanie wygenerowany i podpięty w `src/game/assets/painterlyProps.ts`, przypominaj krótko użytkownikowi o dokończeniu Fazy 2.
-- **Pozostały sprite (1024×1024, czyste białe tło `#FFFFFF`, na podstawie `src/game/assets/props/skrzynia_zamknieta.jpg`):**
-  1. `skrzynia_otwarta.jpg` (`kind: 'chest'`, `isOpen: true`) — dokładnie ta sama skrzynia co `skrzynia_zamknieta.jpg`, ale z otwartym wiekiem (ciemne puste wnętrze).
-- **Po wdrożeniu:** Sprawdzić `skrzynia_otwarta.jpg` w 2× powiększeniu na ciemnym tle, podpiąć w `src/game/assets/painterlyProps.ts`, dopisać asercję `isOpen: true` w `tests/verticalSliceFalloutDrakensang.test.ts`, puścić `vitest` + `tsc --noEmit` i **usunąć ten plik `AGENTS.md`**.
+> **WAŻNE:** To tymczasowa notatka robocza po osiągnięciu limitu generatora obrazów (**reset kwoty: sobota 28 listopada 2026, ok. godz. 22:13 CET**). Po wygenerowaniu i wdrożeniu poniższych 4 brakujących grafik **usuń ten plik (`AGENTS.md`)**.
+
+Wdrożone już w Fazie 3: `brama_szlaku.jpg` (`exit_path`), `skrzynki_drewniane.jpg` (`dungeon_crate`), `beczka_drewniana.jpg` (`dungeon_barrel`), `beczka_wybuchowa.jpg` (`idPrefix: 'oil_barrel'`).
+
+Pozostałe 4 sprite'y (1024×1024, czyste białe tło `#FFFFFF`, bez cienia, styl jak `src/game/assets/props/skrzynia_zamknieta.jpg`):
+
+1. `stol_drewniany.jpg` (`kind: 'dungeon_table'`) — solidny słowiański drewniany stół z glinianym kubkiem/talerzem, czysta biel między nogami.
+2. `filar_kamienny.jpg` (`kind: 'pillar'`) — wysoki omszały pęknięty kamienny filar/obelisk na kwadratowym cokole.
+3. `pochodnia_slup.jpg` (`kind: 'torch_sconce'`) — drewniany słup z kutym żelaznym koszem i żarzącymi się węglami (bez wielkiego płomienia — silnik rysuje żywy ogień).
+4. `belka_wspornik.jpg` (`kind: 'dungeon_support'`) — drewniany słupek/wspornik ze skośnym zastrzałem, żelazną obejmą i pętlą konopnej liny.
+
+**Po wdrożeniu:** Sprawdzić wszystkie 4 grafiki na ciemnym tle, podpiąć w `src/game/assets/painterlyProps.ts`, dopisać asercje w `tests/verticalSliceFalloutDrakensang.test.ts`, puścić `vitest` + `tsc --noEmit` i **usunąć ten plik `AGENTS.md`**.
