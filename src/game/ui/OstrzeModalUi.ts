@@ -20,6 +20,7 @@ import { getStats } from '../rules/stats';
 import { getWorldAtmosphere } from '../rules/worldCycle';
 import { escapeHtml } from './escapeHtml';
 import { mountModalCard } from './mountModalCard';
+import { renderStoryVistaBannerHtml } from './storyVistaBanner';
 import {
   type CampfireModalOptions,
   renderCampfireView
@@ -813,19 +814,8 @@ export class OstrzeModalUi {
   }
 
   private renderNarrative(card: NarrativeCardData): void {
-    const artMeta = getPixArtMeta(card.artId);
-    const artHtml = artMeta
-      ? `
-        <div class="ostrze-narrative-art-frame">
-          <img
-            class="ostrze-narrative-art ostrze-pix-art"
-            src="${this.escape(artMeta.dataUri)}"
-            width="${artMeta.width}"
-            height="${artMeta.height}"
-            alt="${this.escape(card.title)}"
-          />
-        </div>
-      `
+    const artHtml = card.artId
+      ? renderStoryVistaBannerHtml(card.artId, card.title, 'ostrze-narrative-art-frame')
       : '';
 
     mountModalCard(
@@ -996,20 +986,11 @@ export class OstrzeModalUi {
   }
 
   private renderWelcome(welcome: WelcomeScreenData): void {
-    const heroBanner = getPixArtMeta('wstep_gwiazdy');
-    const bannerHtml = heroBanner
-      ? `
-        <div class="ostrze-welcome-art-frame">
-          <img
-            class="ostrze-narrative-art ostrze-pix-art"
-            src="${this.escape(heroBanner.dataUri)}"
-            width="${heroBanner.width}"
-            height="${heroBanner.height}"
-            alt="Voided — Na przekór gwiazdom"
-          />
-        </div>
-      `
-      : '';
+    const bannerHtml = renderStoryVistaBannerHtml(
+      'wstep_gwiazdy',
+      'Voided — Na przekór gwiazdom',
+      'ostrze-welcome-art-frame'
+    );
 
     mountModalCard(
       this.root,

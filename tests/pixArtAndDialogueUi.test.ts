@@ -21,6 +21,10 @@ import {
 } from '../src/game/rules/dialogueEngine';
 import { PrologueDirector } from '../src/game/scenes/PrologueDirector';
 import type { NarrativeCardData, OstrzeModalUi } from '../src/game/ui/OstrzeModalUi';
+import {
+  renderStoryVistaBannerHtml,
+  resolveStoryVistaTheme
+} from '../src/game/ui/storyVistaBanner';
 
 describe('pixArt renderer and origin/data/art loader', () => {
   it('maps xterm-256 indices across ANSI-16, 6x6x6 cube, and grayscale ramp', () => {
@@ -157,5 +161,24 @@ describe('Dialogue portrait propagation, check outcome, and Narrative artId', ()
     shownCards[0].onContinue();
     expect(shownCards.length).toBe(2);
     expect(shownCards[1].artId).toBe('wstep_brzezina');
+  });
+
+  it('maps story artIds to painterly animated vista banners with SVG layers and themes', () => {
+    expect(resolveStoryVistaTheme('wstep_gwiazdy')).toBe('falling_star');
+    expect(resolveStoryVistaTheme('wstep_brzezina')).toBe('birch_manor');
+    expect(resolveStoryVistaTheme('noc_upiory')).toBe('haunted_night');
+    expect(resolveStoryVistaTheme('krater_gwiazdy')).toBe('astral_crater');
+    expect(resolveStoryVistaTheme('mapa_brod')).toBe('river_ford_map');
+    expect(resolveStoryVistaTheme('unknown_custom_id')).toBe('forest_trail');
+
+    const welcomeHtml = renderStoryVistaBannerHtml(
+      'wstep_gwiazdy',
+      'Voided — Na przekór gwiazdom',
+      'ostrze-welcome-art-frame'
+    );
+    expect(welcomeHtml).toContain('ostrze-welcome-art-frame');
+    expect(welcomeHtml).toContain('data-vista-theme="falling_star"');
+    expect(welcomeHtml).toContain('ostrze-vista-comet');
+    expect(welcomeHtml).toContain('<svg');
   });
 });

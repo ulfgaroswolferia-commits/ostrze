@@ -14,6 +14,7 @@ import {
 } from '../../rules/dialogueEngine';
 import { escapeHtml } from '../escapeHtml';
 import { mountModalCard } from '../mountModalCard';
+import { renderStoryVistaBannerHtml } from '../storyVistaBanner';
 
 /**
  * Optional registry for custom hand-painted portraits (keyed by lowercase speaker fragment).
@@ -233,20 +234,17 @@ export function renderDialogueView(params: {
     : '';
 
   if (isPanoramicScene && pixMeta) {
+    const sceneVistaHtml = renderStoryVistaBannerHtml(
+      pixMeta.id,
+      view.speaker,
+      'ostrze-narrative-art-frame'
+    );
     mountModalCard(
       root,
       'ostrze-card ostrze-dialogue-card ostrze-dialogue-card--scene',
       `
         <h2 class="ostrze-title" style="margin-bottom:12px;">${escapeHtml(view.speaker)}</h2>
-        <div class="ostrze-narrative-art-frame">
-          <img
-            class="ostrze-narrative-art ostrze-pix-art"
-            src="${escapeHtml(pixMeta.dataUri)}"
-            width="${pixMeta.width}"
-            height="${pixMeta.height}"
-            alt="${escapeHtml(view.speaker)}"
-          />
-        </div>
+        ${sceneVistaHtml}
         ${feedbackHtml}
         <div class="ostrze-prose ostrze-dialogue-prose">${escapeHtml(view.text)}</div>
         <div class="ostrze-dialogue-options">${optionsHtml}</div>
