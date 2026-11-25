@@ -412,20 +412,34 @@ class OstrzeAudioManager {
 
     this.clearAmbienceNodes();
 
-    const buffer = this.createFilteredNoiseBuffer(ctx, 2, 0.04, 1.8);
+    const buffer = this.createFilteredNoiseBuffer(ctx, 3, 0.045, 1.9);
     const src = ctx.createBufferSource();
     src.buffer = buffer;
     src.loop = true;
 
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.value = mood === 'night_storm' ? 420 : mood === 'creepy_forest' ? 280 : 340;
+    filter.frequency.value =
+      mood === 'night_storm'
+        ? 460
+        : mood === 'creepy_forest'
+          ? 290
+          : mood === 'town'
+            ? 360
+            : 390;
 
     const gain = ctx.createGain();
-    const volume = mood === 'night_storm' ? 0.075 : mood === 'town' ? 0.038 : 0.052;
+    const volume =
+      mood === 'night_storm'
+        ? 0.088
+        : mood === 'town'
+          ? 0.048
+          : mood === 'creepy_forest'
+            ? 0.064
+            : 0.062;
     const now = ctx.currentTime;
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.linearRampToValueAtTime(volume, now + 0.6);
+    gain.gain.linearRampToValueAtTime(volume, now + 0.75);
 
     src.connect(filter);
     filter.connect(gain);
@@ -435,22 +449,60 @@ class OstrzeAudioManager {
     this.ambienceSource = src;
     this.ambienceGain = gain;
 
-    // Subtle periodic procedural accents tailored to location mood
+    // Rich organic world soundscape accents (replacing monotonous melodic music)
     const accentIntervalMs =
-      mood === 'town' ? 6800 : mood === 'night_storm' ? 9200 : 7600;
+      mood === 'town' ? 5400 : mood === 'night_storm' ? 6200 : 5800;
     this.ambienceAccentTimer = setInterval(() => {
       if (this.isMuted() || this.currentMood !== mood) return;
+      const roll = Math.random();
       if (mood === 'dawn' || mood === 'forest') {
-        const base = 1550 + Math.random() * 520;
-        this.playTone(base, 0.09, 'sine', 0.016, 0, base * 1.18);
-        this.playTone(base * 1.14, 0.11, 'sine', 0.014, 0.11, base * 0.92);
+        if (roll < 0.55) {
+          // Natural varied woodland birdsong trill
+          const base = 1480 + Math.random() * 680;
+          this.playTone(base, 0.085, 'sine', 0.015, 0, base * (1.12 + Math.random() * 0.14));
+          this.playTone(base * 1.16, 0.1, 'sine', 0.013, 0.1, base * 0.94);
+          if (Math.random() < 0.45) {
+            this.playTone(base * 1.06, 0.075, 'sine', 0.01, 0.24, base * 1.24);
+          }
+        } else {
+          // Soft pine-canopy wind gust + subtle leaf rustle
+          this.playNoiseBurst(0.85, 'bandpass', 520 + Math.random() * 240, 1.8, 0.022, 0);
+          this.playTone(210 + Math.random() * 45, 0.45, 'sine', 0.006, 0.05, 165);
+        }
       } else if (mood === 'town') {
-        this.playNoiseBurst(0.06, 'bandpass', 1800 + Math.random() * 700, 3.0, 0.015, 0);
+        if (roll < 0.45) {
+          // Distant blacksmith anvil clink
+          const ring = 980 + Math.random() * 220;
+          this.playTone(ring, 0.28, 'triangle', 0.012, 0, ring * 0.985);
+          this.playNoiseBurst(0.035, 'highpass', 2600, 2.4, 0.012, 0);
+        } else if (roll < 0.78) {
+          // Subtle courtyard breeze & distant hearth crackle
+          this.playNoiseBurst(0.42, 'bandpass', 920 + Math.random() * 480, 1.6, 0.014, 0);
+          this.playCampfireCrackle(0.45);
+        } else {
+          // Distant bird over village roofs
+          const base = 1720 + Math.random() * 400;
+          this.playTone(base, 0.07, 'sine', 0.01, 0, base * 1.15);
+        }
       } else if (mood === 'creepy_forest') {
-        this.playTone(390, 0.28, 'sine', 0.02, 0, 310);
-        this.playTone(320, 0.36, 'sine', 0.018, 0.32, 270);
+        if (roll < 0.5) {
+          // Hollow owl hoot in the mist
+          this.playTone(385, 0.28, 'sine', 0.02, 0, 310);
+          this.playTone(320, 0.38, 'sine', 0.018, 0.34, 265);
+        } else {
+          // Eerie wind sigh through dead branches
+          this.playNoiseBurst(1.1, 'bandpass', 360 + Math.random() * 180, 2.8, 0.024, 0);
+          this.playTone(148, 0.65, 'sine', 0.008, 0.08, 118);
+        }
       } else if (mood === 'night_storm') {
-        this.playNoiseBurst(0.9, 'lowpass', 140, 0.8, 0.05, 0);
+        if (roll < 0.55) {
+          // Distant rolling thunder rumble
+          this.playNoiseBurst(1.2, 'lowpass', 150, 0.85, 0.058, 0);
+          this.playTone(68, 0.75, 'sine', 0.018, 0.04, 42);
+        } else {
+          // Howling night wind swell
+          this.playNoiseBurst(0.95, 'bandpass', 480 + Math.random() * 260, 2.2, 0.034, 0);
+        }
       }
     }, accentIntervalMs);
   }
@@ -610,58 +662,16 @@ class OstrzeAudioManager {
   }
 
   /**
-   * Subtle procedural Slavic Dorian/pentatonic Web Audio music bed
-   * (town lute/harp, forest flute-harp, creepy drone, combat war drums).
+   * Monotonous synthetic music loops are intentionally disabled in favor of
+   * the richer organic world ambience soundscape (`setAmbience` + phenomena + SFX).
    */
   public setMusicTheme(theme: OstrzeMusicTheme): void {
     if (theme !== 'combat') {
       this.explorationMusicTheme = theme;
     }
-    if (this.currentMusicTheme === theme && this.musicTimer !== null) return;
     this.clearMusicNodes();
     this.currentMusicTheme = theme;
     this.musicStep = 0;
-    if (theme === 'none') return;
-    if (!this.ensureContext()) return;
-
-    // D Dorian medieval Slavic motifs (Hz)
-    const townLute = [293.66, 329.63, 349.23, 440.0, 392.0, 349.23, 329.63, 293.66];
-    const forestHarp = [220.0, 293.66, 349.23, 440.0, 523.25, 440.0, 349.23, 293.66];
-    const creepyDrone = [146.83, 155.56, 146.83, 130.81];
-    const combatBass = [110.0, 110.0, 130.81, 98.0, 110.0, 146.83, 130.81, 98.0];
-
-    const stepMs =
-      theme === 'combat' ? 460 : theme === 'creepy' ? 1850 : theme === 'forest' ? 1150 : 880;
-
-    this.musicTimer = setInterval(() => {
-      if (this.isMuted() || this.currentMusicTheme !== theme) return;
-      const idx = this.musicStep++;
-      if (theme === 'town') {
-        const note = townLute[idx % townLute.length];
-        this.playTone(note, 0.52, 'triangle', 0.018, 0, note * 0.996);
-        if (idx % 4 === 0) {
-          this.playTone(note / 2, 1.1, 'sine', 0.015, 0.02);
-        }
-      } else if (theme === 'forest') {
-        const note = forestHarp[idx % forestHarp.length];
-        this.playTone(note, 0.78, 'sine', 0.015, 0);
-        if (idx % 3 === 0) {
-          this.playTone(note * 1.5, 0.42, 'triangle', 0.009, 0.18);
-        }
-      } else if (theme === 'creepy') {
-        const note = creepyDrone[idx % creepyDrone.length];
-        this.playTone(note, 1.55, 'sine', 0.016, 0, note * 0.985);
-      } else if (theme === 'combat') {
-        const bass = combatBass[idx % combatBass.length];
-        // War drum pulse + low string bass
-        this.playTone(96, 0.16, 'sine', 0.042, 0, 44);
-        if (idx % 2 === 0) {
-          this.playTone(bass, 0.36, 'sawtooth', 0.014, 0.03);
-        } else {
-          this.playNoiseBurst(0.04, 'bandpass', 920, 1.8, 0.018, 0.02);
-        }
-      }
-    }, stepMs);
   }
 
   public restoreExplorationMusic(): void {

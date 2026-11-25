@@ -44,6 +44,7 @@ function makeNpc(opts: {
   defense?: number;
   xpReward?: number;
   dialogueId?: string;
+  isFallenCorpse?: boolean;
 }): ActorEntity {
   const recipe = generateRandomCharacterRecipe(opts.seed, opts.id);
   recipe.name = opts.name;
@@ -70,7 +71,8 @@ function makeNpc(opts: {
     animFrame: 0,
     animTimer: 0,
     path: [],
-    dialogueId: opts.dialogueId ?? (!opts.hostile ? opts.id : undefined)
+    dialogueId: opts.dialogueId ?? (!opts.hostile ? opts.id : undefined),
+    isFallenCorpse: opts.isFallenCorpse
   };
 
   if (opts.hostile) {
@@ -1550,7 +1552,8 @@ export function createPobojowiskoSwitScene(): CustomSceneConfig {
       z: tiles[13][8].z,
       direction: 4,
       torso: 'torso_przeszywanica',
-      mainHand: 'weapon_sunblade_longsword'
+      mainHand: 'weapon_sunblade_longsword',
+      isFallenCorpse: true
     }),
     makeNpc({
       id: 'npc_pobojowisko_ragnoslawa',
@@ -1562,7 +1565,8 @@ export function createPobojowiskoSwitScene(): CustomSceneConfig {
       z: tiles[14][10].z,
       direction: 4,
       torso: 'torso_przeszywanica',
-      mainHand: 'weapon_astral_staff'
+      mainHand: 'weapon_astral_staff',
+      isFallenCorpse: true
     }),
     makeNpc({
       id: 'npc_pobojowisko_wojmir',
@@ -1573,7 +1577,8 @@ export function createPobojowiskoSwitScene(): CustomSceneConfig {
       y: 11,
       z: tiles[11][8].z,
       direction: 4,
-      torso: 'torso_slavic_giezlo'
+      torso: 'torso_slavic_giezlo',
+      isFallenCorpse: true
     }),
     makeNpc({
       id: 'npc_pobojowisko_slad',

@@ -2968,6 +2968,21 @@ h3 .ostrze-kbd {
   animation: ostrzeVistaWispFloat 4.8s ease-in-out 0.8s infinite;
 }
 
+.ostrze-vista-smoke {
+  animation: ostrzeVistaSmokeDrift 5.6s ease-in-out infinite alternate;
+}
+
+@keyframes ostrzeVistaSmokeDrift {
+  from {
+    transform: translate(0, 0);
+    opacity: 0.22;
+  }
+  to {
+    transform: translate(5px, -6px);
+    opacity: 0.36;
+  }
+}
+
 @keyframes ostrzeVistaTwinkle {
   0%, 100% {
     opacity: 0.42;
@@ -3063,7 +3078,8 @@ h3 .ostrze-kbd {
   .ostrze-vista-ember--c,
   .ostrze-vista-wisp--a,
   .ostrze-vista-wisp--b,
-  .ostrze-vista-wisp--c {
+  .ostrze-vista-wisp--c,
+  .ostrze-vista-smoke {
     animation: none;
   }
   .ostrze-hub-btn:hover:not(:disabled),
