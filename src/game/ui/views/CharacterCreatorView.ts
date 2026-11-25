@@ -15,6 +15,7 @@ import {
 } from '../../rules/difficulty';
 import { getStats } from '../../rules/stats';
 import { escapeHtml } from '../escapeHtml';
+import { mountModalCard } from '../mountModalCard';
 
 export interface CharacterCreatorDraftState {
   name: string;
@@ -60,7 +61,6 @@ export function renderCharacterCreatorView(params: {
   onComplete: () => void;
 }): void {
   const { root, data, state, draft, onRerender, onComplete } = params;
-  const prevScrollTop = root.querySelector<HTMLElement>('.ostrze-creator-card')?.scrollTop ?? 0;
   const c = data.rules.creator;
   const remaining = getRemainingCreatorAttrPoints(data, draft.attrs);
   const cls = data.classes.find((cl) => cl.id === draft.classId)!;
@@ -143,9 +143,7 @@ export function renderCharacterCreatorView(params: {
 
   const initialStatus = computeStatus(draft.name);
 
-  root.innerHTML = `
-    <div class="ostrze-overlay">
-      <div class="ostrze-card ostrze-creator-card">
+  const cardInnerHtml = `
         <div class="ostrze-creator-header">
           <h2 class="ostrze-title">Kreator Adepta — Szkoła Ostrzy w Brzezinie</h2>
           <p class="ostrze-subtitle">Rozdziel <strong>${c.points} pkt</strong> atrybutów (zostało: <strong class="ostrze-creator-rem ${remaining === 0 ? 'done' : ''}">${remaining}</strong>) oraz wybierz <strong>${c.taggedCount}</strong> umiejętności oznaczone (+${c.taggedBonus}%).</p>
@@ -182,14 +180,9 @@ export function renderCharacterCreatorView(params: {
             Wejdź do gry
           </button>
         </div>
-      </div>
-    </div>
   `;
 
-  const cardEl = root.querySelector<HTMLElement>('.ostrze-creator-card');
-  if (cardEl && prevScrollTop > 0) {
-    cardEl.scrollTop = prevScrollTop;
-  }
+  mountModalCard(root, 'ostrze-card ostrze-creator-card', cardInnerHtml);
 
   const nameInput = root.querySelector<HTMLInputElement>('#ostrze-name-input');
   const submitBtn = root.querySelector<HTMLButtonElement>('[data-action="creator-submit"]');

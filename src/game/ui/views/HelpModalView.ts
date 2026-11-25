@@ -1,4 +1,5 @@
 import { escapeHtml } from '../escapeHtml';
+import { mountModalCard } from '../mountModalCard';
 
 export type HelpModalTab = 'controls' | 'guide';
 
@@ -123,9 +124,10 @@ export function renderHelpModalView(params: HelpModalViewParams): void {
           </div>
         `;
 
-    root.innerHTML = `
-      <div class="ostrze-overlay">
-        <div class="ostrze-card ostrze-help-card" data-help-modal="true">
+    mountModalCard(
+      root,
+      'ostrze-card ostrze-help-card',
+      `
           <div class="ostrze-worldmap-header">
             <div>
               <h2 class="ostrze-title" style="margin-bottom:4px;">❓ Pomoc i sterowanie — Ostrze 2.5D</h2>
@@ -159,9 +161,9 @@ export function renderHelpModalView(params: HelpModalViewParams): void {
             <span class="ostrze-worldmap-region-caption">Wskazówka: naciśnij F1 lub ? w dowolnym momencie poza polem tekstowym.</span>
             <button type="button" class="ostrze-hub-btn" id="ostrze-help-close">Zamknij <kbd class="ostrze-kbd">ESC</kbd></button>
           </div>
-        </div>
-      </div>
-    `;
+      `,
+      { dataset: { helpModal: 'true' } }
+    );
 
     root.querySelectorAll<HTMLButtonElement>('[data-help-tab]').forEach((btn) => {
       btn.addEventListener('click', () => {

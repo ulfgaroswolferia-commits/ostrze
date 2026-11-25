@@ -3,6 +3,7 @@ import { CAMP_RECIPES, canPerformCampRecipe } from '../../rules/campCrafting';
 import { getStats } from '../../rules/stats';
 import { getWorldAtmosphere } from '../../rules/worldCycle';
 import { escapeHtml } from '../escapeHtml';
+import { mountModalCard } from '../mountModalCard';
 
 export interface CampfireModalOptions {
   onPerform: (recipeId: string) => { ok: boolean; message: string };
@@ -83,25 +84,26 @@ export function renderCampfireView(params: {
     `
     : '';
 
-  root.innerHTML = `
-    <div class="ostrze-overlay">
-      <div class="ostrze-card" style="max-width:720px;">
+  mountModalCard(
+    root,
+    'ostrze-card',
+    `
         <h2 class="ostrze-title">Przygotowanie Obozowe przy Ognisku</h2>
         <p class="ostrze-subtitle">
           ${escapeHtml(atmo.timeLabel)} · ${escapeHtml(atmo.clockText)}${
             atmo.phenomenonName ? ` · ${escapeHtml(atmo.phenomenonName)}` : ''
           }${ch && stats ? ` · HP: ${ch.hp}/${stats.derived.hpMax} · Medycyna: ${stats.skills.medycyna}` : ''}
         </p>
-        <div style="max-height:58vh;overflow-y:auto;padding-right:4px;margin-bottom:14px;">
+        <div data-preserve-scroll="campfire" style="max-height:58vh;overflow-y:auto;padding-right:4px;margin-bottom:14px;">
           ${waitSectionHtml}
           ${sectionsHtml}
         </div>
         <div style="display:flex;justify-content:flex-end;">
           <button type="button" class="ostrze-hub-btn" id="ostrze-camp-close">Zamknij [ESC]</button>
         </div>
-      </div>
-    </div>
-  `;
+    `,
+    { styleText: 'max-width:720px;' }
+  );
 
   root.querySelectorAll<HTMLButtonElement>('[data-camp-wait]').forEach((btn) => {
     btn.addEventListener('click', () => {

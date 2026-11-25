@@ -13,6 +13,7 @@ import {
   getOstrzeDialogueView
 } from '../../rules/dialogueEngine';
 import { escapeHtml } from '../escapeHtml';
+import { mountModalCard } from '../mountModalCard';
 
 /**
  * Optional registry for custom hand-painted portraits (keyed by lowercase speaker fragment).
@@ -231,10 +232,11 @@ export function renderDialogueView(params: {
     ? `<div class="${feedbackClass}">${escapeHtml(view.lastCheckFeedback)}</div>`
     : '';
 
-  root.innerHTML = isPanoramicScene && pixMeta
-    ? `
-    <div class="ostrze-overlay">
-      <div class="ostrze-card ostrze-dialogue-card ostrze-dialogue-card--scene">
+  if (isPanoramicScene && pixMeta) {
+    mountModalCard(
+      root,
+      'ostrze-card ostrze-dialogue-card ostrze-dialogue-card--scene',
+      `
         <h2 class="ostrze-title" style="margin-bottom:12px;">${escapeHtml(view.speaker)}</h2>
         <div class="ostrze-narrative-art-frame">
           <img
@@ -249,12 +251,13 @@ export function renderDialogueView(params: {
         <div class="ostrze-prose ostrze-dialogue-prose">${escapeHtml(view.text)}</div>
         <div class="ostrze-dialogue-options">${optionsHtml}</div>
         <div class="ostrze-dialogue-hint">Skróty klawiszowe: [1–9] wybierz odpowiedź</div>
-      </div>
-    </div>
-  `
-    : `
-    <div class="ostrze-overlay">
-      <div class="ostrze-card ostrze-dialogue-card">
+      `
+    );
+  } else {
+    mountModalCard(
+      root,
+      'ostrze-card ostrze-dialogue-card',
+      `
         <div class="ostrze-dialogue-layout">
           <aside class="ostrze-dialogue-portrait-col">
             <div class="ostrze-dialogue-avatar-frame">
@@ -274,9 +277,9 @@ export function renderDialogueView(params: {
             <div class="ostrze-dialogue-hint">Skróty klawiszowe: [1–9] wybierz odpowiedź</div>
           </div>
         </div>
-      </div>
-    </div>
-  `;
+      `
+    );
+  }
 
   root.querySelectorAll<HTMLElement>('[data-opt-idx]').forEach((btn) => {
     btn.addEventListener('click', () => {

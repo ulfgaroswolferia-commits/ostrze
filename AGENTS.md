@@ -11,4 +11,4 @@ Pozostałe 4 sprite'y (1024×1024, czyste białe tło `#FFFFFF`, bez cienia, sty
 3. `pochodnia_slup.jpg` (`kind: 'torch_sconce'`) — drewniany słup z kutym żelaznym koszem i żarzącymi się węglami (bez wielkiego płomienia — silnik rysuje żywy ogień).
 4. `belka_wspornik.jpg` (`kind: 'dungeon_support'`) — drewniany słupek/wspornik ze skośnym zastrzałem, żelazną obejmą i pętlą konopnej liny.
 
-**Po wdrożeniu:** Sprawdzić wszystkie 4 grafiki na ciemnym tle, podpiąć w `src/game/assets/painterlyProps.ts`, dopisać asercje w `tests/verticalSliceFalloutDrakensang.test.ts`, puścić `vitest` + `tsc --noEmit` i **usunąć ten plik `AGENTS.md`**.
+**Po wdrożeniu:** Sprawdzić wszystkie 4 grafiki na ciemnym tle, podpiąć w `src/game/assets/painterlyProps.ts`, dopisać asercje w `tests/verticalSliceFalloutDrakensang.test.ts`, **zweryfikować dopasowanie animacji** (szczególnie wysokość żywego płomienia i iskier nad koszem `pochodnia_slup.jpg` oraz kontaktowe AO/reakcje dla `stol_drewniany.jpg`, `filar_kamienny.jpg`, `belka_wspornik.jpg`), puścić `vitest` + `tsc --noEmit` i **usunąć ten plik `AGENTS.md`**.

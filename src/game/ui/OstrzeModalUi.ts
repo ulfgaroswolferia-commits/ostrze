@@ -19,10 +19,12 @@ import { renderItemStatPillsHtml } from '../rules/itemComparison';
 import { getStats } from '../rules/stats';
 import { getWorldAtmosphere } from '../rules/worldCycle';
 import { escapeHtml } from './escapeHtml';
+import { mountModalCard } from './mountModalCard';
 import {
   type CampfireModalOptions,
   renderCampfireView
 } from './views/CampfireView';
+import type { OstrzeDifficultyId } from '../rules/difficulty';
 import {
   buildInitialCreatorAttrs,
   renderCharacterCreatorView
@@ -123,6 +125,7 @@ export class OstrzeModalUi {
   } | null = null;
   private hubPanel: HubPanelData | null = null;
   private hubCollapsed = false;
+  private lastHubHtml = '';
   private isCombatActiveFn: (() => boolean) | null = null;
   private activeCampfire: CampfireModalOptions | null = null;
   private activePauseMenu: PauseMenuOptions | null = null;
@@ -141,6 +144,7 @@ export class OstrzeModalUi {
   private draftClass: ClassId = 'miecz';
   private draftAttrs: Record<AttributeId, number>;
   private draftTagged: SkillId[] = ['sieczna', 'wymowa', 'skradanie'];
+  private draftDifficulty: OstrzeDifficultyId | undefined = undefined;
   private creatorError: string | null = null;
 
   constructor(data: OriginGameData, state: OstrzeGameState, rng: SeededRng) {
@@ -589,6 +593,7 @@ export class OstrzeModalUi {
       this.activeTravel ||
       this.activeCampfire
     ) {
+      this.lastHubHtml = '';
       this.hubRoot.innerHTML = '';
       return;
     }
@@ -617,7 +622,7 @@ export class OstrzeModalUi {
       ? `<span class="ostrze-atmo-pill is-phenom" title="${this.escape(atmo.phenomenonSummary ?? '')}">${this.escape(atmo.phenomenonName)}</span>`
       : '';
 
-    this.hubRoot.innerHTML = `
+    const nextHubHtml = `
       <div class="ostrze-hub-bar">
         <div class="ostrze-hub-header">
           <div class="ostrze-hub-title">${this.escape(this.hubPanel.title)}</div>
@@ -641,6 +646,11 @@ export class OstrzeModalUi {
         }
       </div>
     `;
+    if (nextHubHtml === this.lastHubHtml && this.hubRoot.firstElementChild) {
+      return;
+    }
+    this.lastHubHtml = nextHubHtml;
+    this.hubRoot.innerHTML = nextHubHtml;
 
     this.hubRoot.querySelector('[data-hub-toggle]')?.addEventListener('click', () => {
       this.hubCollapsed = !this.hubCollapsed;
@@ -729,9 +739,10 @@ export class OstrzeModalUi {
       `
       : '';
 
-    this.root.innerHTML = `
-      <div class="ostrze-overlay">
-        <div class="ostrze-card ostrze-shop-card">
+    mountModalCard(
+      this.root,
+      'ostrze-card ostrze-shop-card',
+      `
           <div class="ostrze-shop-header">
             ${portraitHtml}
             <div style="flex:1;min-width:0;">
@@ -757,9 +768,8 @@ export class OstrzeModalUi {
           <div style="display:flex;justify-content:flex-end;margin-top:14px;">
             <button class="ostrze-btn" data-action="shop-close">Zamknij kram [ESC]</button>
           </div>
-        </div>
-      </div>
-    `;
+      `
+    );
 
     this.root.querySelectorAll<HTMLElement>('[data-buy]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -818,9 +828,10 @@ export class OstrzeModalUi {
       `
       : '';
 
-    this.root.innerHTML = `
-      <div class="ostrze-overlay">
-        <div class="ostrze-card ostrze-narrative-card">
+    mountModalCard(
+      this.root,
+      'ostrze-card ostrze-narrative-card',
+      `
           <h2 class="ostrze-title">${this.escape(card.title)}</h2>
           ${card.subtitle ? `<p class="ostrze-subtitle">${this.escape(card.subtitle)}</p>` : ''}
           ${artHtml}
@@ -831,16 +842,17 @@ export class OstrzeModalUi {
             </button>
             <span class="ostrze-shortcut-hint">Enter / Spacja</span>
           </div>
-        </div>
-      </div>
-    `;
+      `
+    );
     this.root
       .querySelector('[data-action="narrative-next"]')
       ?.addEventListener('click', () => {
         const cb = card.onContinue;
         this.activeNarrative = null;
-        this.render();
         cb();
+        if (!this.hasOpenModal()) {
+          this.render();
+        }
       });
   }
 
@@ -850,6 +862,7 @@ export class OstrzeModalUi {
       classId: this.draftClass,
       attrs: this.draftAttrs,
       tagged: this.draftTagged,
+      difficulty: this.draftDifficulty,
       error: this.creatorError
     };
     renderCharacterCreatorView({
@@ -862,6 +875,7 @@ export class OstrzeModalUi {
         this.draftClass = draft.classId;
         this.draftAttrs = draft.attrs;
         this.draftTagged = draft.tagged;
+        this.draftDifficulty = draft.difficulty;
         this.creatorError = draft.error;
         this.render();
       },
@@ -870,6 +884,7 @@ export class OstrzeModalUi {
         this.draftClass = draft.classId;
         this.draftAttrs = draft.attrs;
         this.draftTagged = draft.tagged;
+        this.draftDifficulty = draft.difficulty;
         this.creatorError = null;
         const cb = this.onCreatorComplete;
         this.creatorOpen = false;
@@ -950,18 +965,18 @@ export class OstrzeModalUi {
       )
       .join('');
 
-    this.root.innerHTML = `
-      <div class="ostrze-overlay">
-        <div class="ostrze-card">
+    mountModalCard(
+      this.root,
+      'ostrze-card',
+      `
           <h2 class="ostrze-title">Tablica Zleceń — Wilczy Bród</h2>
           <p class="ostrze-subtitle">Ogłoszenia strażnicy, kontrakty łowieckie i wieści z pogórza.</p>
           ${cardsHtml}
           <div style="display:flex;justify-content:flex-end;margin-top:12px">
             <button class="ostrze-btn" id="ostrze-nb-close">Odejdź od tablicy [ESC]</button>
           </div>
-        </div>
-      </div>
-    `;
+      `
+    );
 
     board.entries.forEach((entry) => {
       if (entry.actionLabel && entry.onAction) {
@@ -996,9 +1011,10 @@ export class OstrzeModalUi {
       `
       : '';
 
-    this.root.innerHTML = `
-      <div class="ostrze-overlay">
-        <div class="ostrze-card ostrze-welcome-card">
+    mountModalCard(
+      this.root,
+      'ostrze-card ostrze-welcome-card',
+      `
           ${bannerHtml}
           <h1 class="ostrze-welcome-title">VOIDED</h1>
           <p class="ostrze-welcome-subtitle">Na przekór gwiazdom</p>
@@ -1037,9 +1053,8 @@ export class OstrzeModalUi {
             <div>Fabuła, dialogi etc.: Twiist</div>
             <div>Silnik gry, port i wykonanie: Ulfgaros</div>
           </div>
-        </div>
-      </div>
-    `;
+      `
+    );
 
     const inputEl = this.root.querySelector<HTMLInputElement>('#ostrze-welcome-name');
     inputEl?.focus();
@@ -1052,8 +1067,10 @@ export class OstrzeModalUi {
       const finalName = rawName.length >= this.data.rules.creator.nameMin ? rawName : 'Mściwój';
       this.draftName = finalName;
       this.activeWelcome = null;
-      this.render();
       welcome.onStartNew(finalName);
+      if (!this.hasOpenModal()) {
+        this.render();
+      }
     });
 
     this.root.querySelector('#ostrze-welcome-continue')?.addEventListener('click', () => {
@@ -1073,9 +1090,10 @@ export class OstrzeModalUi {
     const modal = this.activeSaveKey;
     if (!modal) return;
 
-    this.root.innerHTML = `
-      <div class="ostrze-overlay">
-        <div class="ostrze-card" style="max-width:600px;">
+    mountModalCard(
+      this.root,
+      'ostrze-card',
+      `
           <h2 class="ostrze-title">Klucz rozgrywki</h2>
           <p class="ostrze-subtitle">
             Zapis lokalny działa w tej przeglądarce. Aby przenieść postęp na inny komputer lub przeglądarkę, skopiuj poniższy klucz lub wklej otrzymany klucz i kliknij „Wczytaj z klucza”.
@@ -1100,9 +1118,9 @@ export class OstrzeModalUi {
             <button type="button" class="ostrze-btn" id="ostrze-key-load">Wczytaj z klucza</button>
             <button type="button" class="ostrze-hub-btn" id="ostrze-key-close">Zamknij [ESC]</button>
           </div>
-        </div>
-      </div>
-    `;
+      `,
+      { styleText: 'max-width:600px;' }
+    );
 
     this.root.querySelector('#ostrze-key-copy')?.addEventListener('click', () => {
       const el = this.root.querySelector<HTMLTextAreaElement>('#ostrze-key-export');

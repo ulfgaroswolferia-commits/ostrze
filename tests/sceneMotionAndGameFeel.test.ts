@@ -2,13 +2,19 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   classifyCombatImpact,
   computeArcanePulseScale,
+  computeAttackLungeTransform,
   computeDeathCollapsePose,
   computeDodgeGhostOffset,
   computeFearTrembleOffset,
   computeFloatingTextMotion,
+  computeHitRecoilTransform,
+  computeHoverFloatTransform,
   computeIdleBreathingTransform,
   computePropReactionTransform,
+  computeTelegraphAnticipationPose,
+  computeWalkStrideTransform,
   computeWindSwaySkew,
+  isHoveringActor,
   isNpcNameCoveredBySpeechMarker,
   resolveNonOverlappingLabelPosition,
   type LabelRect
@@ -236,5 +242,46 @@ describe('2.5D Living World & Combat Game Feel (sceneMotion)', () => {
     // Pure icon markers or unrelated barks must NOT hide the nameplate
     expect(isNpcNameCoveredBySpeechMarker('❗', 'Kupiec Ostromir')).toBe(false);
     expect(isNpcNameCoveredBySpeechMarker('Dzisiaj chłodno w lesie.', 'Wojmir Cienki')).toBe(false);
+  });
+
+  it('produces organic continuous walk stride bounce, squash/stretch, and sway while moving', () => {
+    const plant = computeWalkStrideTransform(0, false, false);
+    const leftApex = computeWalkStrideTransform(1, false, false);
+    const rightApex = computeWalkStrideTransform(3, false, false);
+    const stealthApex = computeWalkStrideTransform(1, true, false);
+    const reduced = computeWalkStrideTransform(1, false, true);
+
+    expect(plant.offsetY).toBeCloseTo(0, 3);
+    expect(leftApex.offsetY).toBeLessThan(-2.5);
+    expect(leftApex.rotation).toBeGreaterThan(0.02);
+    expect(rightApex.rotation).toBeLessThan(-0.02);
+    expect(Math.abs(stealthApex.rotation)).toBeLessThan(Math.abs(leftApex.rotation));
+    expect(reduced).toEqual({ offsetY: 0, scaleX: 1, scaleY: 1, rotation: 0 });
+  });
+
+  it('animates hovering wisps, asymmetric attack lunges, hit recoil, and boss telegraph poses', () => {
+    expect(isHoveringActor('enemy_blednik_1', 'Błędnik Bagienny')).toBe(true);
+    expect(isHoveringActor('enemy_upior', 'Upiór z Krypty')).toBe(true);
+    expect(isHoveringActor('enemy_wilk_1', 'Dziki Wilk')).toBe(false);
+
+    const wisp = computeHoverFloatTransform('enemy_blednik_1', 0.9, false, false);
+    expect(wisp.offsetY).toBeLessThan(-1);
+
+    // Attack lunge: wind-up pulls back (< 0), strike snaps forward (> 1)
+    const windup = computeAttackLungeTransform(0.15, false);
+    const strike = computeAttackLungeTransform(0.45, false);
+    expect(windup.distFactor).toBeLessThan(0);
+    expect(strike.distFactor).toBeGreaterThan(1.0);
+
+    // Hit recoil: quick peak knockback and squash
+    const recoilPeak = computeHitRecoilTransform(0.2, false);
+    expect(recoilPeak.distFactor).toBeGreaterThan(0.9);
+    expect(recoilPeak.scaleY).toBeLessThan(0.95);
+
+    // Boss telegraph anticipation: heavy_cleave coils down, terror_howl swells up
+    const cleave = computeTelegraphAnticipationPose('heavy_cleave', 0.5, false);
+    const howl = computeTelegraphAnticipationPose('terror_howl', 0.5, false);
+    expect(cleave.scaleY).toBeLessThan(0.96);
+    expect(howl.scaleY).toBeGreaterThan(1.04);
   });
 });

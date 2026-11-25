@@ -3,6 +3,7 @@ import { evaluateAchievements, OSTRZE_ACHIEVEMENTS } from '../../rules/achieveme
 import { getDifficultyProfile, getOstrzeDifficulty } from '../../rules/difficulty';
 import { getVisitedOstrzeLocations, OSTRZE_LOCATIONS } from '../../rules/travel';
 import { escapeHtml } from '../escapeHtml';
+import { mountModalCard } from '../mountModalCard';
 
 export interface CampaignSummaryOptions {
   viaOblawa: boolean;
@@ -105,9 +106,10 @@ export function renderCampaignSummaryView(params: {
   const { root, state, data, opts, onClose } = params;
   const s = buildCampaignSummaryData(state, data, opts.viaOblawa, opts.storyText);
 
-  root.innerHTML = `
-    <div class="ostrze-overlay">
-      <div class="ostrze-card ostrze-summary-card">
+  mountModalCard(
+    root,
+    'ostrze-card ostrze-summary-card',
+    `
         <div class="ostrze-summary-badge">🏁 ${escapeHtml(s.moralPathTitle)} · Trudność: ${escapeHtml(s.difficultyLabel)}</div>
         <h2 class="ostrze-title" style="margin-bottom:4px;">${escapeHtml(s.title)}</h2>
         <p class="ostrze-subtitle" style="margin-bottom:14px;">${escapeHtml(s.subtitle)}</p>
@@ -133,9 +135,8 @@ export function renderCampaignSummaryView(params: {
           <button type="button" class="ostrze-hub-btn" data-summary-action="free-roam">🗺️ Zostań w okolicach Głuszca</button>
           ${opts.onNewGame ? `<button type="button" class="ostrze-hub-btn" data-summary-action="new-game">🔄 Nowa gra</button>` : ''}
         </div>
-      </div>
-    </div>
-  `;
+    `
+  );
 
   root.querySelector('[data-summary-action="free-roam"]')?.addEventListener('click', () => {
     onClose();

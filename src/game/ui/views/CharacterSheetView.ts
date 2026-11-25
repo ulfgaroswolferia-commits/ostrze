@@ -35,6 +35,7 @@ import { renderItemStatPillsHtml } from '../../rules/itemComparison';
 import { getStats } from '../../rules/stats';
 import { getOstrzeLocationMeta } from '../../rules/travel';
 import { escapeHtml } from '../escapeHtml';
+import { mountModalCard } from '../mountModalCard';
 
 export type CharacterSheetTab = 'stats' | 'gear' | 'journal' | 'bestiary' | 'chronicle';
 
@@ -607,9 +608,10 @@ export function renderCharacterSheetView(params: {
           </div>
         `;
 
-  root.innerHTML = `
-    <div class="ostrze-overlay">
-      <div class="ostrze-card ostrze-cs-card">
+  mountModalCard(
+    root,
+    'ostrze-card ostrze-cs-card',
+    `
         <div class="ostrze-cs-header">
           <div>
             <h2 class="ostrze-title" style="margin-bottom:4px">${escapeHtml(ch.name)} — Poziom ${ch.level}</h2>
@@ -654,9 +656,8 @@ export function renderCharacterSheetView(params: {
         <div style="display:flex;justify-content:flex-end;margin-top:8px">
           <button class="ostrze-btn" id="ostrze-cs-close">Zamknij <kbd class="ostrze-kbd">ESC</kbd></button>
         </div>
-      </div>
-    </div>
-  `;
+    `
+  );
 
   root.querySelectorAll<HTMLElement>('[data-cs-tab]').forEach((btn) => {
     btn.addEventListener('click', () => {

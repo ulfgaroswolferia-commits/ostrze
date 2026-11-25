@@ -1,3 +1,5 @@
+import { mountModalCard } from '../mountModalCard';
+
 export interface PauseMenuOptions {
   devMode?: boolean;
   hasSave: boolean;
@@ -21,9 +23,10 @@ export function renderPauseMenuView(params: {
   onDismissForAction: () => void;
 }): void {
   const { root, pm, onRerender, onClose, onDismissForAction } = params;
-  root.innerHTML = `
-    <div class="ostrze-overlay">
-      <div class="ostrze-card" style="max-width:400px;text-align:center;">
+  mountModalCard(
+    root,
+    'ostrze-card',
+    `
         <h2 class="ostrze-title" style="margin-bottom:4px;">Menu Gry</h2>
         <p class="ostrze-subtitle" style="margin-bottom:16px;">Voided: na przekór gwiazdom</p>
         ${pm.devMode ? `<p class="ostrze-subtitle" style="margin-bottom:16px;color:#f0c674;"><strong>DEV:</strong> Reset testu nie kasuje zapisu.${pm.hasSave ? ' „Wczytaj zapis” przywróci zapisaną postać i ostatnią lokację.' : ' Brak zapisu — użyj „Zapisz grę”, aby zachować postać i lokację przed resetem.'}</p>` : ''}
@@ -37,9 +40,9 @@ export function renderPauseMenuView(params: {
           <button type="button" class="ostrze-hub-btn" id="ostrze-pm-mute">${pm.isMuted ? '🔇 Dźwięk: Wyciszony' : '🔊 Dźwięk: Włączony'}</button>
           <button type="button" class="ostrze-hub-btn" id="ostrze-pm-new" style="border-color:rgba(239,68,68,0.45);color:#fca5a5;">🔄 Nowa gra</button>
         </div>
-      </div>
-    </div>
-  `;
+    `,
+    { styleText: 'max-width:400px;text-align:center;' }
+  );
 
   root.querySelector('#ostrze-pm-resume')?.addEventListener('click', onClose);
   root.querySelector('#ostrze-pm-save')?.addEventListener('click', () => {

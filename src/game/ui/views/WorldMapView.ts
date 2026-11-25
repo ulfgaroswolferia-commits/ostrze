@@ -13,6 +13,7 @@ import { clockOf, timeOfDay } from '../../rules/time';
 import { getOstrzeLocationMeta } from '../../rules/travel';
 import { getWorldAtmosphere } from '../../rules/worldCycle';
 import { escapeHtml } from '../escapeHtml';
+import { mountModalCard } from '../mountModalCard';
 import type { TravelDestinationEntry } from '../OstrzeModalUi';
 import { getPhenomenonVisualMeta } from '../phenomenonOverlay';
 
@@ -321,9 +322,10 @@ export function renderWorldMapView(params: WorldMapViewParams): void {
       ? `${atmosphere.timeLabel} · ${atmosphere.clockText} · ${phMeta.icon} ${atmosphere.phenomenonName ?? ''}${travelWarning ? ` — ${travelWarning}` : ''}`
       : `${atmosphere.timeLabel} · ${atmosphere.clockText} · Pogoda spokojna`;
 
-    root.innerHTML = `
-      <div class="ostrze-overlay">
-        <div class="ostrze-card ostrze-worldmap-card" data-worldmap-modal="true">
+    mountModalCard(
+      root,
+      'ostrze-card ostrze-worldmap-card',
+      `
           <div class="ostrze-worldmap-header">
             <div>
               <h2 class="ostrze-title" style="margin-bottom:4px;">
@@ -408,9 +410,9 @@ export function renderWorldMapView(params: WorldMapViewParams): void {
             </div>
             <button type="button" class="ostrze-hub-btn" id="ostrze-travel-close">Zamknij [ESC / M]</button>
           </div>
-        </div>
-      </div>
-    `;
+      `,
+      { dataset: { worldmapModal: 'true' }, onOverlayBackdropClick: onClose }
+    );
 
     root.querySelectorAll<HTMLButtonElement>('[data-map-region]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -450,12 +452,6 @@ export function renderWorldMapView(params: WorldMapViewParams): void {
 
     root.querySelector<HTMLButtonElement>('#ostrze-travel-close')?.addEventListener('click', () => {
       onClose();
-    });
-
-    root.querySelector<HTMLElement>('.ostrze-overlay')?.addEventListener('click', (ev) => {
-      if (ev.target === ev.currentTarget) {
-        onClose();
-      }
     });
   };
 
