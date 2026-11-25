@@ -63,6 +63,8 @@ async function bootstrapOstrze(): Promise<void> {
 
   const params = new URLSearchParams(window.location.search);
   const isDevMode = params.get('dev') === '1';
+  const isDevTeleportEnabled =
+    isDevMode || params.get('devTeleport') === '1' || params.get('teleport') === '1';
   const startChapter = params.get('chapter');
   const startPhenomenon = params.get('phenomenon');
 
@@ -526,6 +528,7 @@ async function bootstrapOstrze(): Promise<void> {
 
   hud = new HudOverlay(hudRoot, engine, sceneView, {
     devMode: isDevMode,
+    showDevSelector: isDevTeleportEnabled,
     devScenes: devLocations,
     getActiveDevSceneId: () => engine.activeCustomSceneId ?? activeChapter,
     onSelectDevScene: switchToDevLocation,
