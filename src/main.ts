@@ -78,6 +78,26 @@ async function bootstrapOstrze(): Promise<void> {
   const combatTargetOverlay = new CombatTargetOverlay(engine, ORIGIN_DATA);
   const phenomenonOverlay = new PhenomenonOverlay();
 
+  const statusVignette = document.createElement('div');
+  statusVignette.className = 'ostrze-status-vignette';
+  statusVignette.setAttribute('aria-hidden', 'true');
+  viewportContainer.appendChild(statusVignette);
+
+  const syncStatusVignette = (): void => {
+    const hideForModal = modalUi.hasOpenModal();
+    const pCombat = engine.player.combat;
+    const isLowHp = Boolean(
+      !hideForModal &&
+        pCombat &&
+        pCombat.isAlive &&
+        pCombat.maxHp > 0 &&
+        pCombat.hp / pCombat.maxHp <= 0.3
+    );
+    const isStealth = Boolean(!hideForModal && engine.isStealthActive);
+    viewportContainer.dataset.lowHp = isLowHp ? 'true' : 'false';
+    viewportContainer.dataset.stealth = isStealth ? 'true' : 'false';
+  };
+
   const refreshUi = (): void => {
     hud?.render();
     inspector?.render();
@@ -85,6 +105,7 @@ async function bootstrapOstrze(): Promise<void> {
     combatTargetOverlay.sync();
     syncPhenomenonUi?.();
     syncHelpFabAndTips?.();
+    syncStatusVignette();
   };
 
   const sceneView = new IsoSceneView(engine, refreshUi);
@@ -237,6 +258,21 @@ async function bootstrapOstrze(): Promise<void> {
     });
   };
   modalUi.onOpenCampfire = openCampfirePanel;
+  modalUi.onOpenLevelUp = () => {
+    if (!prologue.state.character) return;
+    modalUi.showCharacterSheet(() => {
+      engine.syncFromOstrzeState(prologue.state, prologue.data);
+      if (activeChapter === 'prologue') {
+        prologue.refreshObjectiveTracker();
+      } else if (activeChapter === 'chapter2') {
+        chapter2?.refreshHubPanel();
+      } else {
+        chapter1.refreshHubPanel();
+      }
+      performSave(true);
+      refreshUi();
+    }, 'stats');
+  };
 
   engine.onFallbackPropInteract = (propId) => {
     const cacheRes = tryOpenSecretCache(propId, prologue.state, prologue.data);
@@ -689,6 +725,13 @@ async function bootstrapOstrze(): Promise<void> {
       } else if (!modalUi.hasOpenModal()) {
         modalUi.showHelpModal('controls', () => refreshUi());
       }
+      refreshUi();
+      return;
+    }
+
+    if (e.key === 'Tab' && engine.combatState.active && !modalUi.hasOpenModal()) {
+      e.preventDefault();
+      combatTargetOverlay.cycleTarget();
       refreshUi();
       return;
     }

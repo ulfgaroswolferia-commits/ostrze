@@ -112,4 +112,68 @@ describe('Journal Objectives & Enhanced CombatTargetOverlay', () => {
       (globalThis as { document?: unknown }).document = origDoc;
     }
   });
+
+  it('shows live synergy/guard-break callouts, tactical [2]/[R] tip, separated status sections, and cycles targets', () => {
+    const origDoc = (globalThis as { document?: unknown }).document;
+    const elements = new Map<string, ReturnType<typeof makeFakeElement>>();
+    (globalThis as { document?: unknown }).document = {
+      getElementById: (id: string) => elements.get(id) ?? null,
+      createElement: () => makeFakeElement(),
+      body: {
+        appendChild: (el: ReturnType<typeof makeFakeElement>) => {
+          if (el.id) elements.set(el.id, el);
+        }
+      }
+    };
+
+    try {
+      const engine = new OstrzeEngineState();
+      const state = createHeroState();
+      state.inventory.equipped.bron = 'miecz_krotki';
+      engine.registerCustomScene(createBorKlusownikowScene({ withHunt: true }));
+      engine.loadCustomScene('bor_klusownikow');
+      engine.syncFromOstrzeState(state, ORIGIN_DATA);
+
+      const hostiles = engine.npcs.filter((n) => n.combat?.isHostile && n.combat.isAlive);
+      expect(hostiles.length).toBeGreaterThanOrEqual(2);
+      const first = hostiles[0]!;
+      engine.startCombatWithEnemy(first.id);
+
+      // Apply Burn + Guard to target, and Guard to player
+      engine.applyEnemyBurn(first.id, 2);
+      first.combat!.defending = true;
+      engine.player.combat!.defending = true;
+      engine.combatState.selectedAttackMode = 'quick';
+
+      const overlay = new CombatTargetOverlay(engine, ORIGIN_DATA);
+      overlay.sync();
+
+      const card = elements.get('ostrze-combat-target-root')!;
+      // Normal mode shows tactical tip to switch to [2] or [R]
+      expect(card.innerHTML).toContain('data-combat-tactical-tip="true"');
+      expect(card.innerHTML).toContain('Przełamanie Gardy');
+      expect(card.innerHTML).toContain('Wybuch Żaru');
+      // Separated enemy vs player status labels + Riposte Ready indicator
+      expect(card.innerHTML).toContain('Statusy celu');
+      expect(card.innerHTML).toContain('Twój stan');
+      expect(card.innerHTML).toContain('Garda aktywna · Riposta');
+
+      // Switching to power mode [2] activates live synergy & guard break pills
+      engine.combatState.selectedAttackMode = 'power';
+      overlay.sync();
+      expect(card.innerHTML).toContain('data-combat-synergies="true"');
+      expect(card.innerHTML).toContain('PRZEŁAMANIE GARDY');
+      expect(card.innerHTML).toContain('WYBUCH ŻARU');
+      expect(card.innerHTML).not.toContain('data-combat-tactical-tip="true"');
+
+      // Tab target cycling updates engine.combatState.selectedTargetId
+      const beforeId = engine.combatState.selectedTargetId;
+      expect(overlay.cycleTarget()).toBe(true);
+      expect(engine.combatState.selectedTargetId).not.toBe(beforeId);
+
+      overlay.destroy();
+    } finally {
+      (globalThis as { document?: unknown }).document = origDoc;
+    }
+  });
 });

@@ -15,6 +15,10 @@ import {
   getShopMerchantPortraitId,
   sellInventoryItemToShop
 } from '../rules/shopEconomy';
+import {
+  classifyInventoryItem,
+  type InventoryCategoryFilter
+} from '../rules/inventoryFilter';
 import { renderItemStatPillsHtml } from '../rules/itemComparison';
 import { getStats } from '../rules/stats';
 import { getWorldAtmosphere } from '../rules/worldCycle';
@@ -32,6 +36,7 @@ import {
 } from './views/CharacterCreatorView';
 import {
   type CharacterSheetTab,
+  hasUnspentPickablePerk,
   renderCharacterSheetView
 } from './views/CharacterSheetView';
 import { renderDialogueView } from './views/DialogueView';
@@ -114,8 +119,10 @@ export class OstrzeModalUi {
   private activeNarrative: NarrativeCardData | null = null;
   private activeDialogue: ActiveOstrzeDialogue | null = null;
   private activeShop: { shopId: string; onClosed?: () => void } | null = null;
+  private activeShopCategoryFilter: InventoryCategoryFilter = 'all';
   private activeCharacterSheet: { onUpdated?: () => void } | null = null;
   private activeCharacterTab: CharacterSheetTab = 'stats';
+  private characterSheetCloseGuard = false;
   private activeNoticeBoard: { entries: NoticeBoardEntry[]; onClosed?: () => void } | null = null;
   private activeTravel: {
     destinations: TravelDestinationEntry[];
@@ -134,6 +141,7 @@ export class OstrzeModalUi {
   private activeHelp: { initialTab?: HelpModalTab; onClosed?: () => void } | null = null;
   private lastEscapeClosedAt = 0;
   public onOpenCampfire?: () => void;
+  public onOpenLevelUp?: () => void;
   private readonly shopBoughtCounts = new Map<string, number>();
   private onDialogueClosed: (() => void) | null = null;
   private onOpenShop: ((shopId: string) => void) | null = null;
@@ -178,6 +186,8 @@ export class OstrzeModalUi {
           e.stopPropagation();
           const candidates = [
             overlay.querySelector<HTMLElement>('.ostrze-help-body'),
+            overlay.querySelector<HTMLElement>('.ostrze-cs-body'),
+            overlay.querySelector<HTMLElement>('.ostrze-camp-grid'),
             overlay.querySelector<HTMLElement>('.ostrze-dialogue-body'),
             overlay.querySelector<HTMLElement>('.ostrze-card'),
             overlay
@@ -258,11 +268,8 @@ export class OstrzeModalUi {
           this.render();
           cb?.();
         } else if (this.activeCharacterSheet) {
-          const cb = this.activeCharacterSheet.onUpdated;
-          this.activeCharacterSheet = null;
           this.lastEscapeClosedAt = performance.now();
-          this.render();
-          cb?.();
+          this.attemptCloseCharacterSheet();
         } else if (this.activeNoticeBoard) {
           const cb = this.activeNoticeBoard.onClosed;
           this.activeNoticeBoard = null;
@@ -369,6 +376,7 @@ export class OstrzeModalUi {
   }
 
   public showShop(shopId: string, onClosed?: () => void): void {
+    this.activeShopCategoryFilter = 'all';
     this.activeShop = { shopId, onClosed };
     this.render();
   }
@@ -378,17 +386,37 @@ export class OstrzeModalUi {
     initialTab?: CharacterSheetTab
   ): void {
     if (this.activeCharacterSheet && initialTab && this.activeCharacterTab === initialTab) {
-      const cb = this.activeCharacterSheet.onUpdated;
-      this.activeCharacterSheet = null;
-      this.render();
-      cb?.();
+      this.attemptCloseCharacterSheet();
       return;
     }
     if (initialTab) {
       this.activeCharacterTab = initialTab;
     }
+    this.characterSheetCloseGuard = false;
     this.activeCharacterSheet = { onUpdated };
     this.render();
+  }
+
+  private attemptCloseCharacterSheet(): void {
+    if (!this.activeCharacterSheet) return;
+    if (hasUnspentPickablePerk(this.state, this.data) && !this.characterSheetCloseGuard) {
+      this.characterSheetCloseGuard = true;
+      this.render();
+      const perksPanel = this.root.querySelector<HTMLElement>('[data-cs-perks-panel]');
+      perksPanel?.classList?.add('is-pulse-highlight');
+      window.setTimeout(() => perksPanel?.classList?.remove('is-pulse-highlight'), 900);
+      return;
+    }
+    this.forceCloseCharacterSheet();
+  }
+
+  private forceCloseCharacterSheet(): void {
+    if (!this.activeCharacterSheet) return;
+    const cb = this.activeCharacterSheet.onUpdated;
+    this.characterSheetCloseGuard = false;
+    this.activeCharacterSheet = null;
+    this.render();
+    cb?.();
   }
 
   public hasOpenModal(): boolean {
@@ -481,13 +509,19 @@ export class OstrzeModalUi {
   }
 
   public showToast(text: string, tone: 'info' | 'gold' | 'success' = 'info'): void {
+    if (tone === 'gold' && /awans/i.test(text)) {
+      ostrzeAudio.playLevelUpFanfare();
+    }
     const el = document.createElement('div');
     el.className = `ostrze-toast ${tone === 'gold' ? 'is-gold' : tone === 'success' ? 'is-success' : ''}`;
     el.textContent = text;
     this.toastRoot.appendChild(el);
     window.setTimeout(() => {
+      el.classList?.add('is-leaving');
+    }, 2940);
+    window.setTimeout(() => {
       el.remove();
-    }, 3200);
+    }, 3220);
   }
 
   public setHubPanel(panel: HubPanelData | null): void {
@@ -598,6 +632,16 @@ export class OstrzeModalUi {
       this.hubRoot.innerHTML = '';
       return;
     }
+    const ch = this.state.character;
+    const pendingPts = ch
+      ? ch.freeAttributePoints + ch.freeSkillPoints + ch.freePerkPicks
+      : 0;
+    const hasFreePerk = Boolean(ch && ch.freePerkPicks > 0);
+    const levelUpBtnHtml =
+      pendingPts > 0
+        ? `<button type="button" class="ostrze-hub-btn is-alert ostrze-hub-levelup-btn" data-hub-levelup="true" title="Otwórz Kartę Postaci [K] i rozdaj punkty rozwoju">✨ Awans (+${pendingPts})${hasFreePerk ? ' · Talent!' : ''} <kbd class="ostrze-kbd">K</kbd></button>`
+        : '';
+
     const btns = this.hubPanel.actions
       .map(
         (act) => `
@@ -609,40 +653,66 @@ export class OstrzeModalUi {
       .join('');
 
     const atmo = getWorldAtmosphere(this.state, this.data);
-    const chEffects = this.state.character?.effects ?? [];
+    const chEffects = ch?.effects ?? [];
+    const formatEffectTooltip = (effId: string): string => {
+      const def = this.data.effects.find((d) => d.id === effId) as
+        | (typeof this.data.effects[number] & {
+            description?: string;
+            modifiers?: Record<string, number>;
+          })
+        | undefined;
+      if (!def) return effId;
+      const parts: string[] = [];
+      if (def.description) parts.push(def.description);
+      const mods = def.modifiers;
+      if (mods && typeof mods === 'object') {
+        const modText = Object.entries(mods)
+          .filter(([, v]) => typeof v === 'number' && v !== 0)
+          .map(([k, v]) => `${v > 0 ? '+' : ''}${v} ${k}`)
+          .join(', ');
+        if (modText) parts.push(`(${modText})`);
+      }
+      return parts.join(' ') || def.name;
+    };
     const effectPillsHtml = chEffects
       .slice(0, 4)
       .map((eff) => {
         const def = this.data.effects.find((d) => d.id === eff.id);
         const isBuff =
           eff.id === 'najedzony' || eff.id === 'mocny_napar' || eff.id === 'natluszczone_ostrze';
-        return `<span class="ostrze-atmo-pill ${isBuff ? 'is-buff' : 'is-debuff'}">${this.escape(def?.name ?? eff.id)}</span>`;
+        const tip = formatEffectTooltip(eff.id);
+        return `<span class="ostrze-atmo-pill ${isBuff ? 'is-buff' : 'is-debuff'}" title="${this.escape(tip)}">${this.escape(def?.name ?? eff.id)}</span>`;
       })
       .join('');
     const phenomPillHtml = atmo.phenomenonName
       ? `<span class="ostrze-atmo-pill is-phenom" title="${this.escape(atmo.phenomenonSummary ?? '')}">${this.escape(atmo.phenomenonName)}</span>`
       : '';
+    const hasAtmoPills = Boolean(phenomPillHtml || effectPillsHtml);
 
     const nextHubHtml = `
-      <div class="ostrze-hub-bar">
+      <div class="ostrze-hub-bar ${this.hubCollapsed ? 'is-collapsed' : ''}">
         <div class="ostrze-hub-header">
           <div class="ostrze-hub-title">${this.escape(this.hubPanel.title)}</div>
-          <button class="ostrze-hub-toggle" data-hub-toggle title="${this.hubCollapsed ? 'Rozwiń tracker celu' : 'Zwiń tracker celu'}">
-            ${this.hubCollapsed ? '+' : '–'}
-          </button>
-        </div>
-        <div class="ostrze-atmo-strip">
-          <span class="ostrze-atmo-pill is-time">${this.escape(atmo.timeLabel)} · ${this.escape(atmo.clockText)}</span>
-          ${phenomPillHtml}
-          ${effectPillsHtml}
+          <div class="ostrze-hub-head-right">
+            <span class="ostrze-hub-clock" title="Pora dnia i godzina">${this.escape(atmo.timeLabel)} · ${this.escape(atmo.clockText)}</span>
+            ${
+              this.hubCollapsed && pendingPts > 0
+                ? `<button type="button" class="ostrze-hub-mini-lvl" data-hub-levelup="true" title="Awans postaci (+${pendingPts})">✨+${pendingPts}</button>`
+                : ''
+            }
+            <button type="button" class="ostrze-hub-toggle" data-hub-toggle title="${this.hubCollapsed ? 'Rozwiń tracker celu' : 'Zwiń tracker celu'}">
+              ${this.hubCollapsed ? '+' : '–'}
+            </button>
+          </div>
         </div>
         ${
           this.hubCollapsed
             ? ''
             : `
+              ${hasAtmoPills ? `<div class="ostrze-atmo-strip">${phenomPillHtml}${effectPillsHtml}</div>` : ''}
               <div class="ostrze-hub-meta">${this.escape(this.hubPanel.statusLine)}</div>
               <div class="ostrze-hub-quests">${this.escape(this.hubPanel.questsLine)}</div>
-              ${btns ? `<div class="ostrze-hub-actions">${btns}</div>` : ''}
+              ${levelUpBtnHtml || btns ? `<div class="ostrze-hub-actions">${levelUpBtnHtml}${btns}</div>` : ''}
             `
         }
       </div>
@@ -656,6 +726,17 @@ export class OstrzeModalUi {
     this.hubRoot.querySelector('[data-hub-toggle]')?.addEventListener('click', () => {
       this.hubCollapsed = !this.hubCollapsed;
       this.renderHubPanel();
+    });
+
+    this.hubRoot.querySelectorAll<HTMLElement>('[data-hub-levelup]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        ostrzeAudio.playUiClick();
+        if (this.onOpenLevelUp) {
+          this.onOpenLevelUp();
+        } else {
+          this.showCharacterSheet(undefined, 'stats');
+        }
+      });
     });
 
     if (!this.hubCollapsed) {
@@ -677,7 +758,66 @@ export class OstrzeModalUi {
     const handel = this.state.character ? getStats(this.state, this.data).skills.handel : 0;
     const merchantMeta = getPixArtMeta(getShopMerchantPortraitId(shopId));
 
-    const buyRows = (shop?.stock ?? [])
+    const stockEntries = shop?.stock ?? [];
+    const invEntries = this.state.inventory.items;
+
+    const shopFilterMeta: ReadonlyArray<{ id: InventoryCategoryFilter; label: string }> = [
+      { id: 'all', label: 'Wszystkie' },
+      { id: 'weapon', label: '⚔️ Broń' },
+      { id: 'armor', label: '🛡️ Pancerz' },
+      { id: 'consumable', label: '🧪 Zużywalne' },
+      { id: 'other', label: '📦 Inne' }
+    ];
+
+    const categoryCounts: Record<InventoryCategoryFilter, number> = {
+      all: stockEntries.length + invEntries.length,
+      weapon: 0,
+      armor: 0,
+      consumable: 0,
+      other: 0
+    };
+    for (const e of stockEntries) {
+      const cat = classifyInventoryItem(this.data.items.find((i) => i.id === e.id));
+      categoryCounts[cat] += 1;
+    }
+    for (const e of invEntries) {
+      const cat = classifyInventoryItem(this.data.items.find((i) => i.id === e.id));
+      categoryCounts[cat] += 1;
+    }
+    if (
+      this.activeShopCategoryFilter !== 'all' &&
+      categoryCounts[this.activeShopCategoryFilter] === 0
+    ) {
+      this.activeShopCategoryFilter = 'all';
+    }
+
+    const matchesShopFilter = (itemId: string): boolean => {
+      if (this.activeShopCategoryFilter === 'all') return true;
+      const item = this.data.items.find((i) => i.id === itemId);
+      return classifyInventoryItem(item) === this.activeShopCategoryFilter;
+    };
+
+    const shopFiltersHtml = `
+      <div class="ostrze-gear-filters ostrze-shop-filters" role="tablist" aria-label="Filtr kategorii w kramie" data-shop-filters="true">
+        ${shopFilterMeta
+          .map(
+            (f) => `
+            <button
+              type="button"
+              class="ostrze-gear-filter-btn ${this.activeShopCategoryFilter === f.id ? 'is-active' : ''}"
+              data-shop-filter="${f.id}"
+              ${f.id !== 'all' && categoryCounts[f.id] === 0 ? 'disabled' : ''}
+            >
+              ${f.label} <span class="ostrze-gear-filter-count">${categoryCounts[f.id]}</span>
+            </button>
+          `
+          )
+          .join('')}
+      </div>
+    `;
+
+    const buyRows = stockEntries
+      .filter((entry) => matchesShopFilter(entry.id))
       .map((entry) => {
         const item = this.data.items.find((i) => i.id === entry.id);
         const boughtKey = `${shopId}:${entry.id}`;
@@ -689,14 +829,16 @@ export class OstrzeModalUi {
           : '';
         const statPills = renderItemStatPillsHtml(item, this.state, this.data);
         return `
-          <div class="ostrze-row">
+          <div class="ostrze-row ostrze-shop-row">
             <div style="flex:1;min-width:0;">
-              <strong>${this.escape(item?.name ?? entry.id)}</strong>
-              <span class="ostrze-shop-qty"> (szt: ${remainingQty})</span>
+              <div class="ostrze-gear-item-line">
+                <strong>${this.escape(item?.name ?? entry.id)}</strong>
+                <span class="ostrze-shop-qty ostrze-num">(szt: ${remainingQty})</span>
+              </div>
               ${statPills}
               ${desc}
             </div>
-            <button class="ostrze-btn ostrze-shop-btn" data-buy="${this.escape(entry.id)}" ${canBuy ? '' : 'disabled'}>
+            <button type="button" class="ostrze-btn ostrze-shop-btn" data-buy="${this.escape(entry.id)}" ${canBuy ? '' : 'disabled'}>
               Kup (${price} gr)
             </button>
           </div>
@@ -704,21 +846,27 @@ export class OstrzeModalUi {
       })
       .join('');
 
-    const sellRows = this.state.inventory.items
+    const equippedValues = new Set(Object.values(this.state.inventory.equipped));
+    const sellRows = invEntries
+      .filter((entry) => matchesShopFilter(entry.id))
       .map((entry) => {
         const item = this.data.items.find((i) => i.id === entry.id);
         const check = canSellItemToShop(entry.id, shopId, this.state, this.data);
+        const isEquipped = equippedValues.has(entry.id);
         const statPills = renderItemStatPillsHtml(item, this.state, this.data);
         return `
-          <div class="ostrze-row">
+          <div class="ostrze-row ostrze-shop-row">
             <div style="flex:1;min-width:0;">
-              <strong>${this.escape(item?.name ?? entry.id)}</strong>
-              <span class="ostrze-shop-qty"> ×${entry.qty}</span>
+              <div class="ostrze-gear-item-line">
+                <strong>${this.escape(item?.name ?? entry.id)}</strong>
+                <span class="ostrze-shop-qty ostrze-num">×${entry.qty}</span>
+                ${isEquipped ? '<span class="ostrze-gear-equipped-tag">Założono</span>' : ''}
+              </div>
               ${statPills}
             </div>
             ${
               check.ok
-                ? `<button class="ostrze-hub-btn" data-sell="${this.escape(entry.id)}">Sprzedaj (+${check.price} gr)</button>`
+                ? `<button type="button" class="ostrze-hub-btn" data-sell="${this.escape(entry.id)}">Sprzedaj (+${check.price} gr)</button>`
                 : `<span class="ostrze-shop-tag">${this.escape(check.reason ?? 'Niedostępne')}</span>`
             }
           </div>
@@ -740,6 +888,13 @@ export class OstrzeModalUi {
       `
       : '';
 
+    const closeShop = (): void => {
+      const cb = this.activeShop?.onClosed;
+      this.activeShop = null;
+      this.render();
+      cb?.();
+    };
+
     mountModalCard(
       this.root,
       'ostrze-card ostrze-shop-card',
@@ -753,24 +908,40 @@ export class OstrzeModalUi {
                 <span class="ostrze-shop-tag">Handel: ${handel}%</span>
               </div>
             </div>
+            <button type="button" class="ostrze-modal-close-x" data-action="shop-close-top" aria-label="Zamknij" title="Zamknij [ESC]">×</button>
           </div>
+
+          ${shopFiltersHtml}
 
           <div class="ostrze-shop-grid">
             <div class="ostrze-panel ostrze-shop-col">
               <h3>Towar kramarza</h3>
-              ${buyRows || '<p class="ostrze-subtitle">Brak towaru.</p>'}
+              ${buyRows || '<p class="ostrze-subtitle" style="margin-bottom:0;">Brak towaru w tej kategorii.</p>'}
             </div>
             <div class="ostrze-panel ostrze-shop-col">
               <h3>Twój plecak (sprzedaż)</h3>
-              ${sellRows || '<p class="ostrze-subtitle">Pusty plecak.</p>'}
+              ${sellRows || '<p class="ostrze-subtitle" style="margin-bottom:0;">Brak przedmiotów w tej kategorii.</p>'}
             </div>
           </div>
 
-          <div style="display:flex;justify-content:flex-end;margin-top:14px;">
-            <button class="ostrze-btn" data-action="shop-close">Zamknij kram [ESC]</button>
+          <div class="ostrze-modal-footer">
+            <span class="ostrze-modal-footer-hint">Wyższy poziom umiejętności Handel obniża ceny zakupu i podnosi wycenę sprzedaży.</span>
+            <button type="button" class="ostrze-btn ostrze-modal-close-btn" data-action="shop-close">Zamknij kram <kbd class="ostrze-kbd">ESC</kbd></button>
           </div>
-      `
+      `,
+      { onOverlayBackdropClick: closeShop }
     );
+
+    this.root.querySelectorAll<HTMLElement>('[data-shop-filter]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const nextFilter = btn.dataset.shopFilter as InventoryCategoryFilter | undefined;
+        if (nextFilter && nextFilter !== this.activeShopCategoryFilter) {
+          ostrzeAudio.playUiClick();
+          this.activeShopCategoryFilter = nextFilter;
+          this.render();
+        }
+      });
+    });
 
     this.root.querySelectorAll<HTMLElement>('[data-buy]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -805,12 +976,8 @@ export class OstrzeModalUi {
       });
     });
 
-    this.root.querySelector('[data-action="shop-close"]')?.addEventListener('click', () => {
-      const cb = this.activeShop?.onClosed;
-      this.activeShop = null;
-      this.render();
-      cb?.();
-    });
+    this.root.querySelector('[data-action="shop-close"]')?.addEventListener('click', closeShop);
+    this.root.querySelector('[data-action="shop-close-top"]')?.addEventListener('click', closeShop);
   }
 
   private renderNarrative(card: NarrativeCardData): void {
@@ -913,21 +1080,25 @@ export class OstrzeModalUi {
       data: this.data,
       rng: this.rng,
       activeTab: this.activeCharacterTab,
+      closeGuardActive: this.characterSheetCloseGuard,
       onSelectTab: (tab) => {
         this.activeCharacterTab = tab;
         this.render();
       },
       onUpdated: () => {
+        if (!hasUnspentPickablePerk(this.state, this.data)) {
+          this.characterSheetCloseGuard = false;
+        }
         this.activeCharacterSheet?.onUpdated?.();
       },
       onShowToast: (text, tone) => this.showToast(text, tone),
       onRerender: () => this.render(),
-      onClose: () => {
-        const cb = this.activeCharacterSheet?.onUpdated;
-        this.activeCharacterSheet = null;
+      onAttemptClose: () => this.attemptCloseCharacterSheet(),
+      onCancelCloseGuard: () => {
+        this.characterSheetCloseGuard = false;
         this.render();
-        cb?.();
-      }
+      },
+      onClose: () => this.forceCloseCharacterSheet()
     });
   }
 
@@ -955,17 +1126,34 @@ export class OstrzeModalUi {
       )
       .join('');
 
+    const closeNoticeBoard = (): void => {
+      const cb = board.onClosed;
+      this.activeNoticeBoard = null;
+      this.activeTravel = null;
+      this.render();
+      cb?.();
+    };
+
     mountModalCard(
       this.root,
-      'ostrze-card',
+      'ostrze-card ostrze-notice-board-card',
       `
-          <h2 class="ostrze-title">Tablica Zleceń — Wilczy Bród</h2>
-          <p class="ostrze-subtitle">Ogłoszenia strażnicy, kontrakty łowieckie i wieści z pogórza.</p>
-          ${cardsHtml}
-          <div style="display:flex;justify-content:flex-end;margin-top:12px">
-            <button class="ostrze-btn" id="ostrze-nb-close">Odejdź od tablicy [ESC]</button>
+          <div class="ostrze-modal-head">
+            <div>
+              <h2 class="ostrze-title" style="margin-bottom:3px;">Tablica Zleceń — Wilczy Bród</h2>
+              <p class="ostrze-subtitle" style="margin-bottom:0;">Ogłoszenia strażnicy, kontrakty łowieckie i wieści z pogórza.</p>
+            </div>
+            <button type="button" class="ostrze-modal-close-x" id="ostrze-nb-close-top" aria-label="Zamknij" title="Zamknij [ESC]">×</button>
           </div>
-      `
+          <div class="ostrze-notice-grid">
+            ${cardsHtml}
+          </div>
+          <div class="ostrze-modal-footer">
+            <span class="ostrze-modal-footer-hint">Przyjęte zlecenia trafiają do Dziennika <kbd class="ostrze-kbd">J</kbd>.</span>
+            <button type="button" class="ostrze-btn ostrze-modal-close-btn" id="ostrze-nb-close">Odejdź od tablicy <kbd class="ostrze-kbd">ESC</kbd></button>
+          </div>
+      `,
+      { onOverlayBackdropClick: closeNoticeBoard }
     );
 
     board.entries.forEach((entry) => {
@@ -976,13 +1164,8 @@ export class OstrzeModalUi {
       }
     });
 
-    this.root.querySelector('#ostrze-nb-close')?.addEventListener('click', () => {
-      const cb = board.onClosed;
-      this.activeNoticeBoard = null;
-      this.activeTravel = null;
-      this.render();
-      cb?.();
-    });
+    this.root.querySelector('#ostrze-nb-close')?.addEventListener('click', closeNoticeBoard);
+    this.root.querySelector('#ostrze-nb-close-top')?.addEventListener('click', closeNoticeBoard);
   }
 
   private renderWelcome(welcome: WelcomeScreenData): void {
@@ -1071,36 +1254,46 @@ export class OstrzeModalUi {
     const modal = this.activeSaveKey;
     if (!modal) return;
 
+    const closeSaveKey = (): void => {
+      const cb = modal.onClosed;
+      this.activeSaveKey = null;
+      this.render();
+      cb?.();
+    };
+
     mountModalCard(
       this.root,
       'ostrze-card',
       `
-          <h2 class="ostrze-title">Klucz rozgrywki</h2>
-          <p class="ostrze-subtitle">
-            Zapis lokalny działa w tej przeglądarce. Aby przenieść postęp na inny komputer lub przeglądarkę, skopiuj poniższy klucz lub wklej otrzymany klucz i kliknij „Wczytaj z klucza”.
+          <div class="ostrze-modal-head">
+            <h2 class="ostrze-title" style="margin-bottom:0;">Klucz rozgrywki</h2>
+            <button type="button" class="ostrze-modal-close-x" id="ostrze-key-close-top" aria-label="Zamknij" title="Zamknij [ESC]">×</button>
+          </div>
+          <p class="ostrze-subtitle" style="margin-bottom:12px;">
+            Zapis lokalny działa w tej przeglądarce. Skopiuj swój klucz, aby przenieść postęp na inne urządzenie, lub wklej otrzymany klucz i kliknij „Wczytaj”.
           </p>
           ${
             modal.currentKey
               ? `
-                <div style="margin-bottom:14px;">
-                  <div class="ostrze-subtitle" style="margin-bottom:6px;">Twój aktualny klucz zapisu:</div>
+                <div style="margin-bottom:12px;">
+                  <div class="ostrze-subtitle" style="margin-bottom:4px;font-size:0.82rem;">Twój aktualny klucz zapisu:</div>
                   <textarea class="ostrze-key-textarea" id="ostrze-key-export" readonly>${this.escape(modal.currentKey)}</textarea>
-                  <button type="button" class="ostrze-hub-btn" id="ostrze-key-copy">Kopiuj klucz</button>
+                  <button type="button" class="ostrze-hub-btn" id="ostrze-key-copy">📋 Kopiuj klucz</button>
                 </div>
               `
               : ''
           }
           <div>
-            <div class="ostrze-subtitle" style="margin-bottom:6px;">Wklej klucz rozgrywki do wczytania:</div>
+            <div class="ostrze-subtitle" style="margin-bottom:4px;font-size:0.82rem;">Wklej klucz rozgrywki do wczytania:</div>
             <textarea class="ostrze-key-textarea" id="ostrze-key-import" placeholder="OSTRZE1:..."></textarea>
             <div id="ostrze-key-err" class="ostrze-error" style="display:none;"></div>
           </div>
-          <div style="display:flex;justify-content:space-between;gap:10px;margin-top:8px;">
+          <div class="ostrze-modal-footer">
             <button type="button" class="ostrze-btn" id="ostrze-key-load">Wczytaj z klucza</button>
-            <button type="button" class="ostrze-hub-btn" id="ostrze-key-close">Zamknij [ESC]</button>
+            <button type="button" class="ostrze-hub-btn" id="ostrze-key-close">Zamknij <kbd class="ostrze-kbd">ESC</kbd></button>
           </div>
       `,
-      { styleText: 'max-width:600px;' }
+      { styleText: 'max-width:560px;', onOverlayBackdropClick: closeSaveKey }
     );
 
     this.root.querySelector('#ostrze-key-copy')?.addEventListener('click', () => {
@@ -1124,12 +1317,8 @@ export class OstrzeModalUi {
       }
     });
 
-    this.root.querySelector('#ostrze-key-close')?.addEventListener('click', () => {
-      const cb = modal.onClosed;
-      this.activeSaveKey = null;
-      this.render();
-      cb?.();
-    });
+    this.root.querySelector('#ostrze-key-close')?.addEventListener('click', closeSaveKey);
+    this.root.querySelector('#ostrze-key-close-top')?.addEventListener('click', closeSaveKey);
   }
 
   private renderTravelModal(): void {

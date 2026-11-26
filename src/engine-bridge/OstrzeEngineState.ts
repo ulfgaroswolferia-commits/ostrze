@@ -260,6 +260,14 @@ export class OstrzeEngineState extends CrpgGameState {
     );
   }
 
+  public isPlayerRiposteReady(): boolean {
+    return Boolean(
+      this.player.combat?.defending &&
+        this.combatState.active &&
+        this.riposteUsedRound !== this.combatState.round
+    );
+  }
+
   public tickEnemyBurn(enemy: ActorEntity, rng: () => number = Math.random): number {
     const rem = this.enemyBurnTurns.get(enemy.id) ?? 0;
     if (rem <= 0 || !enemy.combat?.isAlive) {
@@ -393,6 +401,7 @@ export class OstrzeEngineState extends CrpgGameState {
     attacker.damageFlashTimer = 0.22;
 
     this.onJuicyImpact?.(false);
+    ostrzeAudio.playRiposte();
     this.pushFloatingCombatText(
       attacker.x,
       attacker.y,
@@ -1300,6 +1309,7 @@ export class OstrzeEngineState extends CrpgGameState {
     if (outcome?.hit && enemy?.combat) {
       if (guardBreak.triggered) {
         enemy.combat.ap = Math.max(0, enemy.combat.ap - guardBreak.apPenalty);
+        ostrzeAudio.playGuardBreak();
         this.addCombatLog(
           `💥 PRZEŁAMANIE GARDY na ${enemy.recipe.name}! (+25% obr., -${guardBreak.apPenalty} AP)`
         );
@@ -1310,6 +1320,10 @@ export class OstrzeEngineState extends CrpgGameState {
           '💥 PRZEŁAMANIE GARDY!',
           0xf59e0b
         );
+      }
+
+      if (synergies.tags.length > 0) {
+        ostrzeAudio.playSynergyProc();
       }
 
       if (synergies.bonusFireDamage > 0 && enemy.combat.isAlive) {
@@ -1461,6 +1475,7 @@ export class OstrzeEngineState extends CrpgGameState {
     if (guardBreak.triggered) {
       target.combat.defending = false;
       target.combat.ap = Math.max(0, target.combat.ap - guardBreak.apPenalty);
+      ostrzeAudio.playGuardBreak();
     }
     const synergies = evaluateStatusSynergies({
       targetBleeding: this.getEnemyBleedTurns(target.id) > 0,
@@ -1470,6 +1485,9 @@ export class OstrzeEngineState extends CrpgGameState {
       isMeleeAttack: !isRangedManeuver,
       isHeavyOrManeuver: true
     });
+    if (synergies.tags.length > 0) {
+      ostrzeAudio.playSynergyProc();
+    }
     const finalDmg =
       Math.max(
         1,

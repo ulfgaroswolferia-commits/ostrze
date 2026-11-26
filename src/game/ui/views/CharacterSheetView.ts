@@ -4,6 +4,7 @@ import type {
   AttributeId,
   OriginGameData,
   OstrzeGameState,
+  PerkDef,
   SkillId
 } from '../../data/originTypes';
 import {
@@ -15,6 +16,7 @@ import {
   HUNTER_LORE_KILL_THRESHOLD
 } from '../../rules/bestiary';
 import {
+  canPickPerk,
   getAvailablePerks,
   pickPerk,
   spendAttributePoint,
@@ -40,6 +42,141 @@ import { mountModalCard } from '../mountModalCard';
 export type CharacterSheetTab = 'stats' | 'gear' | 'journal' | 'bestiary' | 'chronicle';
 
 let activeGearCategoryFilter: InventoryCategoryFilter = 'all';
+let selectedQuickBeltSlot: number | null = null;
+
+/**
+ * Returns true if the hero has at least one unspent perk pick AND at least one eligible perk.
+ */
+export function hasUnspentPickablePerk(state: OstrzeGameState, data: OriginGameData): boolean {
+  const ch = state.character;
+  return Boolean(ch && ch.freePerkPicks > 0 && getAvailablePerks(state, data).length > 0);
+}
+
+/**
+ * Resolves which Quick-Belt slot (0..3 -> keys [4]..[7]) a one-click "+ Pas" action should target.
+ */
+export function resolveTargetQuickBeltSlot(
+  quickBelt: Array<string | null> | undefined,
+  preferredSlot: number | null
+): number {
+  if (preferredSlot !== null && preferredSlot >= 0 && preferredSlot <= 3) {
+    return preferredSlot;
+  }
+  const belt = quickBelt ?? [null, null, null, null];
+  for (let i = 0; i < 4; i++) {
+    if (!belt[i]) return i;
+  }
+  return 3;
+}
+
+const MODIFIER_LABELS: Record<string, { label: string; suffix?: string }> = {
+  ap: { label: 'AP' },
+  hpMax: { label: 'HP' },
+  damage: { label: 'obr.' },
+  defense: { label: 'Obrona' },
+  meleeHitChance: { label: 'Traf. wręcz', suffix: '%' },
+  rangedHitChance: { label: 'Traf. dyst.', suffix: '%' },
+  critChance: { label: 'Krytyk', suffix: '%' },
+  initiative: { label: 'Inicjatywa' },
+  fleeChance: { label: 'Ucieczka', suffix: '%' },
+  carry: { label: 'Udźwig' },
+  resist_ogluszenie: { label: 'Odp. ogłuszenie', suffix: '%' },
+  resist_strach: { label: 'Odp. strach', suffix: '%' },
+  resist_rozkojarzenie: { label: 'Odp. rozkojarzenie', suffix: '%' }
+};
+
+/**
+ * Formats a perk's mechanical stat modifiers and special unlocks into compact Polish badges.
+ */
+export function formatPerkModifiers(perk: PerkDef, data: OriginGameData): string[] {
+  const pills: string[] = [];
+  const mods = perk.modifiers ?? {};
+  for (const [key, val] of Object.entries(mods)) {
+    if (typeof val !== 'number' || val === 0) continue;
+    const sign = val > 0 ? '+' : '';
+    const known = MODIFIER_LABELS[key];
+    if (known) {
+      pills.push(`${sign}${val}${known.suffix ?? ''} ${known.label}`);
+      continue;
+    }
+    const skillDef = data.skills.find((s) => s.id === key);
+    if (skillDef) {
+      pills.push(`${sign}${val}% ${skillDef.name}`);
+      continue;
+    }
+    const attrDef = data.attributes.find((a) => a.id === key);
+    if (attrDef) {
+      pills.push(`${sign}${val} ${attrDef.name}`);
+      continue;
+    }
+    pills.push(`${sign}${val} ${key}`);
+  }
+  if (Array.isArray(perk.unlocks) && perk.unlocks.length > 0) {
+    for (const u of perk.unlocks) {
+      pills.push(u === 'finta' ? 'Odblokowuje: Finta (przełamuje Gardę)' : `Odblokowuje: ${u}`);
+    }
+  }
+  if (perk.id === 'cyrulik') {
+    pills.push('+25% leczenia');
+  } else if (perk.id === 'sokole_oko' || perk.id === 'pewna_reka') {
+    pills.push('+2 obr. rzutem');
+  }
+  return pills;
+}
+
+export interface PerkRequirementCheck {
+  label: string;
+  met: boolean;
+}
+
+/**
+ * Evaluates each prerequisite of a perk against the character's permanent stats.
+ */
+export function formatPerkRequirements(
+  perk: PerkDef,
+  state: OstrzeGameState,
+  data: OriginGameData
+): PerkRequirementCheck[] {
+  const ch = state.character;
+  if (!ch) return [];
+  const req = perk.requires as
+    | { level?: number; attributes?: Partial<Record<AttributeId, number>>; skills?: Partial<Record<SkillId, number>> }
+    | undefined;
+  if (!req) return [];
+
+  const permStats = getStats(state, data, { permanentOnly: true });
+  const checks: PerkRequirementCheck[] = [];
+
+  if (typeof req.level === 'number') {
+    checks.push({
+      label: `Poz. ${req.level}`,
+      met: ch.level >= req.level
+    });
+  }
+  if (req.attributes) {
+    for (const [attrId, minVal] of Object.entries(req.attributes)) {
+      if (typeof minVal !== 'number') continue;
+      const attrName = data.attributes.find((a) => a.id === attrId)?.name ?? attrId;
+      const cur = permStats.permanentAttributes[attrId as AttributeId] ?? 0;
+      checks.push({
+        label: `${attrName} ${minVal}`,
+        met: cur >= minVal
+      });
+    }
+  }
+  if (req.skills) {
+    for (const [skillId, minVal] of Object.entries(req.skills)) {
+      if (typeof minVal !== 'number') continue;
+      const skillName = data.skills.find((s) => s.id === skillId)?.name ?? skillId;
+      const cur = permStats.skills[skillId as SkillId] ?? 0;
+      checks.push({
+        label: `${skillName} ${minVal}%`,
+        met: cur >= minVal
+      });
+    }
+  }
+  return checks;
+}
 
 export function renderCharacterSheetView(params: {
   root: HTMLElement;
@@ -47,10 +184,13 @@ export function renderCharacterSheetView(params: {
   data: OriginGameData;
   rng: SeededRng;
   activeTab: CharacterSheetTab;
+  closeGuardActive?: boolean;
   onSelectTab: (tab: CharacterSheetTab) => void;
   onUpdated: () => void;
   onShowToast: (text: string, tone: 'info' | 'gold' | 'success') => void;
   onRerender: () => void;
+  onAttemptClose?: () => void;
+  onCancelCloseGuard?: () => void;
   onClose: () => void;
 }): void {
   const {
@@ -59,10 +199,13 @@ export function renderCharacterSheetView(params: {
     data,
     rng,
     activeTab,
+    closeGuardActive = false,
     onSelectTab,
     onUpdated,
     onShowToast,
     onRerender,
+    onAttemptClose,
+    onCancelCloseGuard,
     onClose
   } = params;
   const ch = state.character;
@@ -85,28 +228,30 @@ export function renderCharacterSheetView(params: {
       const max = attrMaxBase + (data.rules.creator.gifts[attr.id] ?? 0);
       const canAdd = ch.freeAttributePoints > 0 && ch.attributes[attr.id] < max;
       return `
-        <div class="ostrze-row">
-          <span>${escapeHtml(attr.name)}</span>
+        <div class="ostrze-row ostrze-cs-stat-row" title="${escapeHtml(attr.description)}">
+          <span class="ostrze-cs-stat-name">${escapeHtml(attr.name)}</span>
           <span class="ostrze-stepper">
-            <strong>${val}</strong>
-            ${canAdd ? `<button class="ostrze-step-btn" data-cs-attr="${attr.id}">+</button>` : ''}
+            <strong class="ostrze-num">${val}</strong>
+            ${canAdd ? `<button type="button" class="ostrze-step-btn is-upgrade" data-cs-attr="${attr.id}" title="Dodaj +1 do ${escapeHtml(attr.name)}">+</button>` : ''}
           </span>
         </div>
       `;
     })
     .join('');
 
+  const taggedStep = data.rules.skills.taggedPointValue;
   const skillsHtml = data.skills
     .map((sk) => {
       const val = stats.skills[sk.id];
       const isTagged = ch.tagged.includes(sk.id);
-      const canAdd = ch.freeSkillPoints > 0 && val < 100;
+      const step = isTagged ? taggedStep : 1;
+      const canAdd = ch.freeSkillPoints > 0 && val + step <= data.rules.skills.max;
       return `
-        <div class="ostrze-row">
-          <span>${escapeHtml(sk.name)}${isTagged ? ' ★' : ''}</span>
+        <div class="ostrze-row ostrze-cs-stat-row ${isTagged ? 'is-tagged' : ''}">
+          <span class="ostrze-cs-stat-name">${escapeHtml(sk.name)}${isTagged ? ' <span class="ostrze-cs-star" title="Umiejętność oznaczona (+2% za punkt)">★</span>' : ''}</span>
           <span class="ostrze-stepper">
-            <strong>${val}%</strong>
-            ${canAdd ? `<button class="ostrze-step-btn" data-cs-skill="${sk.id}">+</button>` : ''}
+            <strong class="ostrze-num">${val}%</strong>
+            ${canAdd ? `<button type="button" class="ostrze-step-btn is-upgrade is-skill-step" data-cs-skill="${sk.id}" title="Zwiększ ${escapeHtml(sk.name)} o +${step}%">+${step}</button>` : ''}
           </span>
         </div>
       `;
@@ -114,31 +259,101 @@ export function renderCharacterSheetView(params: {
     .join('');
 
   const availablePerks = getAvailablePerks(state, data);
+  const maxPerks = data.rules.leveling.maxPerks;
+  const perkInterval = data.rules.leveling.perkEveryLevels;
+  const nextPerkLevel =
+    ch.perks.length + ch.freePerkPicks >= maxPerks
+      ? null
+      : Math.ceil((ch.level + 1) / perkInterval) * perkInterval;
+
   const pickedPerksHtml =
     ch.perks.length > 0
       ? ch.perks
           .map((id) => {
             const p = data.perks.find((x) => x.id === id);
-            return `<div class="ostrze-row"><span><strong>${escapeHtml(p?.name ?? id)}</strong></span><span>✓</span></div>`;
+            const modPills = p ? formatPerkModifiers(p, data) : [];
+            return `
+              <div class="ostrze-perk-card is-owned">
+                <div class="ostrze-perk-head">
+                  <strong class="ostrze-perk-name">${escapeHtml(p?.name ?? id)}</strong>
+                  <span class="ostrze-perk-owned-mark">✓</span>
+                </div>
+                ${
+                  modPills.length > 0
+                    ? `<div class="ostrze-perk-mods">${modPills.map((m) => `<span class="ostrze-perk-mod-pill">${escapeHtml(m)}</span>`).join('')}</div>`
+                    : ''
+                }
+              </div>
+            `;
           })
           .join('')
-      : '<div class="ostrze-subtitle" style="margin-bottom:0">Brak wybranych talentów.</div>';
+      : '<div class="ostrze-perk-empty">Brak wybranych talentów. Nowy talent odblokujesz co 2 poziomy.</div>';
 
   const perkChoicesHtml =
     ch.freePerkPicks > 0
-      ? availablePerks
-          .map(
-            (p) => `
-            <div class="ostrze-notice-card">
-              <div class="ostrze-notice-head">
-                <span class="ostrze-notice-title">${escapeHtml(p.name)}</span>
-                <button class="ostrze-hub-btn is-alert" data-cs-perk="${escapeHtml(p.id)}">Wybierz talent</button>
-              </div>
-              <div class="ostrze-subtitle" style="margin-bottom:0">${escapeHtml(p.description ?? '')}</div>
-            </div>
-          `
-          )
-          .join('')
+      ? availablePerks.length > 0
+        ? availablePerks
+            .map((p) => {
+              const modPills = formatPerkModifiers(p, data);
+              return `
+                <div class="ostrze-perk-card is-pickable">
+                  <div class="ostrze-perk-head">
+                    <strong class="ostrze-perk-name">${escapeHtml(p.name)}</strong>
+                    <button type="button" class="ostrze-hub-btn is-alert ostrze-perk-pick-btn" data-cs-perk="${escapeHtml(p.id)}">Wybierz</button>
+                  </div>
+                  ${
+                    modPills.length > 0
+                      ? `<div class="ostrze-perk-mods">${modPills.map((m) => `<span class="ostrze-perk-mod-pill is-highlight">${escapeHtml(m)}</span>`).join('')}</div>`
+                      : ''
+                  }
+                  <div class="ostrze-perk-desc">${escapeHtml(p.description ?? '')}</div>
+                </div>
+              `;
+            })
+            .join('')
+        : '<div class="ostrze-perk-empty">Brak talentów spełniających wymagania. Rozdaj najpierw punkty Atrybutów lub Umiejętności.</div>'
+      : '';
+
+  const lockedPerks = data.perks.filter(
+    (p) => !ch.perks.includes(p.id) && !canPickPerk(state, p, data)
+  );
+  const upcomingPerksHtml =
+    ch.perks.length < maxPerks && lockedPerks.length > 0
+      ? `
+        <details class="ostrze-perk-preview" ${ch.freePerkPicks === 0 && ch.perks.length === 0 ? 'open' : ''}>
+          <summary>Katalog talentów i wymagania (${lockedPerks.length})</summary>
+          <div class="ostrze-perk-preview-list">
+            ${lockedPerks
+              .map((p) => {
+                const modPills = formatPerkModifiers(p, data);
+                const reqChecks = formatPerkRequirements(p, state, data);
+                return `
+                  <div class="ostrze-perk-card is-locked">
+                    <div class="ostrze-perk-head">
+                      <strong class="ostrze-perk-name">${escapeHtml(p.name)}</strong>
+                    </div>
+                    ${
+                      modPills.length > 0
+                        ? `<div class="ostrze-perk-mods">${modPills.map((m) => `<span class="ostrze-perk-mod-pill">${escapeHtml(m)}</span>`).join('')}</div>`
+                        : ''
+                    }
+                    ${
+                      reqChecks.length > 0
+                        ? `<div class="ostrze-perk-reqs">${reqChecks
+                            .map(
+                              (r) =>
+                                `<span class="ostrze-perk-req ${r.met ? 'is-met' : 'is-unmet'}">${r.met ? '✓' : '✕'} ${escapeHtml(r.label)}</span>`
+                            )
+                            .join('')}</div>`
+                        : ''
+                    }
+                  </div>
+                `;
+              })
+              .join('')}
+          </div>
+        </details>
+      `
       : '';
 
   const gearCounts = countInventoryByCategory(state.inventory.items, data);
@@ -177,6 +392,60 @@ export function renderCharacterSheetView(params: {
     </div>
   `;
 
+  const quickBelt = state.inventory.quickBelt ?? [null, null, null, null];
+  const targetBeltSlot = resolveTargetQuickBeltSlot(quickBelt, selectedQuickBeltSlot);
+
+  const quickBeltStripHtml = `
+    <div class="ostrze-belt-strip" data-cs-quickbelt-strip="true">
+      <div class="ostrze-belt-strip-head">
+        <span class="ostrze-belt-strip-title">Pas Szybkiego Użycia <kbd class="ostrze-kbd">4–7</kbd></span>
+        <span class="ostrze-belt-strip-hint">
+          ${
+            selectedQuickBeltSlot !== null
+              ? `Wybrano docelowy slot [${selectedQuickBeltSlot + 4}] — kliknij „+ Pas” przy przedmiocie.`
+              : 'Kliknij „+ Pas” przy przedmiocie lub wybierz konkretny slot.'
+          }
+        </span>
+      </div>
+      <div class="ostrze-belt-slots-grid">
+        ${[0, 1, 2, 3]
+          .map((slotIdx) => {
+            const pinnedId = quickBelt[slotIdx] ?? null;
+            const pinnedItem = pinnedId ? data.items.find((i) => i.id === pinnedId) : undefined;
+            const pinnedQty = pinnedId
+              ? state.inventory.items.find((i) => i.id === pinnedId)?.qty ?? 0
+              : 0;
+            const isTarget = selectedQuickBeltSlot === slotIdx;
+            return `
+              <div
+                class="ostrze-belt-slot ${pinnedId ? 'is-filled' : 'is-empty'} ${isTarget ? 'is-target' : ''}"
+                data-cs-belt-slot-select="${slotIdx}"
+                role="button"
+                tabindex="0"
+                title="${pinnedId ? `Slot [${slotIdx + 4}]: ${escapeHtml(pinnedItem?.name ?? pinnedId)}` : `Wybierz slot [${slotIdx + 4}] jako docelowy`}"
+              >
+                <kbd class="ostrze-kbd">${slotIdx + 4}</kbd>
+                <div class="ostrze-belt-slot-info">
+                  ${
+                    pinnedId
+                      ? `<strong class="ostrze-belt-slot-name">${escapeHtml(pinnedItem?.name ?? pinnedId)}</strong>
+                         <span class="ostrze-belt-slot-qty ostrze-num">×${pinnedQty}</span>`
+                      : `<span class="ostrze-belt-slot-empty">Wolny slot</span>`
+                  }
+                </div>
+                ${
+                  pinnedId
+                    ? `<button type="button" class="ostrze-belt-slot-clear" data-cs-belt-unpin="${slotIdx}" title="Odepnij slot [${slotIdx + 4}]" aria-label="Odepnij">×</button>`
+                    : ''
+                }
+              </div>
+            `;
+          })
+          .join('')}
+      </div>
+    </div>
+  `;
+
   const itemsHtml =
     visibleInventoryEntries.length > 0
       ? visibleInventoryEntries
@@ -203,34 +472,29 @@ export function renderCharacterSheetView(params: {
                 ? `Użyj (+${healFlat} HP)`
                 : 'Użyj';
             const beltEligible = isQuickBeltEligible(item);
-            const pinnedSlotIdx = (state.inventory.quickBelt ?? []).indexOf(entry.id);
+            const pinnedSlotIdx = quickBelt.indexOf(entry.id);
             const beltPinHtml = beltEligible
               ? pinnedSlotIdx >= 0
-                ? `<button class="ostrze-hub-btn" data-cs-belt-unpin="${pinnedSlotIdx}" title="Odepnij z pasa szybkiego użycia">Pas [${pinnedSlotIdx + 4}] ✕</button>`
-                : `<select class="ostrze-belt-select" data-cs-belt-pin="${escapeHtml(entry.id)}" title="Przypnij do slotu pasa walki [4]–[7]">
-                    <option value="">+ Pas…</option>
-                    <option value="0">Slot [4]</option>
-                    <option value="1">Slot [5]</option>
-                    <option value="2">Slot [6]</option>
-                    <option value="3">Slot [7]</option>
-                  </select>`
+                ? `<button type="button" class="ostrze-hub-btn ostrze-belt-pinned-btn" data-cs-belt-unpin="${pinnedSlotIdx}" title="Odepnij z pasa szybkiego użycia">Pas [${pinnedSlotIdx + 4}] ✕</button>`
+                : `<button type="button" class="ostrze-hub-btn ostrze-belt-pin-btn" data-cs-belt-quickpin="${escapeHtml(entry.id)}" title="Przypnij do slotu pasa [${targetBeltSlot + 4}]">+ Pas [${targetBeltSlot + 4}]</button>`
               : '';
             const statPillsHtml = renderItemStatPillsHtml(item, state, data);
             return `
-              <div class="ostrze-row">
+              <div class="ostrze-row ostrze-gear-row">
                 <div style="flex:1;min-width:0;">
-                  <div>
-                    ${escapeHtml(item?.name ?? entry.id)} ×${entry.qty}
-                    ${isEquipped ? '<span style="color:#6fd18e;font-size:0.75rem"> [Założono]</span>' : ''}
-                    ${pinnedSlotIdx >= 0 ? `<span style="color:#e5b869;font-size:0.75rem"> [Pas ${pinnedSlotIdx + 4}]</span>` : ''}
+                  <div class="ostrze-gear-item-line">
+                    <strong>${escapeHtml(item?.name ?? entry.id)}</strong>
+                    <span class="ostrze-shop-qty ostrze-num">×${entry.qty}</span>
+                    ${isEquipped ? '<span class="ostrze-gear-equipped-tag">Założono</span>' : ''}
+                    ${pinnedSlotIdx >= 0 ? `<span class="ostrze-gear-belt-tag">Pas ${pinnedSlotIdx + 4}</span>` : ''}
                   </div>
                   ${statPillsHtml}
                 </div>
                 <span class="ostrze-stepper">
                   ${beltPinHtml}
-                  ${canEquip ? `<button class="ostrze-hub-btn" data-cs-equip="${escapeHtml(entry.id)}">Załóż</button>` : ''}
-                  ${isEquipped && equipSlot ? `<button class="ostrze-hub-btn" data-cs-unequip="${escapeHtml(equipSlot)}">Zdejmij</button>` : ''}
-                  ${canUse ? `<button class="ostrze-hub-btn" data-cs-use="${escapeHtml(entry.id)}">${useLabel}</button>` : ''}
+                  ${canEquip ? `<button type="button" class="ostrze-hub-btn" data-cs-equip="${escapeHtml(entry.id)}">Załóż</button>` : ''}
+                  ${isEquipped && equipSlot ? `<button type="button" class="ostrze-hub-btn" data-cs-unequip="${escapeHtml(equipSlot)}">Zdejmij</button>` : ''}
+                  ${canUse ? `<button type="button" class="ostrze-hub-btn" data-cs-use="${escapeHtml(entry.id)}">${useLabel}</button>` : ''}
                 </span>
               </div>
             `;
@@ -259,7 +523,7 @@ export function renderCharacterSheetView(params: {
                   <div><span style="text-transform:capitalize;color:#9e9689">${escapeHtml(slot)}:</span> <strong>${escapeHtml(item?.name ?? itemId)}</strong></div>
                   ${pills}
                 </div>
-                <button class="ostrze-hub-btn" data-cs-unequip="${escapeHtml(slot)}">Zdejmij</button>
+                <button type="button" class="ostrze-hub-btn" data-cs-unequip="${escapeHtml(slot)}">Zdejmij</button>
               </div>
             `;
           })
@@ -476,69 +740,133 @@ export function renderCharacterSheetView(params: {
     )
     .join('');
 
+  const levelUpBannerHtml =
+    pendingPts > 0
+      ? `
+        <div class="ostrze-levelup-banner" data-cs-levelup-banner="true">
+          <span class="ostrze-levelup-label">Awans — do rozdania:</span>
+          <div class="ostrze-levelup-steps">
+            ${
+              ch.freeAttributePoints > 0
+                ? `<span class="ostrze-levelup-pill is-pending">Atrybuty <strong>+${ch.freeAttributePoints}</strong></span>`
+                : ''
+            }
+            ${
+              ch.freeSkillPoints > 0
+                ? `<span class="ostrze-levelup-pill is-pending">Umiejętności <strong>+${ch.freeSkillPoints}</strong></span>`
+                : ''
+            }
+            ${
+              ch.freePerkPicks > 0
+                ? `<button type="button" class="ostrze-levelup-pill is-perk-cta" data-cs-focus-perks="true">★ Wybierz Talent <strong>+${ch.freePerkPicks}</strong> →</button>`
+                : ''
+            }
+          </div>
+        </div>
+      `
+      : '';
+
+  const weaponId = state.inventory?.equipped?.bron;
+  const weapon = weaponId ? data.items.find((it) => it.id === weaponId) : undefined;
+  const wMin = (weapon?.damage?.[0] ?? 2) + stats.derived.bonusDamage;
+  const wMax = (weapon?.damage?.[1] ?? 4) + stats.derived.bonusDamage;
+  const wLabel = weapon ? weapon.name : 'Walka wręcz';
+  const hasResists =
+    stats.derived.resistStrach > 0 ||
+    stats.derived.resistOgluszenie > 0 ||
+    stats.derived.resistRozkojarzenie > 0;
+
   const tabContentHtml =
     activeTab === 'stats'
       ? `
-        ${
-          pendingPts > 0
-            ? `<div class="ostrze-feedback">Punkty do wydania — Cechy: ${ch.freeAttributePoints} · Umiejętności: ${ch.freeSkillPoints} · Talenty: ${ch.freePerkPicks}</div>`
-            : ''
-        }
-        <div class="ostrze-creator-grid">
-          <div class="ostrze-panel">
-            <h3>Atrybuty ${ch.freeAttributePoints > 0 ? `(wolne: ${ch.freeAttributePoints})` : ''}</h3>
+        ${levelUpBannerHtml}
+        <div class="ostrze-cs-stats-grid">
+          <div class="ostrze-panel ostrze-cs-col ${ch.freeAttributePoints > 0 ? 'is-action-ready' : ''}" data-preserve-scroll="cs-attrs">
+            <h3>
+              Atrybuty
+              ${ch.freeAttributePoints > 0 ? `<span class="ostrze-panel-badge">+${ch.freeAttributePoints} pkt</span>` : ''}
+            </h3>
             ${attrsHtml}
-            <h3 style="margin-top:14px">Pochodne bojowe</h3>
-            ${(() => {
-              const weaponId = state.inventory?.equipped?.bron;
-              const weapon = weaponId ? data.items.find((it) => it.id === weaponId) : undefined;
-              const wMin = (weapon?.damage?.[0] ?? 2) + stats.derived.bonusDamage;
-              const wMax = (weapon?.damage?.[1] ?? 4) + stats.derived.bonusDamage;
-              const wLabel = weapon ? `${weapon.name}` : 'Walka wręcz';
-              return `<div class="ostrze-row"><span>Broń (${escapeHtml(wLabel)})</span><strong>${wMin}–${wMax} obr.</strong></div>`;
-            })()}
-            <div class="ostrze-row"><span>Pancerz / Obrona</span><strong>${stats.derived.armor} / ${stats.derived.defense}</strong></div>
-            <div class="ostrze-row"><span>Premia obrażeń (atuty/olej)</span><strong>+${stats.derived.bonusDamage} obr.</strong></div>
-            <div class="ostrze-row"><span>Trafienie (wręcz / dyst.)</span><strong>+${stats.derived.meleeHitChance}% / +${stats.derived.rangedHitChance}%</strong></div>
-            <div class="ostrze-row"><span>Krytyk / Inicjatywa</span><strong>${stats.derived.critChance}% / ${stats.derived.initiative}</strong></div>
-            ${
-              stats.derived.resistStrach > 0 || stats.derived.resistOgluszenie > 0 || stats.derived.resistRozkojarzenie > 0
-                ? `<div class="ostrze-row"><span>Odporności (Strach / Ogł. / Rozk.)</span><strong>${stats.derived.resistStrach}% / ${stats.derived.resistOgluszenie}% / ${stats.derived.resistRozkojarzenie}%</strong></div>`
-                : ''
-            }
-            ${(() => {
-              const badges: string[] = [];
-              if (ch.perks.includes('finta')) badges.push('⚔️ Mistrz finty');
-              if (ch.perks.includes('cyrulik')) badges.push('🩹 Cyrulik (+25% lecz.)');
-              if (ch.perks.includes('sokole_oko')) badges.push('🎯 Sokole oko (+2 rzut)');
-              if (ch.perks.includes('pewna_reka')) badges.push('🏹 Pewna ręka (+2 rzut)');
-              if (ch.perks.includes('nieugiety')) badges.push('🛡️ Nieugięty');
-              if (ch.perks.includes('chlodna_glowa')) badges.push('🧠 Chłodna głowa');
-              return badges.length > 0
-                ? `<div class="ostrze-combat-pills" style="margin-top:8px;">${badges.map((b) => `<span class="ostrze-combat-pill is-status">${escapeHtml(b)}</span>`).join('')}</div>`
-                : '';
-            })()}
+            <h3 class="ostrze-cs-subhead">Pochodne bojowe</h3>
+            <div class="ostrze-cs-derived-grid">
+              <div class="ostrze-cs-derived-item" title="${escapeHtml(wLabel)}">
+                <span>Obrażenia</span>
+                <strong class="ostrze-num">${wMin}–${wMax}</strong>
+              </div>
+              <div class="ostrze-cs-derived-item">
+                <span>Pancerz / Obr.</span>
+                <strong class="ostrze-num">${stats.derived.armor} / ${stats.derived.defense}</strong>
+              </div>
+              <div class="ostrze-cs-derived-item">
+                <span>Traf. wręcz / dyst.</span>
+                <strong class="ostrze-num">+${stats.derived.meleeHitChance}% / +${stats.derived.rangedHitChance}%</strong>
+              </div>
+              <div class="ostrze-cs-derived-item">
+                <span>Krytyk / Inic.</span>
+                <strong class="ostrze-num">${stats.derived.critChance}% / ${stats.derived.initiative}</strong>
+              </div>
+              ${
+                stats.derived.bonusDamage !== 0
+                  ? `<div class="ostrze-cs-derived-item"><span>Premia obr.</span><strong class="ostrze-num">+${stats.derived.bonusDamage}</strong></div>`
+                  : ''
+              }
+              ${
+                hasResists
+                  ? `<div class="ostrze-cs-derived-item"><span>Odp. Str/Ogł/Roz</span><strong class="ostrze-num">${stats.derived.resistStrach}/${stats.derived.resistOgluszenie}/${stats.derived.resistRozkojarzenie}%</strong></div>`
+                  : ''
+              }
+            </div>
           </div>
-          <div class="ostrze-panel">
-            <h3>Umiejętności ${ch.freeSkillPoints > 0 ? `(wolne: ${ch.freeSkillPoints})` : ''}</h3>
+
+          <div class="ostrze-panel ostrze-cs-col ${ch.freeSkillPoints > 0 ? 'is-action-ready' : ''}" data-preserve-scroll="cs-skills">
+            <h3>
+              Umiejętności
+              ${ch.freeSkillPoints > 0 ? `<span class="ostrze-panel-badge">+${ch.freeSkillPoints} pkt</span>` : ''}
+            </h3>
             ${skillsHtml}
           </div>
+
+          <div class="ostrze-panel ostrze-cs-col ostrze-cs-perks-col ${ch.freePerkPicks > 0 ? 'is-perk-ready' : ''}" data-cs-perks-panel="true" data-preserve-scroll="cs-perks">
+            <h3>
+              Talenty (${ch.perks.length}/${maxPerks})
+              ${
+                ch.freePerkPicks > 0
+                  ? `<span class="ostrze-panel-badge is-perk-alert">★ Wybierz: ${ch.freePerkPicks}</span>`
+                  : nextPerkLevel
+                    ? `<span class="ostrze-panel-badge is-muted">Nast. poz. ${nextPerkLevel}</span>`
+                    : ''
+              }
+            </h3>
+            ${
+              ch.freePerkPicks > 0
+                ? `<div class="ostrze-perk-pick-section" data-cs-perk-picker="true">
+                    <div class="ostrze-perk-section-label">Dostępne teraz (${availablePerks.length}):</div>
+                    ${perkChoicesHtml}
+                  </div>`
+                : ''
+            }
+            ${
+              ch.perks.length > 0 || ch.freePerkPicks === 0
+                ? `<div class="ostrze-perk-owned-section">
+                    ${ch.freePerkPicks > 0 && ch.perks.length > 0 ? '<div class="ostrze-perk-section-label">Posiadane talenty:</div>' : ''}
+                    ${pickedPerksHtml}
+                  </div>`
+                : ''
+            }
+            ${upcomingPerksHtml}
+          </div>
         </div>
-        <div class="ostrze-panel" style="margin-bottom:14px">
-          <h3>Talenty (${ch.perks.length}/${data.rules.leveling.maxPerks})</h3>
-          ${pickedPerksHtml}
-        </div>
-        ${perkChoicesHtml ? `<div class="ostrze-panel" style="margin-bottom:14px"><h3>Wybierz nowy talent (wolne: ${ch.freePerkPicks})</h3>${perkChoicesHtml}</div>` : ''}
       `
       : activeTab === 'gear'
         ? `
-          <div class="ostrze-creator-grid">
-            <div class="ostrze-panel">
+          ${quickBeltStripHtml}
+          <div class="ostrze-creator-grid ostrze-cs-two-col">
+            <div class="ostrze-panel ostrze-cs-col" data-preserve-scroll="cs-equipped">
               <h3>Założony ekwipunek</h3>
               ${equippedHtml}
             </div>
-            <div class="ostrze-panel">
-              <h3>Plecak i Pas Szybkiego Użycia <kbd class="ostrze-kbd">4–7</kbd></h3>
+            <div class="ostrze-panel ostrze-cs-col" data-preserve-scroll="cs-bag">
+              <h3>Plecak (${state.inventory.items.length})</h3>
               ${gearFiltersHtml}
               ${itemsHtml}
             </div>
@@ -546,60 +874,60 @@ export function renderCharacterSheetView(params: {
         `
         : activeTab === 'journal'
           ? `
-          <div class="ostrze-creator-grid">
-            <div class="ostrze-panel">
+          <div class="ostrze-creator-grid ostrze-cs-two-col">
+            <div class="ostrze-panel ostrze-cs-col" data-preserve-scroll="cs-quests">
               <h3>Aktywne zadania (${activeQuests.length})</h3>
               ${renderQuestList(activeQuests, 'Brak aktywnych zadań.')}
-              <h3 style="margin-top:14px">Ukończone zadania (${doneQuests.length})</h3>
+              <h3 class="ostrze-cs-subhead">Ukończone zadania (${doneQuests.length})</h3>
               ${renderQuestList(doneQuests, 'Brak ukończonych zadań.')}
             </div>
-            <div class="ostrze-panel">
+            <div class="ostrze-panel ostrze-cs-col" data-preserve-scroll="cs-keepsakes">
               <h3>Pamiątki z Brzeziny</h3>
               ${
                 keepsakesHtml ||
                 '<div class="ostrze-subtitle" style="margin-bottom:0">Nie niesiesz jeszcze żadnych osobistych pamiątek po towarzyszach.</div>'
               }
-              <h3 style="margin-top:14px">Poznane lokacje (${readableKnownPlaces.length} / ${progress.totalLocations})</h3>
+              <h3 class="ostrze-cs-subhead">Poznane lokacje (${readableKnownPlaces.length} / ${progress.totalLocations})</h3>
               <div class="ostrze-shop-desc">${escapeHtml(readableKnownPlaces.join(', ') || 'Brzezina — Dziedziniec')}</div>
             </div>
           </div>
         `
           : activeTab === 'bestiary'
             ? `
-          <div class="ostrze-panel" data-cs-bestiary="true">
+          <div class="ostrze-panel ostrze-cs-col" data-cs-bestiary="true" data-preserve-scroll="cs-bestiary">
             <h3>Bestiariusz i Wiedza Łowiecka (${unlockedBestiaryCount} / ${bestiaryEntries.length})</h3>
-            <p class="ostrze-subtitle" style="margin-bottom:10px;">Pokonanie <strong>${HUNTER_LORE_KILL_THRESHOLD} sztuk</strong> danego gatunku odblokowuje <strong>Wiedzę Łowiecką (+1 obr. przeciwko temu wrogowi)</strong>.</p>
+            <p class="ostrze-subtitle" style="margin-bottom:8px;">Pokonanie <strong>${HUNTER_LORE_KILL_THRESHOLD} sztuk</strong> danego gatunku odblokowuje <strong>Wiedzę Łowiecką (+1 obr. przeciwko temu wrogowi)</strong>.</p>
             <div class="ostrze-bestiary-grid">
               ${bestiaryCardsHtml}
             </div>
           </div>
         `
             : `
-          <div class="ostrze-creator-grid" data-cs-chronicle="true">
-            <div class="ostrze-panel">
+          <div class="ostrze-creator-grid ostrze-cs-two-col" data-cs-chronicle="true">
+            <div class="ostrze-panel ostrze-cs-col" data-preserve-scroll="cs-progress">
               <h3>Postęp kampanii</h3>
               <div class="ostrze-chronicle-bars">
                 <div class="ostrze-progress-item">
-                  <div class="ostrze-row"><span>Prolog — Brzezina</span><strong>${progress.prologuePct}%</strong></div>
+                  <div class="ostrze-row"><span>Prolog — Brzezina</span><strong class="ostrze-num">${progress.prologuePct}%</strong></div>
                   <div class="ostrze-progress-track"><div class="ostrze-progress-fill" style="width:${progress.prologuePct}%"></div></div>
                 </div>
                 <div class="ostrze-progress-item">
-                  <div class="ostrze-row"><span>Akt I — Pogórze</span><strong>${progress.act1Pct}%</strong></div>
+                  <div class="ostrze-row"><span>Akt I — Pogórze</span><strong class="ostrze-num">${progress.act1Pct}%</strong></div>
                   <div class="ostrze-progress-track"><div class="ostrze-progress-fill" style="width:${progress.act1Pct}%"></div></div>
                 </div>
                 <div class="ostrze-progress-item">
-                  <div class="ostrze-row"><span>Akt II — Głusz</span><strong>${progress.act2Pct}%</strong></div>
+                  <div class="ostrze-row"><span>Akt II — Głusz</span><strong class="ostrze-num">${progress.act2Pct}%</strong></div>
                   <div class="ostrze-progress-track"><div class="ostrze-progress-fill" style="width:${progress.act2Pct}%"></div></div>
                 </div>
               </div>
-              <h3 style="margin-top:14px">Statystyki wyprawy</h3>
+              <h3 class="ostrze-cs-subhead">Statystyki wyprawy</h3>
               <div class="ostrze-row"><span>Dzień wyprawy</span><strong>Dzień ${progress.daysElapsed}</strong></div>
               <div class="ostrze-row"><span>Atmosfera i pora</span><strong>${escapeHtml(progress.atmosphereLabel)}</strong></div>
-              <div class="ostrze-row"><span>Odkryte lokacje</span><strong>${progress.visitedCount} / ${progress.totalLocations}</strong></div>
-              <div class="ostrze-row"><span>Zadania (ukończone / aktywne)</span><strong>${progress.completedQuests} / ${progress.activeQuests}</strong></div>
-              <div class="ostrze-row"><span>Doświadczenie / Talenty</span><strong>${progress.totalXp} XP · ${progress.perksCount}</strong></div>
+              <div class="ostrze-row"><span>Odkryte lokacje</span><strong class="ostrze-num">${progress.visitedCount} / ${progress.totalLocations}</strong></div>
+              <div class="ostrze-row"><span>Zadania (ukończone / aktywne)</span><strong class="ostrze-num">${progress.completedQuests} / ${progress.activeQuests}</strong></div>
+              <div class="ostrze-row"><span>Doświadczenie / Talenty</span><strong class="ostrze-num">${progress.totalXp} XP · ${progress.perksCount}</strong></div>
             </div>
-            <div class="ostrze-panel">
+            <div class="ostrze-panel ostrze-cs-col" data-preserve-scroll="cs-achievements">
               <h3>Dokonania (${progress.unlockedAchievements} / ${progress.totalAchievements})</h3>
               <div class="ostrze-ach-grid">
                 ${achievementsGridHtml}
@@ -608,13 +936,47 @@ export function renderCharacterSheetView(params: {
           </div>
         `;
 
+  const perkGuardVisible = closeGuardActive && hasUnspentPickablePerk(state, data);
+  const requestClose = (): void => {
+    if (onAttemptClose) {
+      onAttemptClose();
+    } else {
+      onClose();
+    }
+  };
+
+  const footerHtml = perkGuardVisible
+    ? `
+        <div class="ostrze-modal-footer is-perk-guard" data-cs-perk-guard="true">
+          <span class="ostrze-perk-guard-text">⚠️ Masz jeszcze niewybrany Talent (${ch.freePerkPicks})!</span>
+          <div class="ostrze-perk-guard-actions">
+            <button type="button" class="ostrze-hub-btn is-alert" data-cs-guard-go-perks="true">★ Przejdź do Talentów</button>
+            <button type="button" class="ostrze-hub-btn" data-cs-guard-force-close="true">Zamknij mimo to</button>
+          </div>
+        </div>
+      `
+    : `
+        <div class="ostrze-modal-footer">
+          <span class="ostrze-modal-footer-hint">
+            ${
+              activeTab === 'stats'
+                ? '★ Umiejętności oznaczone rosną o +2% za punkt · Talenty odblokowują się co 2 poziomy.'
+                : activeTab === 'gear'
+                  ? 'Przypnij opatrunki i mikstury do Pasa [4–7], aby używać ich szybko w walce.'
+                  : 'Naciśnij ESC, aby wrócić do gry.'
+            }
+          </span>
+          <button type="button" class="ostrze-btn ostrze-modal-close-btn" id="ostrze-cs-close">Zamknij <kbd class="ostrze-kbd">ESC</kbd></button>
+        </div>
+      `;
+
   mountModalCard(
     root,
     'ostrze-card ostrze-cs-card',
     `
         <div class="ostrze-cs-header">
-          <div>
-            <h2 class="ostrze-title" style="margin-bottom:4px">${escapeHtml(ch.name)} — Poziom ${ch.level}</h2>
+          <div class="ostrze-cs-identity">
+            <h2 class="ostrze-title" style="margin-bottom:3px">${escapeHtml(ch.name)} — Poziom ${ch.level}</h2>
             <div class="ostrze-shop-meta">
               <span class="ostrze-shop-tag">${escapeHtml(cls?.name ?? ch.classId)}</span>
               <span class="ostrze-shop-tag">AP: ${stats.derived.ap}</span>
@@ -622,41 +984,48 @@ export function renderCharacterSheetView(params: {
               <span class="ostrze-purse-pill">🪙 ${ch.money} gr</span>
             </div>
           </div>
-          <div class="ostrze-cs-bars">
-            <div class="ostrze-hp-bar">
-              <div class="ostrze-hp-fill ${hpPct <= 30 ? 'is-low' : ''}" style="width:${hpPct}%"></div>
-              <span class="ostrze-hp-label">${ch.hp} / ${hpMax} HP</span>
+          <div class="ostrze-cs-header-right">
+            <div class="ostrze-cs-bars">
+              <div class="ostrze-hp-bar">
+                <div class="ostrze-hp-fill ${hpPct <= 30 ? 'is-low' : ''}" style="width:${hpPct}%"></div>
+                <span class="ostrze-hp-label">${ch.hp} / ${hpMax} HP</span>
+              </div>
+              <div class="ostrze-cs-xp-row" title="XP: ${ch.xp} / ${nextLvXp}">
+                <div class="ostrze-xp-bar" style="margin:0;flex:1;">
+                  <div class="ostrze-xp-fill" style="width:${xpPct}%"></div>
+                </div>
+                <span class="ostrze-cs-xp-text">${ch.xp}/${nextLvXp} XP</span>
+              </div>
             </div>
-            <div class="ostrze-xp-bar" title="XP: ${ch.xp} / ${nextLvXp}" style="margin:6px 0 0;">
-              <div class="ostrze-xp-fill" style="width:${xpPct}%"></div>
-            </div>
+            <button type="button" class="ostrze-modal-close-x" data-cs-close-top="true" aria-label="Zamknij" title="Zamknij [ESC]">×</button>
           </div>
         </div>
 
         <div class="ostrze-cs-tabs">
-          <button class="ostrze-cs-tab ${activeTab === 'stats' ? 'is-active' : ''}" data-cs-tab="stats">
+          <button type="button" class="ostrze-cs-tab ${activeTab === 'stats' ? 'is-active' : ''}" data-cs-tab="stats">
             Postać i Rozwój <kbd class="ostrze-kbd">K</kbd> ${pendingPts > 0 ? `<span class="ostrze-cs-tab-badge">+${pendingPts}</span>` : ''}
           </button>
-          <button class="ostrze-cs-tab ${activeTab === 'gear' ? 'is-active' : ''}" data-cs-tab="gear">
-            Ekwipunek i Pas (${state.inventory.items.length}) <kbd class="ostrze-kbd">I</kbd>
+          <button type="button" class="ostrze-cs-tab ${activeTab === 'gear' ? 'is-active' : ''}" data-cs-tab="gear">
+            Ekwipunek (${state.inventory.items.length}) <kbd class="ostrze-kbd">I</kbd>
           </button>
-          <button class="ostrze-cs-tab ${activeTab === 'journal' ? 'is-active' : ''}" data-cs-tab="journal">
-            Dziennik i Pamiątki <kbd class="ostrze-kbd">J</kbd>
+          <button type="button" class="ostrze-cs-tab ${activeTab === 'journal' ? 'is-active' : ''}" data-cs-tab="journal">
+            Dziennik <kbd class="ostrze-kbd">J</kbd>
           </button>
-          <button class="ostrze-cs-tab ${activeTab === 'bestiary' ? 'is-active' : ''}" data-cs-tab="bestiary">
+          <button type="button" class="ostrze-cs-tab ${activeTab === 'bestiary' ? 'is-active' : ''}" data-cs-tab="bestiary">
             🐺 Bestiariusz (${unlockedBestiaryCount}/${bestiaryEntries.length}) <kbd class="ostrze-kbd">B</kbd>
           </button>
-          <button class="ostrze-cs-tab ${activeTab === 'chronicle' ? 'is-active' : ''}" data-cs-tab="chronicle">
+          <button type="button" class="ostrze-cs-tab ${activeTab === 'chronicle' ? 'is-active' : ''}" data-cs-tab="chronicle">
             🏆 Kronika (${progress.unlockedAchievements}/${progress.totalAchievements})
           </button>
         </div>
 
-        ${tabContentHtml}
-
-        <div style="display:flex;justify-content:flex-end;margin-top:8px">
-          <button class="ostrze-btn" id="ostrze-cs-close">Zamknij <kbd class="ostrze-kbd">ESC</kbd></button>
+        <div class="ostrze-cs-body" data-preserve-scroll="cs-body">
+          ${tabContentHtml}
         </div>
-    `
+
+        ${footerHtml}
+    `,
+    { onOverlayBackdropClick: requestClose }
   );
 
   root.querySelectorAll<HTMLElement>('[data-cs-tab]').forEach((btn) => {
@@ -667,6 +1036,13 @@ export function renderCharacterSheetView(params: {
         onSelectTab(nextTab);
       }
     });
+  });
+
+  root.querySelector('[data-cs-focus-perks]')?.addEventListener('click', () => {
+    const perksPanel = root.querySelector<HTMLElement>('[data-cs-perks-panel]');
+    perksPanel?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+    perksPanel?.classList?.add('is-pulse-highlight');
+    window.setTimeout(() => perksPanel?.classList?.remove('is-pulse-highlight'), 900);
   });
 
   root.querySelectorAll<HTMLElement>('[data-cs-gear-filter]').forEach((btn) => {
@@ -684,6 +1060,7 @@ export function renderCharacterSheetView(params: {
     btn.addEventListener('click', () => {
       const attrId = btn.dataset.csAttr as AttributeId;
       if (spendAttributePoint(state, attrId, data)) {
+        ostrzeAudio.playUiClick();
         onUpdated();
         onRerender();
       }
@@ -694,6 +1071,7 @@ export function renderCharacterSheetView(params: {
     btn.addEventListener('click', () => {
       const skillId = btn.dataset.csSkill as SkillId;
       if (spendSkillPoint(state, skillId, data)) {
+        ostrzeAudio.playUiClick();
         onUpdated();
         onRerender();
       }
@@ -703,7 +1081,12 @@ export function renderCharacterSheetView(params: {
   root.querySelectorAll<HTMLElement>('[data-cs-perk]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const perkId = btn.dataset.csPerk ?? '';
+      const perkDef = data.perks.find((p) => p.id === perkId);
       if (pickPerk(state, perkId, data)) {
+        ostrzeAudio.playPerkPick();
+        if (perkDef) {
+          onShowToast(`Wybrano talent: ${perkDef.name}`, 'gold');
+        }
         onUpdated();
         onRerender();
       }
@@ -785,12 +1168,35 @@ export function renderCharacterSheetView(params: {
     });
   });
 
-  root.querySelectorAll<HTMLSelectElement>('[data-cs-belt-pin]').forEach((sel) => {
-    sel.addEventListener('change', () => {
-      const itemId = sel.dataset.csBeltPin ?? '';
-      const slotIdx = Number(sel.value);
-      if (itemId && !Number.isNaN(slotIdx)) {
+  root.querySelectorAll<HTMLElement>('[data-cs-belt-slot-select]').forEach((slotEl) => {
+    const toggleSlot = (): void => {
+      const idx = Number(slotEl.dataset.csBeltSlotSelect);
+      if (!Number.isNaN(idx)) {
+        ostrzeAudio.playUiClick();
+        selectedQuickBeltSlot = selectedQuickBeltSlot === idx ? null : idx;
+        onRerender();
+      }
+    };
+    slotEl.addEventListener('click', (ev) => {
+      if ((ev.target as HTMLElement | null)?.closest('[data-cs-belt-unpin]')) return;
+      toggleSlot();
+    });
+    slotEl.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' || ev.key === ' ') {
+        ev.preventDefault();
+        toggleSlot();
+      }
+    });
+  });
+
+  root.querySelectorAll<HTMLElement>('[data-cs-belt-quickpin]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const itemId = btn.dataset.csBeltQuickpin ?? '';
+      if (itemId) {
+        const slotIdx = resolveTargetQuickBeltSlot(state.inventory.quickBelt, selectedQuickBeltSlot);
         pinItemToQuickBelt(state, slotIdx, itemId);
+        selectedQuickBeltSlot = null;
+        ostrzeAudio.playUiClick();
         onShowToast(`Przypięto do pasa szybkiego użycia [Slot ${slotIdx + 4}].`, 'info');
         onUpdated();
         onRerender();
@@ -799,10 +1205,12 @@ export function renderCharacterSheetView(params: {
   });
 
   root.querySelectorAll<HTMLElement>('[data-cs-belt-unpin]').forEach((btn) => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
       const slotIdx = Number(btn.dataset.csBeltUnpin);
       if (!Number.isNaN(slotIdx)) {
         pinItemToQuickBelt(state, slotIdx, null);
+        ostrzeAudio.playUiClick();
         onShowToast(`Odpięto slot [${slotIdx + 4}] (powrót do auto-doboru).`, 'info');
         onUpdated();
         onRerender();
@@ -810,7 +1218,24 @@ export function renderCharacterSheetView(params: {
     });
   });
 
-  root.querySelector('#ostrze-cs-close')?.addEventListener('click', () => {
+  root.querySelector('#ostrze-cs-close')?.addEventListener('click', requestClose);
+  root.querySelector('[data-cs-close-top]')?.addEventListener('click', requestClose);
+
+  root.querySelector('[data-cs-guard-go-perks]')?.addEventListener('click', () => {
+    ostrzeAudio.playUiClick();
+    onCancelCloseGuard?.();
+    if (activeTab !== 'stats') {
+      onSelectTab('stats');
+    } else {
+      const perksPanel = root.querySelector<HTMLElement>('[data-cs-perks-panel]');
+      perksPanel?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+      perksPanel?.classList?.add('is-pulse-highlight');
+      window.setTimeout(() => perksPanel?.classList?.remove('is-pulse-highlight'), 900);
+    }
+  });
+
+  root.querySelector('[data-cs-guard-force-close]')?.addEventListener('click', () => {
+    ostrzeAudio.playUiClick();
     onClose();
   });
 }

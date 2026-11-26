@@ -279,21 +279,28 @@ export class ChronicleUxController {
   }
 
   private syncExpandedTopOffset(): void {
-    const hubEl = document.querySelector<HTMLElement>('.ostrze-hub-bar');
-    let hubBottomPx: number | null = null;
-    if (hubEl) {
-      const style = window.getComputedStyle(hubEl);
-      if (style.display !== 'none' && style.visibility !== 'hidden') {
-        const rect = hubEl.getBoundingClientRect();
-        if (rect.height > 0 && rect.bottom > 0) {
-          hubBottomPx = rect.bottom;
-        }
+    // Expanded Chronicle is anchored on the right side of the viewport; only reserve space
+    // for right-side top controls (FABs or a right-aligned hub bar), never the left-side hub bar.
+    let rightTopObstacleBottomPx: number | null = null;
+    const rightCandidates = [
+      document.querySelector<HTMLElement>('.ostrze-help-fab'),
+      document.querySelector<HTMLElement>('.ostrze-attack-fab'),
+      document.querySelector<HTMLElement>('.ostrze-hub-bar')
+    ];
+    const halfViewport = window.innerWidth * 0.5;
+    for (const el of rightCandidates) {
+      if (!el) continue;
+      const style = window.getComputedStyle(el);
+      if (style.display === 'none' || style.visibility === 'hidden') continue;
+      const rect = el.getBoundingClientRect();
+      if (rect.height > 0 && rect.bottom > 0 && rect.left >= halfViewport) {
+        rightTopObstacleBottomPx = Math.max(rightTopObstacleBottomPx ?? 0, rect.bottom);
       }
     }
 
     const topPx = computeExpandedChronicleTop({
       viewportHeight: window.innerHeight,
-      hubBottomPx
+      hubBottomPx: rightTopObstacleBottomPx
     });
     this.hudRoot.style.setProperty('--chronicle-expanded-top', `${topPx}px`);
   }

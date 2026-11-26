@@ -150,6 +150,7 @@ export function renderHelpModalView(params: HelpModalViewParams): void {
                 aria-selected="${activeTab === 'guide' ? 'true' : 'false'}">
                 📖 Poradnik Ostrza
               </button>
+              <button type="button" class="ostrze-modal-close-x" data-help-close-top="true" aria-label="Zamknij" title="Zamknij [ESC]">×</button>
             </div>
           </div>
 
@@ -162,7 +163,7 @@ export function renderHelpModalView(params: HelpModalViewParams): void {
             <button type="button" class="ostrze-hub-btn" id="ostrze-help-close">Zamknij <kbd class="ostrze-kbd">ESC</kbd></button>
           </div>
       `,
-      { dataset: { helpModal: 'true' } }
+      { dataset: { helpModal: 'true' }, onOverlayBackdropClick: onClose }
     );
 
     root.querySelectorAll<HTMLButtonElement>('[data-help-tab]').forEach((btn) => {
@@ -176,6 +177,9 @@ export function renderHelpModalView(params: HelpModalViewParams): void {
     });
 
     root.querySelector<HTMLButtonElement>('#ostrze-help-close')?.addEventListener('click', () => {
+      onClose();
+    });
+    root.querySelector<HTMLButtonElement>('[data-help-close-top]')?.addEventListener('click', () => {
       onClose();
     });
   };

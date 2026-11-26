@@ -408,7 +408,7 @@ export function renderWorldMapView(params: WorldMapViewParams): void {
               <span><i class="ostrze-legend-dot is-quest"></i> Aktywne zadanie</span>
               <span><i class="ostrze-legend-dot is-locked"></i> Niedostępne</span>
             </div>
-            <button type="button" class="ostrze-hub-btn" id="ostrze-travel-close">Zamknij [ESC / M]</button>
+            <button type="button" class="ostrze-hub-btn" id="ostrze-travel-close">Zamknij <kbd class="ostrze-kbd">ESC</kbd> / <kbd class="ostrze-kbd">M</kbd></button>
           </div>
       `,
       { dataset: { worldmapModal: 'true' }, onOverlayBackdropClick: onClose }

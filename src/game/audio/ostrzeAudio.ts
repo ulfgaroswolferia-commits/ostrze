@@ -698,6 +698,41 @@ class OstrzeAudioManager {
     this.playNoiseBurst(0.24, 'bandpass', 2400, 1.8, 0.045, 0.08);
   }
 
+  public playLevelUpFanfare(): void {
+    // Warm ascending 4-note Slavic brass/harp arpeggio (D4 -> F#4 -> A4 -> D5)
+    this.playTone(293.66, 0.16, 'triangle', 0.055, 0);
+    this.playTone(369.99, 0.16, 'triangle', 0.06, 0.09);
+    this.playTone(440.0, 0.2, 'triangle', 0.065, 0.18);
+    this.playTone(587.33, 0.38, 'triangle', 0.075, 0.28);
+    this.playTone(293.66, 0.36, 'sine', 0.04, 0.28);
+  }
+
+  public playPerkPick(): void {
+    // Crisp noble two-note chime (E5 -> B5)
+    this.playTone(659.25, 0.12, 'triangle', 0.055, 0);
+    this.playTone(987.77, 0.24, 'triangle', 0.065, 0.08);
+  }
+
+  public playGuardBreak(): void {
+    // Heavy shield shatter: low thud + metallic crunch
+    this.playTone(145, 0.22, 'sawtooth', 0.075, 0, 52);
+    this.playNoiseBurst(0.16, 'bandpass', 1450, 2.2, 0.07, 0);
+    this.playTone(880, 0.14, 'triangle', 0.045, 0.03, 420);
+  }
+
+  public playRiposte(): void {
+    // Quick sharp steel parry-counter glint
+    this.playTone(1680, 0.09, 'triangle', 0.05, 0, 2420);
+    this.playNoiseBurst(0.07, 'highpass', 2600, 1.5, 0.045, 0.02);
+  }
+
+  public playSynergyProc(): void {
+    // Resonant combo flare (G4 -> D5 -> G5)
+    this.playTone(392.0, 0.12, 'triangle', 0.05, 0, 587.33);
+    this.playTone(783.99, 0.2, 'sine', 0.05, 0.06);
+    this.playNoiseBurst(0.1, 'bandpass', 2100, 2.0, 0.03, 0.03);
+  }
+
   public playFootstep(terrain: string, isStealth = false): void {
     if (this.isMuted()) return;
     const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();

@@ -14,13 +14,18 @@ import {
   resolveEnemyPixArtId,
   resolvePlayerWeaponDamageType
 } from '../rules/combatEnemyMeta';
+import {
+  evaluateGuardBreak,
+  evaluateStatusSynergies
+} from '../rules/combatSynergies';
 import { escapeHtml } from './escapeHtml';
 
 /**
  * Compact Ostrze combat target card mounted alongside engine HudOverlay
  * (without modifying engine/ internals). Shows 64x48 .pix enemy portrait,
- * HP/AP/Defense, active debuffs, resistances from origin/data/enemies.json,
- * target switcher tabs, and triggers WebAudio combat SFX + crit pulse.
+ * HP/AP/Defense, live attack preview with status synergies & Guard Break,
+ * separated Enemy vs Player status sections, actionable boss telegraphs,
+ * synced target switcher tabs ([Tab]), and triggers WebAudio combat SFX + crit pulse.
  */
 export class CombatTargetOverlay {
   private readonly root: HTMLElement;
@@ -50,6 +55,24 @@ export class CombatTargetOverlay {
     this.disposed = true;
     this.abortController.abort();
     this.root.remove();
+  }
+
+  /**
+   * Cycles the active combat target to the next living hostile and syncs `engine.combatState.selectedTargetId`.
+   */
+  public cycleTarget(): boolean {
+    if (this.disposed || !this.engine.combatState.active) return false;
+    const livingEnemies = this.engine.npcs.filter((n) => n.combat?.isHostile && n.combat.isAlive);
+    if (livingEnemies.length <= 1) return false;
+    const curId = this.selectedEnemyId ?? this.engine.combatState.selectedTargetId;
+    const curIdx = livingEnemies.findIndex((e) => e.id === curId);
+    const nextEnemy = livingEnemies[(curIdx + 1) % livingEnemies.length];
+    if (!nextEnemy) return false;
+    this.selectedEnemyId = nextEnemy.id;
+    this.engine.combatState.selectedTargetId = nextEnemy.id;
+    ostrzeAudio.playUiClick();
+    this.sync();
+    return true;
   }
 
   private escape(str: string): string {
@@ -120,6 +143,9 @@ export class CombatTargetOverlay {
     }
 
     const target = livingEnemies.find((e) => e.id === this.selectedEnemyId) ?? livingEnemies[0];
+    if (!this.engine.combatState.selectedTargetId) {
+      this.engine.combatState.selectedTargetId = target.id;
+    }
     const c = target.combat!;
     const isCritFlash = Date.now() < this.critFlashUntil;
     const telegraph = this.engine.getTelegraphedIntent(target.id);
@@ -127,8 +153,10 @@ export class CombatTargetOverlay {
     const playerWeaponType = resolvePlayerWeaponDamageType(ostrzeState, this.data);
     const selectedMode = this.engine.combatState.selectedAttackMode;
     const targetBurnTurns = this.engine.getEnemyBurnTurns(target.id);
+    const targetBleedTurns = this.engine.getEnemyBleedTurns(target.id);
     const playerStatuses = this.engine.getPlayerActiveStatusTurns();
     const playerDefending = Boolean(this.engine.player.combat?.defending);
+    const playerRiposteReady = this.engine.isPlayerRiposteReady();
     const playerFeintReady = this.engine.isPlayerFeintReady();
     const playerOiled = Boolean(
       ostrzeState?.character?.effects.some((e) => e.id === 'natluszczone_ostrze')
@@ -148,6 +176,7 @@ export class CombatTargetOverlay {
       c.crippledLegsTurns,
       c.defending ? 1 : 0,
       targetBurnTurns,
+      targetBleedTurns,
       targetCover.hasCover ? 1 : 0,
       playerCover.hasCover ? 1 : 0,
       maneuverState.maneuver.id,
@@ -160,6 +189,7 @@ export class CombatTargetOverlay {
       playerWeaponType,
       selectedMode,
       playerDefending ? 1 : 0,
+      playerRiposteReady ? 1 : 0,
       playerFeintReady ? 1 : 0,
       playerOiled ? 1 : 0,
       playerStatuses.krwawienie ?? 0,
@@ -186,6 +216,9 @@ export class CombatTargetOverlay {
     const originDef = originId ? this.data.enemies.find((e) => e.id === originId) : undefined;
 
     const statusPills: string[] = [];
+    if (targetBleedTurns > 0) {
+      statusPills.push(`<span class="ostrze-combat-pill is-weak">🩸 Krwawienie (${targetBleedTurns} t.)</span>`);
+    }
     if (targetBurnTurns > 0) {
       statusPills.push(`<span class="ostrze-combat-pill is-weak">🔥 Podpalony (${targetBurnTurns} t.)</span>`);
     }
@@ -196,7 +229,7 @@ export class CombatTargetOverlay {
       statusPills.push(`<span class="ostrze-combat-pill is-status">🦵 Okaleczony (${c.crippledLegsTurns})</span>`);
     }
     if (c.defending) {
-      statusPills.push(`<span class="ostrze-combat-pill is-defend">🛡️ Obrona</span>`);
+      statusPills.push(`<span class="ostrze-combat-pill is-defend">🛡️ Garda</span>`);
     }
     if (targetCover.hasCover) {
       statusPills.push(`<span class="ostrze-combat-pill is-defend">🧱 Osłona (-20% dyst.)</span>`);
@@ -209,10 +242,11 @@ export class CombatTargetOverlay {
 
     const tabsHtml =
       livingEnemies.length > 1
-        ? `<div class="ostrze-combat-tabs">${livingEnemies
+        ? `<div class="ostrze-combat-tabs" title="Przełącz cel klawiszem Tab">${livingEnemies
             .map(
               (enemy, idx) => `
                 <button
+                  type="button"
                   class="ostrze-combat-tab ${enemy.id === target.id ? 'is-active' : ''}"
                   data-combat-target="${this.escape(enemy.id)}"
                 >
@@ -220,7 +254,7 @@ export class CombatTargetOverlay {
                 </button>
               `
             )
-            .join('')}</div>`
+            .join('')}<kbd class="ostrze-kbd ostrze-combat-tab-kbd" title="Przełącz cel">Tab</kbd></div>`
         : '';
 
     const portraitHtml = pixMeta
@@ -252,8 +286,33 @@ export class CombatTargetOverlay {
     const enemySnap = this.engine.getActorCombatant(target);
     const dist = Math.hypot(target.tileX - this.engine.player.tileX, target.tileY - this.engine.player.tileY);
     const preview = computeAttackPreview(playerSnap, enemySnap, dist, selectedMode);
-    const estMin = Math.max(1, Math.round(preview.estimatedMinDamage * mult));
-    const estMax = Math.max(estMin, Math.round(preview.estimatedMaxDamage * mult));
+
+    // Live synergies & Guard Break evaluation for current selected attack mode
+    const isMeleeWeapon = playerSnap.derived.weaponProfile.maxRange <= 2;
+    const synergies = evaluateStatusSynergies({
+      targetBleeding: targetBleedTurns > 0,
+      targetBurning: targetBurnTurns > 0,
+      targetDazedOrCrippled: c.dazedHeadTurns > 0 || c.crippledLegsTurns > 0,
+      isMeleeAttack: isMeleeWeapon,
+      isHeavyOrManeuver: selectedMode === 'power'
+    });
+    const guardBreak = evaluateGuardBreak({
+      targetDefending: Boolean(c.defending),
+      attackMode: selectedMode,
+      isFeint: playerFeintReady
+    });
+
+    const totalDmgMult = mult * synergies.damageMultiplier * guardBreak.damageMultiplier;
+    const estMin =
+      Math.max(1, Math.round(preview.estimatedMinDamage * totalDmgMult)) +
+      synergies.bonusFireDamage;
+    const estMax =
+      Math.max(
+        Math.max(1, Math.round(preview.estimatedMinDamage * totalDmgMult)),
+        Math.round(preview.estimatedMaxDamage * totalDmgMult)
+      ) + synergies.bonusFireDamage;
+    const estHitPct = Math.min(95, Math.max(5, preview.hitChancePct + synergies.hitBonusPct));
+
     const multBadge =
       mult < 1
         ? `<span class="ostrze-combat-mult is-resist">×${mult} ODPORNOŚĆ</span>`
@@ -263,11 +322,39 @@ export class CombatTargetOverlay {
             ? `<span class="ostrze-combat-mult is-star">✨ Gwiezdne (×1.0)</span>`
             : `<span class="ostrze-combat-mult">×1.0</span>`;
 
+    const activeSynergyPills: string[] = [];
+    if (guardBreak.triggered) {
+      activeSynergyPills.push(
+        `<span class="ostrze-combat-pill is-synergy">💥 PRZEŁAMANIE GARDY (+25%, -1 AP)</span>`
+      );
+    }
+    for (const tag of synergies.tags) {
+      activeSynergyPills.push(`<span class="ostrze-combat-pill is-synergy">${this.escape(tag)}</span>`);
+    }
+    const activeSynergyHtml =
+      activeSynergyPills.length > 0
+        ? `<div class="ostrze-combat-synergy-strip" data-combat-synergies="true">${activeSynergyPills.join('')}</div>`
+        : '';
+
+    const tacticalHints: string[] = [];
+    if (selectedMode !== 'power') {
+      if (c.defending && !guardBreak.triggered) {
+        tacticalHints.push('💥 Przełamanie Gardy (+25%, -1 AP)');
+      }
+      if (targetBurnTurns > 0) {
+        tacticalHints.push('🔥 Wybuch Żaru (+5 ognia)');
+      }
+    }
+    const tacticalTipHtml =
+      tacticalHints.length > 0
+        ? `<div class="ostrze-combat-tactical-tip" data-combat-tactical-tip="true">💡 <kbd class="ostrze-kbd">2</kbd> Silny cios lub <kbd class="ostrze-kbd">R</kbd> → ${this.escape(tacticalHints.join(' · '))}</div>`
+        : '';
+
     const telegraphHtml =
       telegraph === 'heavy_cleave'
-        ? `<div class="ostrze-combat-telegraph">⚠️ BIERZE ZAMACH — użyj Gardy lub ogłusz!</div>`
+        ? `<div class="ostrze-combat-telegraph" data-combat-telegraph="heavy_cleave">⚠️ BIERZE ZAMACH — użyj Gardy <kbd class="ostrze-kbd">3</kbd> lub ogłusz <kbd class="ostrze-kbd">R</kbd>!</div>`
         : telegraph === 'terror_howl'
-          ? `<div class="ostrze-combat-telegraph">⚠️ ZBIERA SIŁY DO WYCIA — ogłusz go!</div>`
+          ? `<div class="ostrze-combat-telegraph" data-combat-telegraph="terror_howl">⚠️ ZBIERA SIŁY DO WYCIA — ogłusz go <kbd class="ostrze-kbd">R</kbd> lub Garda <kbd class="ostrze-kbd">3</kbd>!</div>`
           : '';
 
     const playerPills: string[] = [];
@@ -306,7 +393,9 @@ export class CombatTargetOverlay {
       );
     }
     if (playerDefending) {
-      playerPills.push(`<span class="ostrze-combat-pill is-defend">🛡️ Garda aktywna</span>`);
+      playerPills.push(
+        `<span class="ostrze-combat-pill is-defend">${playerRiposteReady ? '🛡️ Garda aktywna · Riposta' : '🛡️ Garda aktywna'}</span>`
+      );
     }
     if (playerCover.hasCover) {
       playerPills.push(`<span class="ostrze-combat-pill is-defend">🧱 Osłona (-20% dyst.)</span>`);
@@ -318,9 +407,24 @@ export class CombatTargetOverlay {
       playerPills.push(`<span class="ostrze-combat-pill is-defend">⚔️ Finta gotowa</span>`);
     }
 
+    const enemyStatusSectionHtml =
+      statusPills.length > 0
+        ? `
+          <div class="ostrze-combat-section" data-enemy-combat-status="true">
+            <div class="ostrze-combat-section-label">Statusy celu</div>
+            <div class="ostrze-combat-pills">${statusPills.join('')}</div>
+          </div>
+        `
+        : '';
+
     const playerStripHtml =
       playerPills.length > 0
-        ? `<div class="ostrze-combat-pills" data-player-combat-status="true">${playerPills.join('')}</div>`
+        ? `
+          <div class="ostrze-combat-section" data-player-combat-status="true">
+            <div class="ostrze-combat-section-label">Twój stan</div>
+            <div class="ostrze-combat-pills">${playerPills.join('')}</div>
+          </div>
+        `
         : '';
 
     const maneuverBtnLabel =
@@ -331,11 +435,12 @@ export class CombatTargetOverlay {
       nearbyBarrel && (this.engine.player.combat?.ap ?? 0) >= 3
     );
     const barrelBtnHtml = nearbyBarrel
-      ? `<button class="ostrze-tactical-action-btn is-barrel" data-combat-barrel="${this.escape(nearbyBarrel.id)}" ${canDetonateBarrel ? '' : 'disabled'} title="Wysadź beczkę ze smołą w promieniu 2 kafli (ogień + Podpalenie)">🛢️ Wysadź beczkę (3 AP)</button>`
+      ? `<button type="button" class="ostrze-tactical-action-btn is-barrel" data-combat-barrel="${this.escape(nearbyBarrel.id)}" ${canDetonateBarrel ? '' : 'disabled'} title="Wysadź beczkę ze smołą w promieniu 2 kafli (ogień + Podpalenie)">🛢️ Wysadź beczkę (3 AP)</button>`
       : '';
     const tacticalActionsHtml = `
       <div class="ostrze-combat-tactical-actions">
         <button
+          type="button"
           class="ostrze-tactical-action-btn"
           data-combat-maneuver="true"
           ${maneuverState.canUse ? '' : 'disabled'}
@@ -357,8 +462,8 @@ export class CombatTargetOverlay {
               <span class="ostrze-combat-archetype">${archetypeLabels[archetype]}</span>
             </div>
             <div class="ostrze-combat-target-stats">
-              <span>AP: <strong>${c.ap}/${c.maxAp}</strong></span>
-              <span>Obrona: <strong>${defenseVal}</strong></span>
+              <span>AP: <strong class="ostrze-num">${c.ap}/${c.maxAp}</strong></span>
+              <span>Obrona: <strong class="ostrze-num">${defenseVal}</strong></span>
             </div>
             <div class="ostrze-hp-bar" style="margin-top:6px;">
               <div class="ostrze-hp-fill ${hpPct <= 30 ? 'is-low' : ''}" style="width:${hpPct}%"></div>
@@ -367,10 +472,12 @@ export class CombatTargetOverlay {
           </div>
         </div>
         <div class="ostrze-combat-attack-preview">
-          <span>⚔️ Twój atak (${this.escape(dmgTypeLabel)}): <strong>${estMin}–${estMax} obr.</strong> · ${preview.hitChancePct}%</span>
+          <span>⚔️ Twój atak (${this.escape(dmgTypeLabel)}): <strong class="ostrze-num">${estMin}–${estMax} obr.</strong> · <span class="ostrze-num">${estHitPct}%</span></span>
           ${multBadge}
         </div>
-        ${statusPills.length > 0 ? `<div class="ostrze-combat-pills">${statusPills.join('')}</div>` : ''}
+        ${activeSynergyHtml}
+        ${tacticalTipHtml}
+        ${enemyStatusSectionHtml}
         ${playerStripHtml}
         ${tacticalActionsHtml}
       </aside>
@@ -412,6 +519,7 @@ export class CombatTargetOverlay {
           const id = btn.dataset.combatTarget ?? null;
           if (id && id !== this.selectedEnemyId) {
             this.selectedEnemyId = id;
+            this.engine.combatState.selectedTargetId = id;
             ostrzeAudio.playUiClick();
             this.sync();
           }

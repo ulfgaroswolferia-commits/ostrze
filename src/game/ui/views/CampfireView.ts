@@ -26,7 +26,7 @@ export function renderCampfireView(params: {
   const stats = ch ? getStats(state, data) : null;
 
   const groups: Array<{ key: 'alchemy' | 'weapon' | 'cooking' | 'sleep'; title: string }> = [
-    { key: 'alchemy', title: 'Alchemia i Opatrunki (Medycyna)' },
+    { key: 'alchemy', title: 'Alchemia i Opatrunki' },
     { key: 'weapon', title: 'Konserwacja Ostrza' },
     { key: 'cooking', title: 'Gotowanie nad Ogniskiem' },
     { key: 'sleep', title: 'Sen i Regeneracja' }
@@ -49,14 +49,14 @@ export function renderCampfireView(params: {
                   .join(' · ')
               : 'Bez składników';
           return `
-            <div class="ostrze-row">
+            <div class="ostrze-row ostrze-camp-row ${check.ok ? 'is-ready' : 'is-locked'}">
               <div style="flex:1;min-width:0;">
-                <div style="font-weight:600;color:#f4dfba;">${escapeHtml(recipe.label)}</div>
-                <div style="font-size:0.8rem;color:#9e9689;">${escapeHtml(recipe.description)} · <span>${escapeHtml(ingText)}</span></div>
+                <div class="ostrze-camp-recipe-name">${escapeHtml(recipe.label)}</div>
+                <div class="ostrze-camp-recipe-meta">${escapeHtml(recipe.description)} · <span>${escapeHtml(ingText)}</span></div>
               </div>
               <button
                 type="button"
-                class="ostrze-hub-btn"
+                class="ostrze-hub-btn ${check.ok ? 'is-alert' : ''}"
                 data-camp-recipe="${escapeHtml(recipe.id)}"
                 ${!check.ok ? 'disabled' : ''}
                 title="${escapeHtml(check.reason ?? recipe.description)}"
@@ -67,18 +67,18 @@ export function renderCampfireView(params: {
           `;
         })
         .join('');
-      return `<div class="ostrze-panel" style="margin-bottom:10px;"><h3>${escapeHtml(g.title)}</h3>${rows}</div>`;
+      return `<div class="ostrze-panel ostrze-camp-panel"><h3>${escapeHtml(g.title)}</h3>${rows}</div>`;
     })
     .join('');
 
   const waitSectionHtml = modal.onWaitHour
     ? `
-      <div class="ostrze-panel" style="margin-bottom:10px;">
-        <h3>Czekanie przy Ognisku (Przewiń czas)</h3>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button type="button" class="ostrze-hub-btn" data-camp-wait="6">🌅 Czekaj do świtu (06:00)</button>
-          <button type="button" class="ostrze-hub-btn" data-camp-wait="19">🌆 Czekaj do zmierzchu (19:00)</button>
-          <button type="button" class="ostrze-hub-btn" data-camp-wait="21">🌙 Czekaj do nocy (21:00)</button>
+      <div class="ostrze-camp-wait-bar">
+        <span class="ostrze-camp-wait-label">Przewiń czas:</span>
+        <div class="ostrze-camp-wait-btns">
+          <button type="button" class="ostrze-hub-btn" data-camp-wait="6">🌅 Świt (06:00)</button>
+          <button type="button" class="ostrze-hub-btn" data-camp-wait="19">🌆 Zmierzch (19:00)</button>
+          <button type="button" class="ostrze-hub-btn" data-camp-wait="21">🌙 Noc (21:00)</button>
         </div>
       </div>
     `
@@ -86,23 +86,29 @@ export function renderCampfireView(params: {
 
   mountModalCard(
     root,
-    'ostrze-card',
+    'ostrze-card ostrze-camp-card',
     `
-        <h2 class="ostrze-title">Przygotowanie Obozowe przy Ognisku</h2>
-        <p class="ostrze-subtitle">
-          ${escapeHtml(atmo.timeLabel)} · ${escapeHtml(atmo.clockText)}${
-            atmo.phenomenonName ? ` · ${escapeHtml(atmo.phenomenonName)}` : ''
-          }${ch && stats ? ` · HP: ${ch.hp}/${stats.derived.hpMax} · Medycyna: ${stats.skills.medycyna}` : ''}
-        </p>
-        <div data-preserve-scroll="campfire" style="max-height:58vh;overflow-y:auto;padding-right:4px;margin-bottom:14px;">
-          ${waitSectionHtml}
+        <div class="ostrze-modal-head">
+          <div>
+            <h2 class="ostrze-title" style="margin-bottom:3px;">Przygotowanie Obozowe przy Ognisku</h2>
+            <p class="ostrze-subtitle" style="margin-bottom:0;">
+              ${escapeHtml(atmo.timeLabel)} · ${escapeHtml(atmo.clockText)}${
+                atmo.phenomenonName ? ` · ${escapeHtml(atmo.phenomenonName)}` : ''
+              }${ch && stats ? ` · HP: ${ch.hp}/${stats.derived.hpMax} · Medycyna: ${stats.skills.medycyna}%` : ''}
+            </p>
+          </div>
+          <button type="button" class="ostrze-modal-close-x" data-camp-close-top="true" aria-label="Zamknij" title="Zamknij [ESC]">×</button>
+        </div>
+        ${waitSectionHtml}
+        <div class="ostrze-camp-grid" data-preserve-scroll="campfire">
           ${sectionsHtml}
         </div>
-        <div style="display:flex;justify-content:flex-end;">
-          <button type="button" class="ostrze-hub-btn" id="ostrze-camp-close">Zamknij [ESC]</button>
+        <div class="ostrze-modal-footer">
+          <span class="ostrze-modal-footer-hint">Sen usuwa Zmęczenie i przywraca zdrowie. Alchemia korzysta z umiejętności Medycyny.</span>
+          <button type="button" class="ostrze-btn ostrze-modal-close-btn" id="ostrze-camp-close">Zamknij <kbd class="ostrze-kbd">ESC</kbd></button>
         </div>
     `,
-    { styleText: 'max-width:720px;' }
+    { onOverlayBackdropClick: onClose }
   );
 
   root.querySelectorAll<HTMLButtonElement>('[data-camp-wait]').forEach((btn) => {
@@ -125,7 +131,6 @@ export function renderCampfireView(params: {
     });
   });
 
-  root.querySelector('#ostrze-camp-close')?.addEventListener('click', () => {
-    onClose();
-  });
+  root.querySelector('#ostrze-camp-close')?.addEventListener('click', onClose);
+  root.querySelector('[data-camp-close-top]')?.addEventListener('click', onClose);
 }

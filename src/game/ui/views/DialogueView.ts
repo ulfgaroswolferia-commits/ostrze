@@ -243,12 +243,16 @@ export function renderDialogueView(params: {
       root,
       'ostrze-card ostrze-dialogue-card ostrze-dialogue-card--scene',
       `
-        <h2 class="ostrze-title" style="margin-bottom:12px;">${escapeHtml(view.speaker)}</h2>
+        <h2 class="ostrze-title" style="margin-bottom:8px;">${escapeHtml(view.speaker)}</h2>
         ${sceneVistaHtml}
-        ${feedbackHtml}
-        <div class="ostrze-prose ostrze-dialogue-prose">${escapeHtml(view.text)}</div>
-        <div class="ostrze-dialogue-options">${optionsHtml}</div>
-        <div class="ostrze-dialogue-hint">Skróty klawiszowe: [1–9] wybierz odpowiedź</div>
+        <div class="ostrze-dialogue-speech-pane">
+          ${feedbackHtml}
+          <div class="ostrze-prose ostrze-dialogue-prose">${escapeHtml(view.text)}</div>
+        </div>
+        <div class="ostrze-dialogue-choices-pane">
+          <div class="ostrze-dialogue-options">${optionsHtml}</div>
+          <div class="ostrze-dialogue-hint">Skróty klawiszowe: <kbd class="ostrze-kbd">1–9</kbd> wybierz odpowiedź</div>
+        </div>
       `
     );
   } else {
@@ -269,10 +273,14 @@ export function renderDialogueView(params: {
             ${speakerRole ? `<div class="ostrze-dialogue-role">${escapeHtml(speakerRole)}</div>` : ''}
           </aside>
           <div class="ostrze-dialogue-body-col">
-            ${feedbackHtml}
-            <div class="ostrze-prose ostrze-dialogue-prose">${escapeHtml(view.text)}</div>
-            <div class="ostrze-dialogue-options">${optionsHtml}</div>
-            <div class="ostrze-dialogue-hint">Skróty klawiszowe: [1–9] wybierz odpowiedź</div>
+            <div class="ostrze-dialogue-speech-pane">
+              ${feedbackHtml}
+              <div class="ostrze-prose ostrze-dialogue-prose">${escapeHtml(view.text)}</div>
+            </div>
+            <div class="ostrze-dialogue-choices-pane">
+              <div class="ostrze-dialogue-options">${optionsHtml}</div>
+              <div class="ostrze-dialogue-hint">Skróty klawiszowe: <kbd class="ostrze-kbd">1–9</kbd> wybierz odpowiedź</div>
+            </div>
           </div>
         </div>
       `
