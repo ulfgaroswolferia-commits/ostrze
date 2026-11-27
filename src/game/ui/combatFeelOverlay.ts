@@ -85,6 +85,10 @@ export class CombatFeelOverlay {
           e.preventDefault();
           e.stopImmediatePropagation();
           this.finishStrike('miss', 1);
+        } else if (!e.ctrlKey && !e.altKey && !e.metaKey) {
+          // Block other combat/modal hotkeys (1, 3, 4-7, K, M, etc.) while timing bar is active
+          e.preventDefault();
+          e.stopImmediatePropagation();
         }
       },
       { capture: true, signal: this.abortController.signal }
@@ -178,16 +182,6 @@ export class CombatFeelOverlay {
     `;
 
     this.cursorEl = this.timedRoot.querySelector<HTMLElement>('.ostrze-timed-cursor');
-    const wrapEl = this.timedRoot.querySelector<HTMLElement>('.ostrze-timed-strike-wrap');
-    wrapEl?.addEventListener(
-      'pointerdown',
-      (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.lockInCurrentStrike();
-      },
-      { signal: this.abortController.signal }
-    );
 
     const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
     const strike: ActiveTimedStrike = {

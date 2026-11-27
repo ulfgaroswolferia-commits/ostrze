@@ -128,7 +128,7 @@ async function bootstrapOstrze(): Promise<void> {
     if (zoomPunchBaseline === null) {
       zoomPunchBaseline = sceneView.targetZoom;
     }
-    sceneView.targetZoom = Math.min(1.65, zoomPunchBaseline + deltaZoom);
+    sceneView.targetZoom = Math.min(1.65, Math.max(sceneView.targetZoom, zoomPunchBaseline + deltaZoom));
     if (zoomPunchRestoreTimer) clearTimeout(zoomPunchRestoreTimer);
     zoomPunchRestoreTimer = setTimeout(() => {
       if (zoomPunchBaseline !== null) {
@@ -779,16 +779,23 @@ async function bootstrapOstrze(): Promise<void> {
     const snap = engine.getActorCombatant(engine.player);
     const powerApCost = snap.derived.weaponProfile.baseApCost + 1;
     const dist = Math.hypot(target.tileX - engine.player.tileX, target.tileY - engine.player.tileY);
-    if (engine.player.combat.ap < powerApCost || dist > snap.derived.weaponProfile.maxRange + 0.55) {
+    if (engine.player.combat.ap < powerApCost || dist > snap.derived.weaponProfile.maxRange + 0.45) {
       return false;
     }
     engine.combatState.selectedTargetId = target.id;
     engine.combatState.selectedAttackMode = 'power';
     return combatFeelOverlay.startTimedStrike('Silny Cios', (grade) => {
-      if (!engine.combatState.active) return;
+      if (!engine.combatState.active) {
+        engine.setPendingTimedStrikeGrade('none');
+        return;
+      }
       engine.setPendingTimedStrikeGrade(grade);
       engine.combatState.selectedAttackMode = 'power';
-      engine.commandAttackEnemy(target.id);
+      try {
+        engine.commandAttackEnemy(target.id);
+      } finally {
+        engine.setPendingTimedStrikeGrade('none');
+      }
       refreshUi();
     });
   };

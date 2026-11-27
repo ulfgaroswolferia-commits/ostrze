@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test';
 
-const ARTIFACT_DIR =
-  process.env.OSTRZE_AUDIT_SHOT_DIR ||
-  'C:/Users/jgorski/.gemini/antigravity-cli/brain/d8f2c5d6-a899-4479-84f8-c4e9e927c1c6';
-
 test('Live combat HUD redesign, Timed Strike [2]/[R], Space capture, Momentum & Execution audit', async ({
   page
-}) => {
+}, testInfo) => {
+  const shotPath = (name: string): string =>
+    process.env.OSTRZE_AUDIT_SHOT_DIR
+      ? `${process.env.OSTRZE_AUDIT_SHOT_DIR}/${name}`
+      : testInfo.outputPath(name);
   test.setTimeout(60_000);
   const pageErrors: string[] = [];
   const consoleErrors: string[] = [];
@@ -23,7 +23,7 @@ test('Live combat HUD redesign, Timed Strike [2]/[R], Space capture, Momentum & 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/?devTeleport=1');
   await expect(page.locator('#viewport-container canvas')).toBeVisible();
-  await page.waitForTimeout(700);
+  await page.waitForFunction(() => Boolean((window as any).__ostrzeDev?.switchToDevLocation));
 
   // Teleport directly to Trakt Zasadzka (closes opening title modal, creates hero, keeps real player HUD!)
   await page.evaluate(() => {
@@ -69,7 +69,7 @@ test('Live combat HUD redesign, Timed Strike [2]/[R], Space capture, Momentum & 
 
   // Screenshot 1: Clean Redesigned Combat HUD (Desktop 1440x900)
   await page.waitForTimeout(250);
-  await page.screenshot({ path: `${ARTIFACT_DIR}/audit-combat-hud-desktop.png` });
+  await page.screenshot({ path: shotPath('audit-combat-hud-desktop.png') });
 
   // Verify [2] launches Timed Strike bar and does NOT collide with tacticalBar
   const deckBox = await tacticalBar.boundingBox();
@@ -89,7 +89,7 @@ test('Live combat HUD redesign, Timed Strike [2]/[R], Space capture, Momentum & 
 
   // Screenshot 2: Timed Strike Bar mid-sweep
   await page.waitForTimeout(160);
-  await page.screenshot({ path: `${ARTIFACT_DIR}/audit-combat-timed-strike.png` });
+  await page.screenshot({ path: shotPath('audit-combat-timed-strike.png') });
 
   // Wait for first strike to settle, then test [R] Maneuver + immediate Space lock-in (must NOT end turn!)
   await page.waitForTimeout(450);
@@ -134,7 +134,7 @@ test('Live combat HUD redesign, Timed Strike [2]/[R], Space capture, Momentum & 
 
   // Screenshot 3: Execution State + Callout Banner + Gold Flash
   await page.waitForTimeout(120);
-  await page.screenshot({ path: `${ARTIFACT_DIR}/audit-combat-execution-callout.png` });
+  await page.screenshot({ path: shotPath('audit-combat-execution-callout.png') });
 
   // Check compact laptop viewport (1280x720) for zero clipping or overlap between topBanner and targetCard
   await page.setViewportSize({ width: 1280, height: 720 });
@@ -144,7 +144,7 @@ test('Live combat HUD redesign, Timed Strike [2]/[R], Space capture, Momentum & 
   expect(laptopBannerBox).not.toBeNull();
   expect(laptopCardBox).not.toBeNull();
   expect(laptopBannerBox!.x + laptopBannerBox!.width).toBeLessThanOrEqual(laptopCardBox!.x - 8);
-  await page.screenshot({ path: `${ARTIFACT_DIR}/audit-combat-hud-1280x720.png` });
+  await page.screenshot({ path: shotPath('audit-combat-hud-1280x720.png') });
 
   expect(pageErrors).toEqual([]);
   expect(consoleErrors).toEqual([]);

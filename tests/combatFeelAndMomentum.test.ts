@@ -12,6 +12,7 @@ import {
   pickCombatBark,
   TIMED_STRIKE_SWEET_CENTER
 } from '../src/game/rules/combatMomentum';
+import { CombatFeelOverlay } from '../src/game/ui/combatFeelOverlay';
 
 function setupCombatEngine(): OstrzeEngineState {
   const state = createEmptyOstrzeState(ORIGIN_DATA, 42);
@@ -91,6 +92,7 @@ describe('Combat Feel Overhaul (Momentum, Execution, Kill Rush, Kinetics & Timed
     enemy.x = enemy.tileX + 0.5;
     enemy.y = enemy.tileY + 0.5;
     engine.combatState.active = true;
+    engine.combatState.activeTurnActorId = engine.player.id;
     engine.combatState.round = 1;
     engine.combatState.selectedTargetId = enemy.id;
     engine.player.combat!.ap = 10;
@@ -221,5 +223,142 @@ describe('Combat Feel Overhaul (Momentum, Execution, Kill Rush, Kinetics & Timed
     expect(() => ostrzeAudio.playTimedStrike('miss')).not.toThrow();
     expect(() => ostrzeAudio.playMomentumTierUp(1)).not.toThrow();
     expect(() => ostrzeAudio.playMomentumTierUp(2)).not.toThrow();
+  });
+
+  it('clears pendingTimedStrikeGrade on early-return maneuver, applies Timed Strike on normal attack, and resets momentum on defeat', () => {
+    const engine = setupCombatEngine();
+    const enemy = engine.npcs.find((n) => n.combat?.isHostile && n.combat.isAlive)!;
+    enemy.combat!.hp = 100;
+    enemy.combat!.maxHp = 100;
+    enemy.tileX = engine.player.tileX + 1;
+    enemy.tileY = engine.player.tileY;
+    enemy.x = enemy.tileX + 0.5;
+    enemy.y = enemy.tileY + 0.5;
+    engine.combatState.active = true;
+    engine.combatState.activeTurnActorId = engine.player.id;
+    engine.combatState.round = 1;
+    engine.combatState.selectedTargetId = enemy.id;
+
+    // Early-return maneuver (0 AP) must still clear pendingTimedStrikeGrade
+    engine.player.combat!.ap = 0;
+    engine.setPendingTimedStrikeGrade('perfect');
+    const failedMan = engine.performPlayerWeaponManeuver(enemy.id, () => 0.5);
+    expect(failedMan.ok).toBe(false);
+    expect(engine.getPendingTimedStrikeGrade()).toBe('none');
+
+    // Normal performPlayerCombatAttack with Perfect Timed Strike consumes grade and boosts momentum
+    engine.player.combat!.ap = 10;
+    engine.setPendingTimedStrikeGrade('perfect');
+    const feedback: CombatFeedbackEvent[] = [];
+    engine.onCombatFeedback = (ev) => feedback.push(ev);
+    const outcome = engine.performPlayerCombatAttack(enemy.id, 'power', () => 0.15);
+    expect(outcome?.hit).toBe(true);
+    expect(engine.getPendingTimedStrikeGrade()).toBe('none');
+    expect(engine.getCombatMomentum()).toBeGreaterThanOrEqual(2);
+    expect(feedback.some((e) => e.kind === 'perfect_strike')).toBe(true);
+
+    // Defeat resets momentum cleanly to 0
+    (engine as unknown as { handlePlayerDefeated: () => void }).handlePlayerDefeated();
+    expect(engine.getCombatMomentum()).toBe(0);
+    expect(engine.combatState.active).toBe(false);
+  });
+
+  it('blocks other hotkeys during Timed Strike, protects post-strike Space grace window, and cleans up DOM/listeners on destroy()', () => {
+    const origWin = (globalThis as Record<string, unknown>).window;
+    const origDoc = (globalThis as Record<string, unknown>).document;
+    const keyListeners: Array<(e: any) => void> = [];
+    const removedIds: string[] = [];
+
+    const makeEl = () => {
+      const el: any = {
+        id: '',
+        className: '',
+        innerHTML: '',
+        style: {},
+        offsetWidth: 0,
+        classList: {
+          add: () => {},
+          remove: () => {}
+        },
+        setAttribute: () => {},
+        querySelector: () => null,
+        remove: () => removedIds.push(el.id)
+      };
+      return el;
+    };
+
+    try {
+      (globalThis as Record<string, unknown>).document = {
+        getElementById: () => null,
+        createElement: makeEl,
+        body: { appendChild: () => {} }
+      };
+      (globalThis as Record<string, unknown>).window = {
+        addEventListener: (type: string, fn: (e: any) => void) => {
+          if (type === 'keydown') keyListeners.push(fn);
+        }
+      };
+
+      const overlay = new CombatFeelOverlay();
+      let resolvedGrade: string | null = null;
+      expect(overlay.startTimedStrike('Silny Cios', (g) => (resolvedGrade = g), 1000)).toBe(true);
+      expect(overlay.isTimedStrikeActive()).toBe(true);
+
+      // Non-confirm hotkey (e.g. '3' for Guard) must be blocked while bar is active
+      let prevented = false;
+      let stopped = false;
+      keyListeners[0]({
+        key: '3',
+        code: 'Digit3',
+        ctrlKey: false,
+        altKey: false,
+        metaKey: false,
+        preventDefault: () => (prevented = true),
+        stopImmediatePropagation: () => (stopped = true)
+      });
+      expect(prevented).toBe(true);
+      expect(stopped).toBe(true);
+      expect(overlay.isTimedStrikeActive()).toBe(true);
+
+      // Space locks in the strike
+      keyListeners[0]({
+        key: ' ',
+        code: 'Space',
+        ctrlKey: false,
+        altKey: false,
+        metaKey: false,
+        preventDefault: () => {},
+        stopImmediatePropagation: () => {}
+      });
+      expect(resolvedGrade).not.toBeNull();
+      expect(overlay.isTimedStrikeActive()).toBe(false);
+
+      // Immediate second Space within 450ms grace window is still swallowed (never ends turn!)
+      let graceStopped = false;
+      keyListeners[0]({
+        key: ' ',
+        code: 'Space',
+        ctrlKey: false,
+        altKey: false,
+        metaKey: false,
+        preventDefault: () => {},
+        stopImmediatePropagation: () => (graceStopped = true)
+      });
+      expect(graceStopped).toBe(true);
+
+      // Music theme start/stop lifecycle does not throw
+      ostrzeAudio.setMusicTheme('combat');
+      ostrzeAudio.stopMusic();
+
+      overlay.destroy();
+      expect(removedIds).toEqual([
+        'ostrze-combat-flash-layer',
+        'ostrze-combat-callout',
+        'ostrze-timed-strike-root'
+      ]);
+    } finally {
+      (globalThis as Record<string, unknown>).window = origWin;
+      (globalThis as Record<string, unknown>).document = origDoc;
+    }
   });
 });

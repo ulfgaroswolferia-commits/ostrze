@@ -1731,6 +1731,7 @@ export class OstrzeEngineState extends CrpgGameState {
     );
     const st = this.getWeaponManeuverState(target?.id ?? null);
     if (!st.canUse || !target || !target.combat || !this.player.combat) {
+      this.pendingTimedStrikeGrade = 'none';
       return { ok: false, damage: 0, secondaryDamage: 0, message: st.reason ?? 'Manewr niedostępny' };
     }
 
@@ -1777,6 +1778,21 @@ export class OstrzeEngineState extends CrpgGameState {
     const timedBonus = getTimedStrikeModifiers(this.pendingTimedStrikeGrade);
     this.pendingTimedStrikeGrade = 'none';
 
+    const playerCritBase = this.activeOstrzeState?.character
+      ? getStats(this.activeOstrzeState, ORIGIN_DATA).derived.critChance
+      : 8;
+    const maneuverCritChancePct = Math.min(
+      85,
+      playerCritBase +
+        momentumBonus.critBonusPct +
+        executionBonus.critBonusPct +
+        timedBonus.critBonusPct +
+        synergies.critBonusPct
+    );
+    const maneuverCritRoll = rng() * 100;
+    const isManeuverCrit = maneuverCritRoll < maneuverCritChancePct;
+    const critMult = isManeuverCrit ? 1.45 : 1;
+
     const finalDmg =
       Math.max(
         1,
@@ -1789,7 +1805,8 @@ export class OstrzeEngineState extends CrpgGameState {
             synergies.damageMultiplier *
             momentumBonus.damageMultiplier *
             executionBonus.damageMultiplier *
-            timedBonus.damageMultiplier
+            timedBonus.damageMultiplier *
+            critMult
         ) + hunterBonus
       ) + synergies.bonusFireDamage;
 
@@ -1916,6 +1933,10 @@ export class OstrzeEngineState extends CrpgGameState {
     }
 
     this.onJuicyImpact?.(true);
+    if (isManeuverCrit) {
+      ostrzeAudio.playCombatSfx('crit');
+      extraNote += ' + KRYT!';
+    }
     if (timedBonus.grade === 'perfect') {
       this.sayHeroCombatBark('perfect_strike');
       this.pushFloatingCombatText(
@@ -2125,6 +2146,7 @@ export class OstrzeEngineState extends CrpgGameState {
     this.combatState.active = false;
     this.combatState.activeTurnActorId = null;
     this.combatState.selectedTargetId = null;
+    this.resetCombatTacticalSessions();
 
     if (this.player.combat) {
       this.player.combat.hp = 0;

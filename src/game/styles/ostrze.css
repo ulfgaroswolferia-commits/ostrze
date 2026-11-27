@@ -5160,3 +5160,10 @@ h3 .ostrze-kbd {
     max-width: min(560px, calc(100vw - 360px));
   }
 }
+
+@media (max-width: 720px) {
+  #hud-root .combat-top-banner {
+    left: 50%;
+    max-width: calc(100vw - 24px);
+  }
+}

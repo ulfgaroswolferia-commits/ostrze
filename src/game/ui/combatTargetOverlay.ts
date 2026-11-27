@@ -203,7 +203,9 @@ export class CombatTargetOverlay {
       this.engine.player.tileY,
       target.tileX,
       target.tileY,
-      livingEnemies.map((e) => `${e.id}:${e.recipe.name}`).join(',')
+      livingEnemies
+        .map((e) => `${e.id}:${e.recipe.name}:${e.combat?.hp ?? 0}/${e.combat?.maxHp ?? 0}`)
+        .join(',')
     ].join('|');
 
     if (stateKey === this.lastRenderedKey) {
@@ -449,7 +451,7 @@ export class CombatTargetOverlay {
         ? `${momentumBonus.label} (+20% obr., +15% kryt)`
         : momentumBonus.tier === 1
           ? `${momentumBonus.label} (+10% obr., +8% kryt)`
-          : `Impet ${momentumBonus.momentum}/${MAX_COMBAT_MOMENTUM}`;
+          : `${momentumBonus.label} (${momentumBonus.momentum}/${MAX_COMBAT_MOMENTUM})`;
     const momentumRowHtml = `
       <div class="ostrze-momentum-row is-tier-${momentumBonus.tier}" data-combat-momentum="${momentumBonus.momentum}" title="Trafienia, synergie, riposty i dobicia ładują Impet Walki (na maksie: Szał Ostrza +20% obr. i +15% kryt; zabicie wroga zwraca +2 AP).">
         <div class="ostrze-momentum-head">
