@@ -53,6 +53,17 @@ import {
   evaluateGuardRiposte,
   evaluateStatusSynergies
 } from '../game/rules/combatSynergies';
+import {
+  clampMomentum,
+  evaluateExecutionBonus,
+  evaluateMomentumBonus,
+  getTimedStrikeModifiers,
+  KILL_RUSH_AP_REFUND,
+  pickCombatBark,
+  type CombatBarkTrigger,
+  type MomentumBonus,
+  type TimedStrikeGrade
+} from '../game/rules/combatMomentum';
 import { registerOstrzePainterlyProps } from '../game/assets/painterlyProps';
 import { ostrzeAudio } from '../game/audio/ostrzeAudio';
 import { ORIGIN_DATA } from '../game/data/originData';
@@ -134,6 +145,29 @@ export interface CustomSceneConfig {
   introSeverity?: LogSeverity;
 }
 
+export type CombatFeedbackKind =
+  | 'hit'
+  | 'crit'
+  | 'miss'
+  | 'player_hurt'
+  | 'guard_break'
+  | 'riposte'
+  | 'execution_kill'
+  | 'perfect_strike'
+  | 'momentum_peak'
+  | 'explosion';
+
+export interface CombatFeedbackEvent {
+  kind: CombatFeedbackKind;
+  headline?: string;
+  subtext?: string;
+  screenFlash?: 'gold' | 'crimson' | 'steel' | 'fire';
+  zoomPunch?: number;
+  hitStopSec?: number;
+  shakeMs?: number;
+  shakeIntensity?: number;
+}
+
 /**
  * Bridge layer isolating Ostrze game content from the upstream ulfRPG engine.
  * Allows loading custom 2.5D scenes and registering Ostrze dialogues without
@@ -149,6 +183,7 @@ export class OstrzeEngineState extends CrpgGameState {
   public onFallbackPropInteract?: (propId: string) => boolean;
   public onSceneLoaded?: (sceneId: string) => void;
   public onJuicyImpact?: (isBigImpact: boolean) => void;
+  public onCombatFeedback?: (event: CombatFeedbackEvent) => void;
   public onPropReaction?: (propId: string, kind: 'rock' | 'pop') => void;
   private readonly persistentMarkers = new Map<string, string>();
   private activeOstrzeState: OstrzeGameState | null = null;
@@ -163,6 +198,9 @@ export class OstrzeEngineState extends CrpgGameState {
   private feintUsedRound = -1;
   private riposteUsedRound = -1;
   private maneuverCooldownUntilRound = 0;
+  private combatMomentum = 0;
+  private pendingTimedStrikeGrade: TimedStrikeGrade = 'none';
+  private lastCombatBarkRound = -1;
   private readonly detonatedOilBarrelIds = new Set<string>();
   private readonly enemyBaseMaxHp = new Map<string, number>();
   private readonly countedBestiaryKillActorIds = new Set<string>();
@@ -178,13 +216,159 @@ export class OstrzeEngineState extends CrpgGameState {
         const originId = resolveEnemyOriginId(event.attacker.id, event.attacker.recipe.name);
         ostrzeAudio.playEnemyAttackVoice(originId);
       }
+      if (event.attacker.id === this.player.id && event.target.id !== this.player.id) {
+        if (!event.outcome.hit) {
+          ostrzeAudio.playCombatSfx('miss');
+          this.adjustCombatMomentum(-1);
+          this.onCombatFeedback?.({ kind: 'miss' });
+        } else if (event.outcome.critical) {
+          ostrzeAudio.playCombatSfx('crit');
+          this.sayHeroCombatBark('crit');
+          this.onCombatFeedback?.({
+            kind: 'crit',
+            screenFlash: 'gold',
+            zoomPunch: 0.085,
+            hitStopSec: 0.085,
+            shakeMs: 220,
+            shakeIntensity: 5.2
+          });
+        } else {
+          ostrzeAudio.playCombatSfx('hit');
+          this.onCombatFeedback?.({
+            kind: 'hit',
+            hitStopSec: 0.04,
+            shakeMs: 110,
+            shakeIntensity: 2.6
+          });
+        }
+      }
       if (event.target.id === this.player.id && event.attacker.id !== this.player.id) {
         if (event.outcome.hit) {
           this.handleEnemyHitStatusEffects(event.attacker);
+          if (event.outcome.damageDealt > 0) {
+            ostrzeAudio.playPlayerHurt();
+            this.onCombatFeedback?.({
+              kind: 'player_hurt',
+              screenFlash: 'crimson',
+              shakeMs: 165,
+              shakeIntensity: 4.0
+            });
+            if (!this.player.combat?.defending) {
+              this.adjustCombatMomentum(-1);
+            }
+          }
+        } else {
+          ostrzeAudio.playCombatSfx('miss');
         }
         this.tryTriggerPlayerGuardRiposte(event.attacker, event.outcome);
       }
     });
+  }
+
+  public getCombatMomentum(): number {
+    return this.combatMomentum;
+  }
+
+  public getCombatMomentumBonus(): MomentumBonus {
+    return evaluateMomentumBonus(this.combatMomentum);
+  }
+
+  public setPendingTimedStrikeGrade(grade: TimedStrikeGrade): void {
+    this.pendingTimedStrikeGrade = grade;
+  }
+
+  public getPendingTimedStrikeGrade(): TimedStrikeGrade {
+    return this.pendingTimedStrikeGrade;
+  }
+
+  private adjustCombatMomentum(delta: number): void {
+    if (!this.combatState.active || delta === 0) return;
+    const prevBonus = evaluateMomentumBonus(this.combatMomentum);
+    const nextVal = clampMomentum(this.combatMomentum + delta);
+    if (nextVal === this.combatMomentum) return;
+    this.combatMomentum = nextVal;
+    const nextBonus = evaluateMomentumBonus(nextVal);
+    if (nextBonus.tier > prevBonus.tier) {
+      ostrzeAudio.playMomentumTierUp(nextBonus.tier as 1 | 2);
+      if (nextBonus.tier === 2) {
+        this.sayHeroCombatBark('momentum_peak', true);
+        this.addCombatLog(`⚡ SZAŁ OSTRZA! Pęd Walki na maksimum (+20% obr., +15% kryt, +5% trafienie)!`);
+        this.pushFloatingCombatText(
+          this.player.x,
+          this.player.y,
+          this.player.z + 2.35,
+          '⚡ SZAŁ OSTRZA!',
+          0xfbbf24
+        );
+        this.onCombatFeedback?.({
+          kind: 'momentum_peak',
+          headline: '⚡ SZAŁ OSTRZA!',
+          subtext: '+20% obrażeń · +15% szansy na kryta',
+          screenFlash: 'gold',
+          zoomPunch: 0.075
+        });
+      } else {
+        this.addCombatLog(`🔥 PĘD WALKI! (+10% obr., +8% kryt)`);
+        this.pushFloatingCombatText(
+          this.player.x,
+          this.player.y,
+          this.player.z + 2.2,
+          '🔥 PĘD WALKI!',
+          0xfb923c
+        );
+      }
+    }
+  }
+
+  private sayHeroCombatBark(trigger: CombatBarkTrigger, force = false): void {
+    if (!this.combatState.active) return;
+    if (!force && this.lastCombatBarkRound === this.combatState.round) return;
+    this.lastCombatBarkRound = this.combatState.round;
+    this.player.speechBubbleText = pickCombatBark(trigger);
+    this.player.speechBubbleTimer = 2.1;
+  }
+
+  private grantKillRushOnEnemyDefeat(killedEnemy: ActorEntity): void {
+    ostrzeAudio.playExecutionKill();
+    const remainingHostiles = this.npcs.filter((n) => n.combat?.isHostile && n.combat.isAlive);
+    const pCombat = this.player.combat;
+    if (remainingHostiles.length > 0 && pCombat && pCombat.isAlive) {
+      const cap = Math.max(pCombat.maxAp + KILL_RUSH_AP_REFUND, pCombat.ap);
+      pCombat.ap = Math.min(cap, pCombat.ap + KILL_RUSH_AP_REFUND);
+      this.adjustCombatMomentum(2);
+      this.sayHeroCombatBark('execution_kill', true);
+      this.pushFloatingCombatText(
+        this.player.x,
+        this.player.y,
+        this.player.z + 2.45,
+        `⚡ KRWAWY PĘD +${KILL_RUSH_AP_REFUND} AP!`,
+        0xfde047
+      );
+      this.addCombatLog(
+        `💀 EGZEKUCJA (${killedEnemy.recipe.name})! Krwawy Pęd zwraca +${KILL_RUSH_AP_REFUND} AP!`
+      );
+      this.onCombatFeedback?.({
+        kind: 'execution_kill',
+        headline: `💀 EGZEKUCJA! +${KILL_RUSH_AP_REFUND} AP`,
+        subtext: `${killedEnemy.recipe.name} pada — atakuj dalej!`,
+        screenFlash: 'gold',
+        zoomPunch: 0.11,
+        hitStopSec: 0.1,
+        shakeMs: 240,
+        shakeIntensity: 5.6
+      });
+    } else {
+      this.onCombatFeedback?.({
+        kind: 'execution_kill',
+        headline: '⚔️ OSTATNI CIOS!',
+        subtext: `${killedEnemy.recipe.name} pokonany`,
+        screenFlash: 'gold',
+        zoomPunch: 0.115,
+        hitStopSec: 0.105,
+        shakeMs: 250,
+        shakeIntensity: 5.8
+      });
+    }
   }
 
   public notifyPlayerStatusCured(statusId: string): void {
@@ -207,6 +391,9 @@ export class OstrzeEngineState extends CrpgGameState {
     this.feintUsedRound = -1;
     this.riposteUsedRound = -1;
     this.maneuverCooldownUntilRound = 0;
+    this.combatMomentum = 0;
+    this.pendingTimedStrikeGrade = 'none';
+    this.lastCombatBarkRound = -1;
     this.detonatedOilBarrelIds.clear();
     this.pendingPlayerFeintActive = false;
     this.pendingPlayerHitBonusPct = 0;
@@ -402,6 +589,18 @@ export class OstrzeEngineState extends CrpgGameState {
 
     this.onJuicyImpact?.(false);
     ostrzeAudio.playRiposte();
+    this.adjustCombatMomentum(1);
+    this.sayHeroCombatBark('riposte');
+    this.onCombatFeedback?.({
+      kind: 'riposte',
+      headline: '⚔️ RIPOSTA Z GARDY!',
+      subtext: `${attacker.recipe.name} -${riposte.damage} HP`,
+      screenFlash: 'steel',
+      zoomPunch: 0.065,
+      hitStopSec: 0.06,
+      shakeMs: 140,
+      shakeIntensity: 3.5
+    });
     this.pushFloatingCombatText(
       attacker.x,
       attacker.y,
@@ -417,6 +616,7 @@ export class OstrzeEngineState extends CrpgGameState {
       aCombat.isAlive = false;
       const originId = resolveEnemyOriginId(attacker.id, attacker.recipe.name);
       this.checkAndRecordEnemyKill(attacker, originId);
+      this.grantKillRushOnEnemyDefeat(attacker);
       const remainingHostiles = this.npcs.filter((n) => n.combat?.isHostile && n.combat.isAlive);
       if (remainingHostiles.length === 0) {
         this.combatState.active = false;
@@ -1288,13 +1488,29 @@ export class OstrzeEngineState extends CrpgGameState {
       );
     }
 
+    const momentumBonus = evaluateMomentumBonus(this.combatMomentum);
+    const executionBonus = enemy?.combat
+      ? evaluateExecutionBonus(enemy.combat.hp, enemy.combat.maxHp)
+      : { isExecutable: false, damageMultiplier: 1, critBonusPct: 0, tag: null };
+    const timedGrade = this.pendingTimedStrikeGrade;
+    const timedBonus = getTimedStrikeModifiers(timedGrade);
+    const wasEnemyAliveBefore = Boolean(enemy?.combat?.isAlive);
+
     this.pendingPlayerAttackMultiplier =
       mult *
       (isSurprise ? 1.2 : 1) *
       guardBreak.damageMultiplier *
-      synergies.damageMultiplier;
-    this.pendingPlayerHitBonusPct = synergies.hitBonusPct;
-    this.pendingPlayerCritBonusPct = synergies.critBonusPct;
+      synergies.damageMultiplier *
+      momentumBonus.damageMultiplier *
+      executionBonus.damageMultiplier *
+      timedBonus.damageMultiplier;
+    this.pendingPlayerHitBonusPct =
+      synergies.hitBonusPct + momentumBonus.hitBonusPct + timedBonus.hitBonusPct;
+    this.pendingPlayerCritBonusPct =
+      synergies.critBonusPct +
+      momentumBonus.critBonusPct +
+      executionBonus.critBonusPct +
+      timedBonus.critBonusPct;
     let outcome;
     try {
       outcome = super.performPlayerCombatAttack(targetId, mode, rng);
@@ -1304,12 +1520,54 @@ export class OstrzeEngineState extends CrpgGameState {
       this.pendingPlayerCritBonusPct = 0;
       this.pendingPlayerFeintActive = false;
       this.pendingSurpriseAttack = false;
+      this.pendingTimedStrikeGrade = 'none';
     }
 
     if (outcome?.hit && enemy?.combat) {
+      const momentumGain = Math.min(
+        3,
+        1 +
+          (outcome.critical ? 1 : 0) +
+          (guardBreak.triggered ? 1 : 0) +
+          (synergies.tags.length > 0 ? 1 : 0) +
+          timedBonus.momentumBonus
+      );
+      this.adjustCombatMomentum(momentumGain);
+
+      if (timedBonus.grade === 'perfect') {
+        this.sayHeroCombatBark('perfect_strike');
+        this.addCombatLog(`⚡ IDEALNY CIOS! (+30% obrażeń, +35% szansy na kryta)`);
+        this.pushFloatingCombatText(
+          enemy.x,
+          enemy.y,
+          enemy.z + 2.65,
+          '⚡ IDEALNY CIOS!',
+          0xfde047
+        );
+        this.onCombatFeedback?.({
+          kind: 'perfect_strike',
+          headline: '⚡ IDEALNY CIOS!',
+          subtext: '+30% obrażeń · Mistrzowski rytm',
+          screenFlash: 'gold',
+          zoomPunch: 0.095,
+          hitStopSec: 0.09,
+          shakeMs: 210,
+          shakeIntensity: 5.0
+        });
+      } else if (timedBonus.grade === 'good') {
+        this.pushFloatingCombatText(
+          enemy.x,
+          enemy.y,
+          enemy.z + 2.4,
+          '✨ DOBRY RYTM!',
+          0xfbbf24
+        );
+      }
+
       if (guardBreak.triggered) {
         enemy.combat.ap = Math.max(0, enemy.combat.ap - guardBreak.apPenalty);
         ostrzeAudio.playGuardBreak();
+        this.sayHeroCombatBark('guard_break');
         this.addCombatLog(
           `💥 PRZEŁAMANIE GARDY na ${enemy.recipe.name}! (+25% obr., -${guardBreak.apPenalty} AP)`
         );
@@ -1320,6 +1578,16 @@ export class OstrzeEngineState extends CrpgGameState {
           '💥 PRZEŁAMANIE GARDY!',
           0xf59e0b
         );
+        this.onCombatFeedback?.({
+          kind: 'guard_break',
+          headline: '💥 PRZEŁAMANIE GARDY!',
+          subtext: `${enemy.recipe.name} traci gardę i -${guardBreak.apPenalty} AP`,
+          screenFlash: 'gold',
+          zoomPunch: 0.075,
+          hitStopSec: 0.075,
+          shakeMs: 190,
+          shakeIntensity: 4.6
+        });
       }
 
       if (synergies.tags.length > 0) {
@@ -1363,10 +1631,26 @@ export class OstrzeEngineState extends CrpgGameState {
           enemy.combat.isAlive = false;
         }
       }
-      this.checkAndRecordEnemyKill(enemy, originId);
+
+      if (wasEnemyAliveBefore && (!enemy.combat.isAlive || enemy.combat.hp <= 0)) {
+        enemy.combat.isAlive = false;
+        this.checkAndRecordEnemyKill(enemy, originId);
+        this.grantKillRushOnEnemyDefeat(enemy);
+        const remainingHostiles = this.npcs.filter((n) => n.combat?.isHostile && n.combat.isAlive);
+        if (remainingHostiles.length === 0 && this.combatState.active) {
+          this.combatState.active = false;
+          this.resetCombatTacticalSessions();
+          this.onCombatEnded?.('victory');
+        }
+      } else {
+        this.checkAndRecordEnemyKill(enemy, originId);
+      }
     }
 
-    if (outcome?.hit && (outcome.critical || isSurprise || guardBreak.triggered)) {
+    if (
+      outcome?.hit &&
+      (outcome.critical || isSurprise || guardBreak.triggered || timedBonus.grade === 'perfect')
+    ) {
       this.onJuicyImpact?.(true);
     }
 
@@ -1488,6 +1772,11 @@ export class OstrzeEngineState extends CrpgGameState {
     if (synergies.tags.length > 0) {
       ostrzeAudio.playSynergyProc();
     }
+    const momentumBonus = evaluateMomentumBonus(this.combatMomentum);
+    const executionBonus = evaluateExecutionBonus(target.combat.hp, target.combat.maxHp);
+    const timedBonus = getTimedStrikeModifiers(this.pendingTimedStrikeGrade);
+    this.pendingTimedStrikeGrade = 'none';
+
     const finalDmg =
       Math.max(
         1,
@@ -1497,9 +1786,27 @@ export class OstrzeEngineState extends CrpgGameState {
             mult *
             coverMult *
             guardBreak.damageMultiplier *
-            synergies.damageMultiplier
+            synergies.damageMultiplier *
+            momentumBonus.damageMultiplier *
+            executionBonus.damageMultiplier *
+            timedBonus.damageMultiplier
         ) + hunterBonus
       ) + synergies.bonusFireDamage;
+
+    // Trigger full kinetic attack lunge & target recoil/flash for weapon maneuvers
+    this.player.direction = deltaToDirection8(
+      target.tileX - this.player.tileX,
+      target.tileY - this.player.tileY
+    );
+    this.player.attackAnimTimer = 0.24;
+    this.player.attackAnimMaxTimer = 0.24;
+    this.player.attackTargetX = target.x;
+    this.player.attackTargetY = target.y;
+    target.hitRecoilTimer = 0.22;
+    target.hitRecoilMaxTimer = 0.22;
+    target.hitFromX = this.player.x;
+    target.hitFromY = this.player.y;
+    target.damageFlashTimer = 0.26;
 
     if (synergies.extraBurnTurns > 0) {
       this.applyEnemyBurn(target.id, this.getEnemyBurnTurns(target.id) + synergies.extraBurnTurns);
@@ -1511,7 +1818,17 @@ export class OstrzeEngineState extends CrpgGameState {
     }
     this.checkAndRecordEnemyKill(target, originId);
 
+    const maneuverMomentumGain = Math.min(
+      3,
+      1 +
+        (guardBreak.triggered ? 1 : 0) +
+        (synergies.tags.length > 0 ? 1 : 0) +
+        timedBonus.momentumBonus
+    );
+    this.adjustCombatMomentum(maneuverMomentumGain);
+
     let secondaryDamage = 0;
+    let secondaryKilled: ActorEntity | null = null;
     let extraNote = '';
 
     if (maneuver.id === 'ciecie_lukiem') {
@@ -1527,7 +1844,17 @@ export class OstrzeEngineState extends CrpgGameState {
       if (secondary && secondary.combat) {
         secondaryDamage = Math.max(1, Math.round(finalDmg * 0.7));
         secondary.combat.hp = Math.max(0, secondary.combat.hp - secondaryDamage);
-        if (secondary.combat.hp <= 0) secondary.combat.isAlive = false;
+        secondary.hitRecoilTimer = 0.2;
+        secondary.hitRecoilMaxTimer = 0.2;
+        secondary.hitFromX = this.player.x;
+        secondary.hitFromY = this.player.y;
+        secondary.damageFlashTimer = 0.24;
+        if (secondary.combat.hp <= 0) {
+          secondary.combat.isAlive = false;
+          const secOrigin = resolveEnemyOriginId(secondary.id, secondary.recipe.name);
+          this.checkAndRecordEnemyKill(secondary, secOrigin);
+          secondaryKilled = secondary;
+        }
         this.pushFloatingCombatText(
           secondary.x,
           secondary.y,
@@ -1589,6 +1916,38 @@ export class OstrzeEngineState extends CrpgGameState {
     }
 
     this.onJuicyImpact?.(true);
+    if (timedBonus.grade === 'perfect') {
+      this.sayHeroCombatBark('perfect_strike');
+      this.pushFloatingCombatText(
+        target.x,
+        target.y,
+        target.z + 2.85,
+        '⚡ IDEALNY MANEWR!',
+        0xfde047
+      );
+      extraNote += ' + Idealny Rytm!';
+      this.onCombatFeedback?.({
+        kind: 'perfect_strike',
+        headline: `⚡ IDEALNY ${maneuver.shortLabel.toUpperCase()}!`,
+        subtext: `- ${finalDmg} HP · +30% obrażeń`,
+        screenFlash: 'gold',
+        zoomPunch: 0.1,
+        hitStopSec: 0.09,
+        shakeMs: 220,
+        shakeIntensity: 5.2
+      });
+    } else {
+      this.onCombatFeedback?.({
+        kind: guardBreak.triggered ? 'guard_break' : 'crit',
+        headline: guardBreak.triggered ? '💥 PRZEŁAMANIE GARDY!' : `${maneuver.icon} ${maneuver.name.toUpperCase()}!`,
+        subtext: `${target.recipe.name} -${finalDmg} HP`,
+        screenFlash: 'gold',
+        zoomPunch: 0.075,
+        hitStopSec: 0.065,
+        shakeMs: 185,
+        shakeIntensity: 4.5
+      });
+    }
     if (guardBreak.triggered) {
       this.pushFloatingCombatText(
         target.x,
@@ -1618,6 +1977,12 @@ export class OstrzeEngineState extends CrpgGameState {
     );
     const msg = `${maneuver.icon} ${maneuver.name} w ${target.recipe.name}: -${finalDmg} HP${extraNote}`;
     this.addCombatLog(msg);
+
+    if (!target.combat.isAlive) {
+      this.grantKillRushOnEnemyDefeat(target);
+    } else if (secondaryKilled) {
+      this.grantKillRushOnEnemyDefeat(secondaryKilled);
+    }
 
     // Check if all enemies died
     const anyAlive = this.npcs.some((n) => n.combat?.isHostile && n.combat.isAlive);
@@ -1671,6 +2036,7 @@ export class OstrzeEngineState extends CrpgGameState {
 
     let hitCount = 0;
     let totalDamage = 0;
+    let firstKilled: ActorEntity | null = null;
     for (const enemy of this.npcs) {
       if (!enemy.combat?.isHostile || !enemy.combat.isAlive) continue;
       const d = Math.hypot(enemy.tileX - barrel.x, enemy.tileY - barrel.y);
@@ -1680,8 +2046,14 @@ export class OstrzeEngineState extends CrpgGameState {
       const fireMult = getEnemyDamageMultiplier(originId, 'ogien', ORIGIN_DATA);
       const dmg = Math.max(1, Math.round(baseRoll * fireMult));
       enemy.combat.hp = Math.max(0, enemy.combat.hp - dmg);
+      enemy.hitRecoilTimer = 0.26;
+      enemy.hitRecoilMaxTimer = 0.26;
+      enemy.hitFromX = barrel.x + 0.5;
+      enemy.hitFromY = barrel.y + 0.5;
+      enemy.damageFlashTimer = 0.3;
       if (enemy.combat.hp <= 0) {
         enemy.combat.isAlive = false;
+        if (!firstKilled) firstKilled = enemy;
       } else {
         this.applyEnemyBurn(enemy.id, 2);
       }
@@ -1697,7 +2069,23 @@ export class OstrzeEngineState extends CrpgGameState {
       );
     }
 
+    if (hitCount > 0) {
+      this.adjustCombatMomentum(Math.min(2, hitCount));
+    }
     this.onJuicyImpact?.(true);
+    this.onCombatFeedback?.({
+      kind: 'explosion',
+      headline: '💥 WYBUCH BECZKI!',
+      subtext: hitCount > 0 ? `Trafiono ${hitCount} wrogów (-${totalDamage} HP)` : 'Ogień ogarnął arenę',
+      screenFlash: 'fire',
+      zoomPunch: 0.1,
+      hitStopSec: 0.08,
+      shakeMs: 260,
+      shakeIntensity: 6.2
+    });
+    if (firstKilled) {
+      this.grantKillRushOnEnemyDefeat(firstKilled);
+    }
     this.pushFloatingCombatText(barrel.x + 0.5, barrel.y + 0.5, barrel.z + 1.8, '💥 BUM!', 0xffab40);
     const msg =
       hitCount > 0

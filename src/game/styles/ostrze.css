@@ -4393,3 +4393,770 @@ h3 .ostrze-kbd {
     animation: none;
   }
 }
+
+
+/* ==========================================================================
+   Combat Game-Feel Overhaul: Impact Flash, Callout Banner, Timed Strike Bar & Momentum
+   ========================================================================== */
+
+.ostrze-combat-flash-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 960;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.28s ease-out;
+}
+
+.ostrze-combat-flash-layer.is-active {
+  opacity: 1;
+}
+
+.ostrze-combat-flash-layer.is-gold {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(251, 191, 36, 0) 46%,
+    rgba(245, 158, 11, 0.32) 84%,
+    rgba(254, 240, 138, 0.48) 100%
+  );
+}
+
+.ostrze-combat-flash-layer.is-crimson {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(127, 29, 29, 0) 44%,
+    rgba(185, 28, 28, 0.36) 82%,
+    rgba(239, 68, 68, 0.52) 100%
+  );
+}
+
+.ostrze-combat-flash-layer.is-steel {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(148, 163, 184, 0) 48%,
+    rgba(203, 213, 225, 0.28) 84%,
+    rgba(248, 250, 252, 0.44) 100%
+  );
+}
+
+.ostrze-combat-flash-layer.is-fire {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(234, 88, 12, 0) 42%,
+    rgba(234, 88, 12, 0.36) 82%,
+    rgba(251, 146, 60, 0.54) 100%
+  );
+}
+
+.ostrze-combat-callout {
+  position: fixed;
+  top: 156px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-10px) scale(0.94);
+  z-index: 970;
+  pointer-events: none;
+  opacity: 0;
+  min-width: 240px;
+  max-width: min(440px, calc(100vw - 40px));
+  padding: 9px 18px;
+  border-radius: 6px;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(22, 20, 18, 0.94) 0%, rgba(12, 11, 10, 0.96) 100%);
+  border: 1px solid rgba(217, 169, 86, 0.72);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.72), 0 0 22px rgba(245, 158, 11, 0.25);
+  transition: opacity 0.2s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ostrze-combat-callout.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0) scale(1);
+}
+
+.ostrze-combat-callout.is-crimson {
+  border-color: rgba(239, 68, 68, 0.75);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.72), 0 0 20px rgba(239, 68, 68, 0.28);
+}
+
+.ostrze-combat-callout.is-steel {
+  border-color: rgba(203, 213, 225, 0.78);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.72), 0 0 20px rgba(148, 163, 184, 0.28);
+}
+
+.ostrze-combat-callout.is-fire {
+  border-color: rgba(251, 146, 60, 0.82);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.72), 0 0 24px rgba(234, 88, 12, 0.35);
+}
+
+.ostrze-combat-callout-title {
+  font-size: 0.96rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #fde68a;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.85);
+}
+
+.ostrze-combat-callout-sub {
+  margin-top: 2px;
+  font-size: 0.76rem;
+  color: #d6cfc2;
+}
+
+.ostrze-timed-strike-root {
+  position: fixed;
+  left: 50%;
+  bottom: 236px;
+  transform: translateX(-50%);
+  z-index: 980;
+  pointer-events: none;
+}
+
+.ostrze-timed-strike-wrap {
+  pointer-events: auto;
+  cursor: pointer;
+  width: min(370px, calc(100vw - 32px));
+  padding: 10px 14px 9px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(20, 22, 30, 0.96) 0%, rgba(11, 13, 18, 0.97) 100%);
+  border: 1px solid rgba(217, 169, 86, 0.78);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.82), 0 0 24px rgba(245, 158, 11, 0.22);
+  user-select: none;
+  animation: timedStrikePopIn 0.14s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ostrze-timed-strike-wrap.is-grade-perfect {
+  border-color: #fde047;
+  box-shadow: 0 0 0 2px rgba(253, 224, 71, 0.55), 0 0 34px rgba(245, 158, 11, 0.55);
+}
+
+.ostrze-timed-strike-wrap.is-grade-good {
+  border-color: #fb923c;
+  box-shadow: 0 0 20px rgba(251, 146, 60, 0.35);
+}
+
+@keyframes timedStrikePopIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.ostrze-timed-strike-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+.ostrze-timed-strike-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #f3e8d2;
+  letter-spacing: 0.03em;
+}
+
+.ostrze-timed-strike-hint {
+  font-size: 0.72rem;
+  color: #d6c3a0;
+}
+
+.ostrze-timed-strike-track {
+  position: relative;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(9, 11, 16, 0.92);
+  border: 1px solid rgba(120, 108, 86, 0.5);
+  overflow: hidden;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.7);
+}
+
+.ostrze-timed-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.ostrze-timed-zone.is-good {
+  background: linear-gradient(90deg, rgba(217, 119, 6, 0.32), rgba(245, 158, 11, 0.45), rgba(217, 119, 6, 0.32));
+}
+
+.ostrze-timed-zone.is-perfect {
+  background: linear-gradient(90deg, rgba(250, 204, 21, 0.65), rgba(254, 240, 138, 0.95), rgba(250, 204, 21, 0.65));
+  box-shadow: 0 0 14px rgba(253, 224, 71, 0.7);
+}
+
+.ostrze-timed-cursor {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 6px;
+  margin-left: -3px;
+  border-radius: 3px;
+  background: #ffffff;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.95), 0 0 6px rgba(253, 224, 71, 0.9);
+}
+
+.ostrze-timed-strike-result {
+  min-height: 16px;
+  margin-top: 6px;
+  text-align: center;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #fde68a;
+  letter-spacing: 0.03em;
+}
+
+.ostrze-momentum-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+  padding: 5px 7px;
+  border-radius: 4px;
+  background: rgba(15, 17, 23, 0.72);
+  border: 1px solid rgba(110, 93, 64, 0.36);
+}
+
+.ostrze-momentum-row.is-tier-1 {
+  border-color: rgba(245, 158, 11, 0.55);
+  background: rgba(48, 28, 12, 0.45);
+}
+
+.ostrze-momentum-row.is-tier-2 {
+  border-color: rgba(253, 224, 71, 0.8);
+  background: linear-gradient(90deg, rgba(66, 32, 6, 0.7), rgba(120, 53, 15, 0.55));
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.22);
+}
+
+.ostrze-momentum-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ostrze-momentum-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #e7decb;
+  letter-spacing: 0.02em;
+}
+
+.ostrze-momentum-row.is-tier-2 .ostrze-momentum-label {
+  color: #fde047;
+}
+
+.ostrze-momentum-pips {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+
+.ostrze-momentum-pip {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  transition: background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.ostrze-momentum-pip.is-filled {
+  background: linear-gradient(90deg, #ea580c, #f59e0b);
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
+}
+
+.ostrze-momentum-pip.is-peak {
+  background: linear-gradient(90deg, #f59e0b, #fef08a);
+  box-shadow: 0 0 9px rgba(253, 224, 71, 0.8);
+}
+
+.ostrze-combat-pill.is-execute {
+  background: rgba(127, 29, 29, 0.82);
+  border-color: rgba(248, 113, 113, 0.85);
+  color: #fef08a;
+  font-weight: 700;
+  animation: executePillPulse 1.3s ease-in-out infinite;
+}
+
+@keyframes executePillPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 10px 1px rgba(251, 191, 36, 0.55);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ostrze-combat-flash-layer,
+  .ostrze-combat-callout,
+  .ostrze-timed-strike-wrap,
+  .ostrze-combat-pill.is-execute {
+    animation: none;
+    transition: none;
+  }
+}
+
+
+/* ==========================================================================
+   Slavic Dark-Fantasy Combat HUD Redesign ("Kute Żelazo, Mosiądz i Ciemny Dąb")
+   Cohesive visual overhaul across Target Card, Top Banner, Tactical Deck & Timed Strike
+   ========================================================================== */
+
+/* --- Target Card (Top-Right Forged Iron & Brass Panel) --- */
+.ostrze-combat-target-card {
+  width: min(352px, calc(100vw - 28px));
+  padding: 13px 15px 14px;
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(196, 146, 68, 0.12) 0%, rgba(196, 146, 68, 0) 48%),
+    linear-gradient(180deg, rgba(26, 21, 17, 0.97) 0%, rgba(14, 11, 9, 0.98) 100%);
+  border: 1px solid rgba(182, 138, 70, 0.56);
+  box-shadow:
+    inset 0 1px 0 rgba(244, 210, 142, 0.22),
+    inset 0 0 0 1px rgba(10, 8, 6, 0.8),
+    0 18px 40px rgba(0, 0, 0, 0.82);
+  color: #ece3d2;
+}
+
+.ostrze-combat-target-card.is-executable {
+  border-color: rgba(220, 68, 68, 0.78);
+  box-shadow:
+    inset 0 1px 0 rgba(252, 165, 165, 0.24),
+    0 18px 40px rgba(0, 0, 0, 0.84),
+    0 0 24px rgba(185, 28, 28, 0.26);
+}
+
+.ostrze-combat-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.ostrze-combat-tab {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 8px 3px;
+  border-radius: 4px;
+  border: 1px solid rgba(126, 102, 68, 0.36);
+  background: linear-gradient(180deg, rgba(31, 25, 20, 0.92), rgba(18, 14, 11, 0.95));
+  color: #c6baa6;
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease, transform 0.14s ease;
+}
+
+.ostrze-combat-tab:hover {
+  border-color: rgba(212, 168, 92, 0.62);
+  color: #f6ead4;
+  transform: translateY(-1px);
+}
+
+.ostrze-combat-tab.is-active {
+  background: linear-gradient(180deg, rgba(72, 48, 22, 0.92), rgba(38, 25, 12, 0.96));
+  border-color: #e5b869;
+  color: #fff3d6;
+  box-shadow: inset 0 1px 0 rgba(254, 240, 138, 0.28);
+}
+
+.ostrze-combat-tab-hp {
+  display: block;
+  width: 100%;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+
+.ostrze-combat-tab-hp > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #b91c1c, #ef4444);
+}
+
+.ostrze-combat-tab.is-low .ostrze-combat-tab-hp > span {
+  background: linear-gradient(90deg, #dc2626, #f59e0b);
+}
+
+.ostrze-combat-portrait-frame {
+  width: 108px;
+  height: 82px;
+  padding: 3px;
+  border-radius: 5px;
+  background: radial-gradient(circle at 50% 35%, #231c16 0%, #0b0907 100%);
+  border: 1px solid rgba(196, 152, 78, 0.68);
+  box-shadow:
+    inset 0 0 12px rgba(0, 0, 0, 0.75),
+    0 4px 12px rgba(0, 0, 0, 0.55);
+}
+
+.ostrze-combat-target-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.ostrze-combat-target-title {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #f6e1b4;
+  line-height: 1.2;
+}
+
+.ostrze-combat-archetype {
+  margin-left: 0;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  background: rgba(196, 146, 68, 0.16);
+  border: 1px solid rgba(196, 146, 68, 0.44);
+  color: #f2cf88;
+}
+
+.ostrze-combat-hp-bar {
+  height: 18px;
+  margin-top: 0;
+  margin-bottom: 7px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(16, 10, 10, 0.95), rgba(28, 16, 16, 0.92));
+  border: 1px solid rgba(168, 66, 60, 0.55);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.72);
+  position: relative;
+  overflow: hidden;
+}
+
+.ostrze-combat-hp-bar .ostrze-hp-fill {
+  background: linear-gradient(90deg, #7f1d1d 0%, #b91c1c 58%, #dc2626 100%);
+  box-shadow: inset 0 1px 0 rgba(254, 202, 202, 0.28);
+  transition: width 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ostrze-combat-hp-bar .ostrze-hp-fill.is-low {
+  background: linear-gradient(90deg, #991b1b 0%, #dc2626 55%, #f59e0b 100%);
+}
+
+.ostrze-combat-hp-bar .ostrze-hp-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.ostrze-combat-target-stats {
+  display: flex;
+  gap: 6px;
+  font-size: 0.73rem;
+}
+
+.ostrze-combat-stat-chip {
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(12, 10, 8, 0.74);
+  border: 1px solid rgba(134, 112, 78, 0.28);
+  color: #c2b6a1;
+  font-variant-numeric: tabular-nums;
+}
+
+.ostrze-combat-stat-chip strong {
+  color: #f3e4c4;
+}
+
+.ostrze-combat-attack-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 7px 9px;
+  border-radius: 5px;
+  background: linear-gradient(180deg, rgba(35, 27, 19, 0.84), rgba(20, 16, 12, 0.9));
+  border: 1px solid rgba(182, 138, 70, 0.34);
+  font-size: 0.76rem;
+}
+
+.ostrze-combat-forecast-main {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.ostrze-combat-forecast-label {
+  color: #cfc3ae;
+}
+
+.ostrze-combat-forecast-dmg {
+  color: #fde68a;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ostrze-combat-hit-odds {
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.ostrze-combat-hit-odds.is-high {
+  background: rgba(34, 197, 94, 0.16);
+  border: 1px solid rgba(74, 222, 128, 0.45);
+  color: #86efac;
+}
+
+.ostrze-combat-hit-odds.is-mid {
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  color: #fde68a;
+}
+
+.ostrze-combat-hit-odds.is-low {
+  background: rgba(239, 68, 68, 0.18);
+  border: 1px solid rgba(248, 113, 113, 0.48);
+  color: #fca5a5;
+}
+
+.ostrze-combat-section {
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(164, 126, 68, 0.24);
+}
+
+.ostrze-combat-section-label {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.67rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #b79c6d;
+  margin-bottom: 5px;
+}
+
+.ostrze-combat-section .ostrze-combat-pills {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.ostrze-combat-tactical-actions {
+  display: flex;
+  gap: 7px;
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(164, 126, 68, 0.28);
+}
+
+.ostrze-tactical-action-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 10px;
+  border-radius: 5px;
+  border: 1px solid rgba(182, 138, 70, 0.54);
+  background: linear-gradient(180deg, rgba(66, 47, 22, 0.92) 0%, rgba(36, 25, 12, 0.96) 100%);
+  color: #fdf0cf;
+  font-size: 0.77rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(254, 240, 138, 0.22), 0 4px 12px rgba(0, 0, 0, 0.45);
+  transition: transform 0.14s ease, border-color 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+}
+
+.ostrze-tactical-action-btn.is-ready:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: #fde047;
+  box-shadow: inset 0 1px 0 rgba(254, 240, 138, 0.35), 0 6px 16px rgba(245, 158, 11, 0.28);
+  filter: brightness(1.08);
+}
+
+.ostrze-tactical-action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.35);
+}
+
+.ostrze-maneuver-cost {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  color: #e5c687;
+  opacity: 0.9;
+}
+
+.ostrze-maneuver-rhythm {
+  padding: 1px 5px;
+  border-radius: 999px;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  background: rgba(250, 204, 21, 0.2);
+  border: 1px solid rgba(253, 224, 71, 0.55);
+  color: #fef08a;
+}
+
+/* --- Engine Combat Top Turn Banner (Heraldic Brass & Iron Ribbon) --- */
+#hud-root .combat-top-banner {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(212, 162, 76, 0.16), rgba(212, 162, 76, 0) 65%),
+    linear-gradient(180deg, rgba(28, 22, 16, 0.96) 0%, rgba(14, 11, 8, 0.98) 100%);
+  border: 1px solid rgba(196, 152, 78, 0.62);
+  border-radius: 8px;
+  box-shadow:
+    inset 0 1px 0 rgba(248, 220, 158, 0.24),
+    0 14px 32px rgba(0, 0, 0, 0.78);
+}
+
+#hud-root .combat-top-banner .combat-turn-title,
+#hud-root .combat-top-banner strong {
+  font-family: 'Cinzel', Georgia, serif;
+  letter-spacing: 0.03em;
+}
+
+#hud-root .combat-top-banner.enemy-turn {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(220, 38, 38, 0.24), rgba(220, 38, 38, 0) 68%),
+    linear-gradient(180deg, rgba(34, 16, 15, 0.96) 0%, rgba(16, 9, 9, 0.98) 100%);
+  border-color: rgba(239, 68, 68, 0.74);
+  box-shadow:
+    inset 0 1px 0 rgba(252, 165, 165, 0.22),
+    0 14px 34px rgba(0, 0, 0, 0.82),
+    0 0 22px rgba(220, 38, 38, 0.24);
+}
+
+/* --- Engine Bottom Tactical Command Deck (Wrought Iron & Dark Oak) --- */
+#hud-root .combat-tactical-bar {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(196, 146, 68, 0.11), rgba(196, 146, 68, 0) 58%),
+    linear-gradient(180deg, rgba(25, 20, 16, 0.97) 0%, rgba(13, 10, 8, 0.98) 100%);
+  border: 1px solid rgba(182, 138, 70, 0.54);
+  box-shadow:
+    inset 0 1px 0 rgba(244, 210, 142, 0.22),
+    0 16px 40px rgba(0, 0, 0, 0.85);
+}
+
+#hud-root .quick-strike-card {
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(36, 29, 23, 0.95) 0%, rgba(19, 15, 12, 0.97) 100%);
+  border: 1px solid rgba(154, 122, 74, 0.38);
+  box-shadow: inset 0 1px 0 rgba(255, 235, 194, 0.1), 0 4px 10px rgba(0, 0, 0, 0.42);
+  transition: transform 0.14s ease, border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
+#hud-root .quick-strike-card:hover:not(.disabled) {
+  transform: translateY(-2px);
+  border-color: rgba(235, 192, 106, 0.82);
+  background: linear-gradient(180deg, rgba(48, 38, 28, 0.98) 0%, rgba(24, 19, 14, 0.98) 100%);
+  box-shadow: inset 0 1px 0 rgba(254, 240, 138, 0.22), 0 8px 18px rgba(0, 0, 0, 0.55);
+}
+
+#hud-root .quick-strike-card.strike-quick {
+  border-color: rgba(110, 178, 124, 0.45);
+}
+
+#hud-root .quick-strike-card.strike-power {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.18), rgba(245, 158, 11, 0) 70%),
+    linear-gradient(180deg, rgba(46, 31, 18, 0.96) 0%, rgba(23, 15, 10, 0.98) 100%);
+  border-color: rgba(234, 142, 48, 0.62);
+}
+
+#hud-root .quick-strike-card.strike-power:hover:not(.disabled) {
+  border-color: #fde047;
+  box-shadow: inset 0 1px 0 rgba(254, 240, 138, 0.28), 0 8px 20px rgba(245, 158, 11, 0.25);
+}
+
+#hud-root .quick-strike-card.strike-defend {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(96, 165, 250, 0.13), rgba(96, 165, 250, 0) 70%),
+    linear-gradient(180deg, rgba(26, 30, 38, 0.95) 0%, rgba(15, 17, 23, 0.98) 100%);
+  border-color: rgba(114, 158, 214, 0.48);
+}
+
+#hud-root .quick-strike-card.selected,
+#hud-root .quick-strike-card.active-stance {
+  border-color: #e5b869;
+  box-shadow: inset 0 1px 0 rgba(254, 240, 138, 0.28), 0 0 0 1px rgba(229, 184, 105, 0.34);
+}
+
+#hud-root .combat-exec-btn.end-turn {
+  font-family: 'Cinzel', Georgia, serif;
+  letter-spacing: 0.04em;
+  background: linear-gradient(180deg, rgba(132, 92, 34, 0.56) 0%, rgba(78, 52, 18, 0.64) 100%);
+  border: 1px solid rgba(212, 168, 86, 0.66);
+  color: #fef3c7;
+  box-shadow: inset 0 1px 0 rgba(254, 240, 138, 0.24), 0 4px 12px rgba(0, 0, 0, 0.45);
+}
+
+#hud-root .combat-exec-btn.end-turn.end-turn-ready {
+  background: linear-gradient(180deg, rgba(196, 140, 46, 0.85) 0%, rgba(136, 86, 22, 0.88) 100%);
+  border-color: #fde047;
+  color: #fffbeb;
+  box-shadow: inset 0 1px 0 rgba(255, 251, 235, 0.42), 0 0 20px rgba(245, 158, 11, 0.48);
+}
+
+/* --- Elevated Timed Strike Bar & Callout Banner --- */
+.ostrze-combat-callout-title {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 1.04rem;
+  letter-spacing: 0.08em;
+}
+
+.ostrze-timed-strike-wrap {
+  background:
+    radial-gradient(circle at 68% 0%, rgba(250, 204, 21, 0.14), rgba(250, 204, 21, 0) 60%),
+    linear-gradient(180deg, rgba(26, 21, 16, 0.97) 0%, rgba(13, 10, 8, 0.98) 100%);
+  border: 1px solid rgba(217, 169, 86, 0.82);
+  box-shadow:
+    inset 0 1px 0 rgba(254, 240, 138, 0.25),
+    0 18px 42px rgba(0, 0, 0, 0.88),
+    0 0 28px rgba(245, 158, 11, 0.22);
+}
+
+.ostrze-timed-strike-label {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.86rem;
+  letter-spacing: 0.04em;
+  color: #f8e6be;
+}
+
+.ostrze-timed-sweet-marker {
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  margin-top: -4px;
+  transform: rotate(45deg);
+  background: #fffbeb;
+  border: 1px solid rgba(180, 83, 9, 0.9);
+  box-shadow: 0 0 8px rgba(254, 240, 138, 0.95);
+  pointer-events: none;
+}
+
+/* Compact laptop screens (<= 1366px): keep crisp separation between top turn banner and target card */
+@media (max-width: 1366px) {
+  .ostrze-combat-target-card {
+    width: min(316px, calc(100vw - 28px));
+    padding: 11px 12px 12px;
+  }
+
+  #hud-root .combat-top-banner {
+    left: calc(50% - 104px);
+    max-width: min(560px, calc(100vw - 360px));
+  }
+}

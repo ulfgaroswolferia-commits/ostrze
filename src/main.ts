@@ -37,6 +37,7 @@ import {
 } from './game/state/saveManager';
 import { OstrzeModalUi } from './game/ui/OstrzeModalUi';
 import { ChronicleUxController } from './game/ui/chronicleUxController';
+import { CombatFeelOverlay } from './game/ui/combatFeelOverlay';
 import { CombatTargetOverlay } from './game/ui/combatTargetOverlay';
 import { PhenomenonOverlay } from './game/ui/phenomenonOverlay';
 
@@ -76,6 +77,7 @@ async function bootstrapOstrze(): Promise<void> {
   let syncHelpFabAndTips: (() => void) | null = null;
   const chronicleUx = new ChronicleUxController(hudRoot, engine);
   const combatTargetOverlay = new CombatTargetOverlay(engine, ORIGIN_DATA);
+  const combatFeelOverlay = new CombatFeelOverlay();
   const phenomenonOverlay = new PhenomenonOverlay();
 
   const statusVignette = document.createElement('div');
@@ -99,6 +101,9 @@ async function bootstrapOstrze(): Promise<void> {
   };
 
   const refreshUi = (): void => {
+    if (!engine.combatState.active && combatFeelOverlay.isTimedStrikeActive()) {
+      combatFeelOverlay.cancelTimedStrike();
+    }
     hud?.render();
     inspector?.render();
     chronicleUx.sync();
@@ -116,9 +121,44 @@ async function bootstrapOstrze(): Promise<void> {
   sceneView.showGridInExploration = isDevMode;
   sceneView.zoom = 0.88;
   sceneView.targetZoom = 0.88;
+  let zoomPunchRestoreTimer: ReturnType<typeof setTimeout> | null = null;
+  let zoomPunchBaseline: number | null = null;
+  const triggerCameraZoomPunch = (deltaZoom: number): void => {
+    if (deltaZoom <= 0) return;
+    if (zoomPunchBaseline === null) {
+      zoomPunchBaseline = sceneView.targetZoom;
+    }
+    sceneView.targetZoom = Math.min(1.65, zoomPunchBaseline + deltaZoom);
+    if (zoomPunchRestoreTimer) clearTimeout(zoomPunchRestoreTimer);
+    zoomPunchRestoreTimer = setTimeout(() => {
+      if (zoomPunchBaseline !== null) {
+        sceneView.targetZoom = zoomPunchBaseline;
+        zoomPunchBaseline = null;
+      }
+      zoomPunchRestoreTimer = null;
+    }, 190);
+  };
+
   engine.onJuicyImpact = (isBigImpact) => {
-    sceneView.hitStopTimer = isBigImpact ? 0.045 : 0.025;
-    sceneView.triggerScreenShake(isBigImpact ? 180 : 110, isBigImpact ? 4.4 : 2.6);
+    sceneView.hitStopTimer = Math.max(sceneView.hitStopTimer, isBigImpact ? 0.055 : 0.03);
+    sceneView.triggerScreenShake(isBigImpact ? 190 : 115, isBigImpact ? 4.6 : 2.7);
+  };
+  engine.onCombatFeedback = (ev) => {
+    if (ev.hitStopSec) {
+      sceneView.hitStopTimer = Math.max(sceneView.hitStopTimer, ev.hitStopSec);
+    }
+    if (ev.shakeMs && ev.shakeIntensity) {
+      sceneView.triggerScreenShake(ev.shakeMs, ev.shakeIntensity);
+    }
+    if (ev.zoomPunch) {
+      triggerCameraZoomPunch(ev.zoomPunch);
+    }
+    if (ev.screenFlash) {
+      combatFeelOverlay.triggerFlash(ev.screenFlash);
+    }
+    if (ev.headline) {
+      combatFeelOverlay.showCallout(ev.headline, ev.subtext, ev.screenFlash ?? 'gold');
+    }
   };
   if (isDevMode) {
     engine.fogOfWarEnabled = false;
@@ -526,6 +566,16 @@ async function bootstrapOstrze(): Promise<void> {
     }
   };
 
+  if (isDevTeleportEnabled) {
+    (window as unknown as Record<string, unknown>).__ostrzeDev = {
+      engine,
+      combatFeelOverlay,
+      combatTargetOverlay,
+      refreshUi,
+      switchToDevLocation
+    };
+  }
+
   const toggleUnifiedAudio = (): boolean => {
     const engineAudio = CombatAudioEngine.getInstance();
     const nextMuted = !engineAudio.getMuted();
@@ -712,6 +762,99 @@ async function bootstrapOstrze(): Promise<void> {
     }
   };
 
+  const launchTimedPowerStrike = (): boolean => {
+    if (
+      !engine.combatState.active ||
+      modalUi.hasOpenModal() ||
+      combatFeelOverlay.isTimedStrikeActive() ||
+      engine.isSequentialEnemyTurnActive ||
+      engine.combatState.activeTurnActorId !== engine.player.id
+    ) {
+      return false;
+    }
+    const livingEnemies = engine.npcs.filter((n) => n.combat?.isHostile && n.combat.isAlive);
+    const targetId = engine.combatState.selectedTargetId ?? livingEnemies[0]?.id ?? null;
+    const target = livingEnemies.find((e) => e.id === targetId) ?? null;
+    if (!target || !engine.player.combat) return false;
+    const snap = engine.getActorCombatant(engine.player);
+    const powerApCost = snap.derived.weaponProfile.baseApCost + 1;
+    const dist = Math.hypot(target.tileX - engine.player.tileX, target.tileY - engine.player.tileY);
+    if (engine.player.combat.ap < powerApCost || dist > snap.derived.weaponProfile.maxRange + 0.55) {
+      return false;
+    }
+    engine.combatState.selectedTargetId = target.id;
+    engine.combatState.selectedAttackMode = 'power';
+    return combatFeelOverlay.startTimedStrike('Silny Cios', (grade) => {
+      if (!engine.combatState.active) return;
+      engine.setPendingTimedStrikeGrade(grade);
+      engine.combatState.selectedAttackMode = 'power';
+      engine.commandAttackEnemy(target.id);
+      refreshUi();
+    });
+  };
+
+  const launchTimedManeuver = (targetId?: string): void => {
+    if (
+      !engine.combatState.active ||
+      modalUi.hasOpenModal() ||
+      combatFeelOverlay.isTimedStrikeActive() ||
+      engine.isSequentialEnemyTurnActive ||
+      engine.combatState.activeTurnActorId !== engine.player.id
+    ) {
+      return;
+    }
+    const st = engine.getWeaponManeuverState(targetId);
+    if (!st.canUse) {
+      modalUi.showToast(st.reason ?? 'Manewr niedostępny', 'info');
+      return;
+    }
+    combatFeelOverlay.startTimedStrike(st.maneuver.name, (grade) => {
+      if (!engine.combatState.active) return;
+      engine.setPendingTimedStrikeGrade(grade);
+      const res = engine.performPlayerWeaponManeuver(targetId);
+      if (res.ok) {
+        ostrzeAudio.playManeuverSfx();
+        refreshUi();
+      } else {
+        modalUi.showToast(res.message, 'info');
+      }
+    });
+  };
+
+  combatTargetOverlay.onRequestManeuver = (targetId) => {
+    launchTimedManeuver(targetId);
+  };
+
+  // Capture-phase hook for [2] Silny Cios & HUD power-strike button -> Timed Strike bar
+  window.addEventListener(
+    'keydown',
+    (e) => {
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.key === '2' && engine.combatState.active && !modalUi.hasOpenModal()) {
+        if (launchTimedPowerStrike()) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+        }
+      }
+    },
+    { capture: true }
+  );
+
+  hudRoot.addEventListener(
+    'click',
+    (e) => {
+      const btn = (e.target as HTMLElement | null)?.closest<HTMLElement>('.quick-strike-card.strike-power');
+      if (!btn || btn.classList.contains('disabled')) return;
+      if (launchTimedPowerStrike()) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      }
+    },
+    { capture: true }
+  );
+
   window.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.altKey || e.metaKey) return;
     const tag = (e.target as HTMLElement | null)?.tagName;
@@ -738,13 +881,7 @@ async function bootstrapOstrze(): Promise<void> {
 
     if (key === 'r' && engine.combatState.active && !modalUi.hasOpenModal()) {
       e.preventDefault();
-      const res = engine.performPlayerWeaponManeuver();
-      if (res.ok) {
-        ostrzeAudio.playManeuverSfx();
-        refreshUi();
-      } else {
-        modalUi.showToast(res.message, 'info');
-      }
+      launchTimedManeuver();
       return;
     }
 

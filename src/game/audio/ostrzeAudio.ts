@@ -318,20 +318,30 @@ class OstrzeAudioManager {
     if (this.isMuted()) return;
     switch (kind) {
       case 'start':
-        this.playTone(146.83, 0.22, 'sawtooth', 0.055, 0, 110);
-        this.playTone(220, 0.28, 'triangle', 0.055, 0.09, 196);
+        // Steel unsheathe + low war drum call
+        this.playNoiseBurst(0.16, 'highpass', 2400, 1.8, 0.04, 0);
+        this.playTone(146.83, 0.24, 'sawtooth', 0.06, 0, 92);
+        this.playTone(220, 0.28, 'triangle', 0.055, 0.08, 196);
         break;
       case 'hit':
-        this.playTone(170, 0.08, 'sawtooth', 0.06, 0, 72);
-        this.playTone(420, 0.05, 'triangle', 0.035, 0.01, 180);
+        // Layered blade whoosh + meaty body thump + crisp steel bite
+        this.playNoiseBurst(0.055, 'bandpass', 1850, 1.4, 0.048, 0);
+        this.playTone(150, 0.095, 'sawtooth', 0.072, 0.005, 56);
+        this.playTone(95, 0.11, 'sine', 0.078, 0.005, 42);
+        this.playNoiseBurst(0.045, 'highpass', 2900, 1.8, 0.036, 0.012);
         break;
       case 'crit':
-        this.playTone(130, 0.14, 'sawtooth', 0.08, 0, 58);
-        this.playTone(660, 0.18, 'triangle', 0.065, 0.02, 880);
-        this.playTone(990, 0.22, 'sine', 0.05, 0.06, 1320);
+        // Heavy sub-bass punch + shattering steel chord + resonant shimmer
+        this.playTone(115, 0.19, 'sine', 0.11, 0, 38);
+        this.playTone(165, 0.15, 'sawtooth', 0.085, 0, 58);
+        this.playNoiseBurst(0.11, 'bandpass', 1600, 1.5, 0.07, 0.008);
+        this.playTone(740, 0.22, 'triangle', 0.065, 0.02, 1110);
+        this.playTone(1180, 0.26, 'sine', 0.052, 0.05, 1480);
         break;
       case 'miss':
-        this.playTone(540, 0.09, 'sine', 0.03, 0, 260);
+        // Airy blade whistle
+        this.playNoiseBurst(0.11, 'bandpass', 1450, 2.4, 0.038, 0);
+        this.playTone(480, 0.085, 'sine', 0.024, 0, 230);
         break;
       case 'victory':
         this.playTone(329.63, 0.14, 'triangle', 0.06, 0);
@@ -343,6 +353,52 @@ class OstrzeAudioManager {
         this.playTone(146.83, 0.42, 'sine', 0.06, 0.16, 98);
         break;
     }
+  }
+
+  public playPlayerHurt(): void {
+    if (this.isMuted()) return;
+    // Heavy dull impact thud on hero armor/body
+    this.playTone(108, 0.16, 'sine', 0.095, 0, 44);
+    this.playTone(175, 0.11, 'sawtooth', 0.052, 0, 72);
+    this.playNoiseBurst(0.08, 'lowpass', 780, 1.1, 0.06, 0);
+  }
+
+  public playExecutionKill(): void {
+    if (this.isMuted()) return;
+    // Dramatic war-drum slam + steel finishing ring
+    this.playTone(96, 0.28, 'sine', 0.12, 0, 36);
+    this.playNoiseBurst(0.14, 'bandpass', 1200, 1.2, 0.075, 0);
+    this.playTone(587.33, 0.22, 'triangle', 0.06, 0.03, 880);
+    this.playTone(1174.66, 0.34, 'sine', 0.05, 0.07, 1318.5);
+  }
+
+  public playTimedStrike(grade: 'perfect' | 'good' | 'miss'): void {
+    if (this.isMuted()) return;
+    if (grade === 'perfect') {
+      // Crisp radiant steel lock-in chime
+      this.playTone(880, 0.11, 'triangle', 0.07, 0, 1318.5);
+      this.playTone(1318.5, 0.22, 'sine', 0.065, 0.04, 1760);
+      this.playNoiseBurst(0.06, 'highpass', 3200, 2.2, 0.045, 0);
+      return;
+    }
+    if (grade === 'good') {
+      this.playTone(587.33, 0.09, 'triangle', 0.05, 0, 740);
+      return;
+    }
+    this.playTone(210, 0.07, 'sine', 0.025, 0, 155);
+  }
+
+  public playMomentumTierUp(tier: 1 | 2): void {
+    if (this.isMuted()) return;
+    if (tier === 2) {
+      // Fierce Szał Ostrza war-chord
+      this.playTone(146.83, 0.24, 'sawtooth', 0.055, 0, 220);
+      this.playTone(440, 0.22, 'triangle', 0.06, 0.04, 587.33);
+      this.playTone(880, 0.28, 'sine', 0.055, 0.09, 1174.66);
+      return;
+    }
+    this.playTone(329.63, 0.14, 'triangle', 0.048, 0, 440);
+    this.playTone(493.88, 0.18, 'sine', 0.042, 0.06, 587.33);
   }
 
   private clearAmbienceNodes(): void {
@@ -662,8 +718,9 @@ class OstrzeAudioManager {
   }
 
   /**
-   * Monotonous synthetic music loops are intentionally disabled in favor of
-   * the richer organic world ambience soundscape (`setAmbience` + phenomena + SFX).
+   * Monotonous synthetic exploration music loops remain disabled in favor of
+   * organic world ambience. During active combat, plays a subtle, low-volume
+   * Slavic frame-drum heartbeat pulse to build tension without melody fatigue.
    */
   public setMusicTheme(theme: OstrzeMusicTheme): void {
     if (theme !== 'combat') {
@@ -672,6 +729,25 @@ class OstrzeAudioManager {
     this.clearMusicNodes();
     this.currentMusicTheme = theme;
     this.musicStep = 0;
+
+    if (theme === 'combat' && !this.isMuted() && typeof window !== 'undefined') {
+      this.musicTimer = setInterval(() => {
+        if (this.isMuted() || this.currentMusicTheme !== 'combat') return;
+        const step = this.musicStep++ % 4;
+        if (step === 0) {
+          // Deep frame-drum downbeat
+          this.playTone(76, 0.18, 'sine', 0.036, 0, 44);
+          this.playNoiseBurst(0.05, 'lowpass', 240, 1.0, 0.014, 0);
+        } else if (step === 2) {
+          // Double heartbeat pulse
+          this.playTone(82, 0.13, 'sine', 0.026, 0, 48);
+          this.playTone(68, 0.16, 'sine', 0.022, 0.16, 42);
+        } else if (step === 3) {
+          // Subtle dry rim/shaker accent
+          this.playNoiseBurst(0.028, 'bandpass', 1100, 2.2, 0.009, 0);
+        }
+      }, 640);
+    }
   }
 
   public restoreExplorationMusic(): void {

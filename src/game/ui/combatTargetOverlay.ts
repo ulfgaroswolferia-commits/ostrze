@@ -18,6 +18,10 @@ import {
   evaluateGuardBreak,
   evaluateStatusSynergies
 } from '../rules/combatSynergies';
+import {
+  evaluateExecutionBonus,
+  MAX_COMBAT_MOMENTUM
+} from '../rules/combatMomentum';
 import { escapeHtml } from './escapeHtml';
 
 /**
@@ -39,6 +43,7 @@ export class CombatTargetOverlay {
   private lastSeenLogHead: string | null = null;
   private critFlashUntil = 0;
   private lastRenderedKey: string | null = null;
+  public onRequestManeuver?: (targetId: string) => void;
 
   constructor(engine: OstrzeEngineState, data: OriginGameData) {
     this.engine = engine;
@@ -110,18 +115,13 @@ export class CombatTargetOverlay {
       return;
     }
 
-    // Detect latest combat log event for SFX & crit flash
+    // Detect latest combat log event for target-card crit pulse (combat SFX fires directly from engine event)
     const latestLog = this.engine.logs[0] ?? null;
     if (latestLog && latestLog !== this.lastSeenLogHead) {
       this.lastSeenLogHead = latestLog;
       const kind = classifyCombatLogEvent(latestLog);
       if (kind === 'crit') {
-        ostrzeAudio.playCombatSfx('crit');
         this.critFlashUntil = Date.now() + 550;
-      } else if (kind === 'hit') {
-        ostrzeAudio.playCombatSfx('hit');
-      } else if (kind === 'miss') {
-        ostrzeAudio.playCombatSfx('miss');
       }
     }
 
@@ -165,6 +165,8 @@ export class CombatTargetOverlay {
     const playerCover = this.engine.getActorCoverInfo(this.engine.player);
     const maneuverState = this.engine.getWeaponManeuverState(target.id);
     const nearbyBarrel = this.engine.findNearbyOilBarrel();
+    const momentumBonus = this.engine.getCombatMomentumBonus();
+    const executionBonus = evaluateExecutionBonus(c.hp, c.maxHp);
     const stateKey = [
       target.id,
       target.recipe.name,
@@ -183,6 +185,8 @@ export class CombatTargetOverlay {
       maneuverState.cooldownLeft,
       maneuverState.canUse ? 1 : 0,
       nearbyBarrel?.id ?? '',
+      momentumBonus.momentum,
+      executionBonus.isExecutable ? 1 : 0,
       this.engine.player.combat?.ap ?? 0,
       isCritFlash ? 1 : 0,
       telegraph ?? '',
@@ -243,17 +247,22 @@ export class CombatTargetOverlay {
     const tabsHtml =
       livingEnemies.length > 1
         ? `<div class="ostrze-combat-tabs" title="Przełącz cel klawiszem Tab">${livingEnemies
-            .map(
-              (enemy, idx) => `
+            .map((enemy, idx) => {
+              const eHpPct = Math.min(
+                100,
+                Math.max(0, Math.round(((enemy.combat?.hp ?? 0) / Math.max(1, enemy.combat?.maxHp ?? 1)) * 100))
+              );
+              return `
                 <button
                   type="button"
-                  class="ostrze-combat-tab ${enemy.id === target.id ? 'is-active' : ''}"
+                  class="ostrze-combat-tab ${enemy.id === target.id ? 'is-active' : ''} ${eHpPct <= 30 ? 'is-low' : ''}"
                   data-combat-target="${this.escape(enemy.id)}"
                 >
-                  ${idx + 1}. ${this.escape(enemy.recipe.name)}
+                  <span class="ostrze-combat-tab-text">${idx + 1}. ${this.escape(enemy.recipe.name)}</span>
+                  <span class="ostrze-combat-tab-hp"><span style="width:${eHpPct}%"></span></span>
                 </button>
-              `
-            )
+              `;
+            })
             .join('')}<kbd class="ostrze-kbd ostrze-combat-tab-kbd" title="Przełącz cel">Tab</kbd></div>`
         : '';
 
@@ -302,7 +311,12 @@ export class CombatTargetOverlay {
       isFeint: playerFeintReady
     });
 
-    const totalDmgMult = mult * synergies.damageMultiplier * guardBreak.damageMultiplier;
+    const totalDmgMult =
+      mult *
+      synergies.damageMultiplier *
+      guardBreak.damageMultiplier *
+      momentumBonus.damageMultiplier *
+      executionBonus.damageMultiplier;
     const estMin =
       Math.max(1, Math.round(preview.estimatedMinDamage * totalDmgMult)) +
       synergies.bonusFireDamage;
@@ -311,7 +325,10 @@ export class CombatTargetOverlay {
         Math.max(1, Math.round(preview.estimatedMinDamage * totalDmgMult)),
         Math.round(preview.estimatedMaxDamage * totalDmgMult)
       ) + synergies.bonusFireDamage;
-    const estHitPct = Math.min(95, Math.max(5, preview.hitChancePct + synergies.hitBonusPct));
+    const estHitPct = Math.min(
+      95,
+      Math.max(5, preview.hitChancePct + synergies.hitBonusPct + momentumBonus.hitBonusPct)
+    );
 
     const multBadge =
       mult < 1
@@ -323,6 +340,11 @@ export class CombatTargetOverlay {
             : `<span class="ostrze-combat-mult">×1.0</span>`;
 
     const activeSynergyPills: string[] = [];
+    if (executionBonus.isExecutable && executionBonus.tag) {
+      activeSynergyPills.push(
+        `<span class="ostrze-combat-pill is-execute" data-combat-executable="true">${this.escape(executionBonus.tag)}</span>`
+      );
+    }
     if (guardBreak.triggered) {
       activeSynergyPills.push(
         `<span class="ostrze-combat-pill is-synergy">💥 PRZEŁAMANIE GARDY (+25%, -1 AP)</span>`
@@ -417,20 +439,38 @@ export class CombatTargetOverlay {
         `
         : '';
 
-    const playerStripHtml =
-      playerPills.length > 0
-        ? `
-          <div class="ostrze-combat-section" data-player-combat-status="true">
-            <div class="ostrze-combat-section-label">Twój stan</div>
-            <div class="ostrze-combat-pills">${playerPills.join('')}</div>
-          </div>
-        `
-        : '';
+    const momentumPipsHtml = Array.from({ length: MAX_COMBAT_MOMENTUM }, (_, idx) => {
+      const filled = idx < momentumBonus.momentum;
+      const isPeak = momentumBonus.tier === 2 && filled;
+      return `<span class="ostrze-momentum-pip ${filled ? 'is-filled' : ''} ${isPeak ? 'is-peak' : ''}"></span>`;
+    }).join('');
+    const momentumDesc =
+      momentumBonus.tier === 2
+        ? `${momentumBonus.label} (+20% obr., +15% kryt)`
+        : momentumBonus.tier === 1
+          ? `${momentumBonus.label} (+10% obr., +8% kryt)`
+          : `Impet ${momentumBonus.momentum}/${MAX_COMBAT_MOMENTUM}`;
+    const momentumRowHtml = `
+      <div class="ostrze-momentum-row is-tier-${momentumBonus.tier}" data-combat-momentum="${momentumBonus.momentum}" title="Trafienia, synergie, riposty i dobicia ładują Impet Walki (na maksie: Szał Ostrza +20% obr. i +15% kryt; zabicie wroga zwraca +2 AP).">
+        <div class="ostrze-momentum-head">
+          <span class="ostrze-momentum-label">${this.escape(momentumDesc)}</span>
+        </div>
+        <div class="ostrze-momentum-pips">${momentumPipsHtml}</div>
+      </div>
+    `;
+
+    const playerStripHtml = `
+      <div class="ostrze-combat-section" data-player-combat-status="true">
+        <div class="ostrze-combat-section-label">Twój stan</div>
+        ${momentumRowHtml}
+        ${playerPills.length > 0 ? `<div class="ostrze-combat-pills">${playerPills.join('')}</div>` : ''}
+      </div>
+    `;
 
     const maneuverBtnLabel =
       maneuverState.cooldownLeft > 0
         ? `${maneuverState.maneuver.icon} ${this.escape(maneuverState.maneuver.shortLabel)} (${maneuverState.cooldownLeft} t.)`
-        : `${maneuverState.maneuver.icon} [R] ${this.escape(maneuverState.maneuver.shortLabel)} (${maneuverState.maneuver.apCost} AP)`;
+        : `${maneuverState.maneuver.icon} <kbd class="ostrze-kbd">R</kbd> ${this.escape(maneuverState.maneuver.shortLabel)} <span class="ostrze-maneuver-cost">${maneuverState.maneuver.apCost} AP</span><span class="ostrze-maneuver-rhythm">⚡ Rytm</span>`;
     const canDetonateBarrel = Boolean(
       nearbyBarrel && (this.engine.player.combat?.ap ?? 0) >= 3
     );
@@ -441,7 +481,7 @@ export class CombatTargetOverlay {
       <div class="ostrze-combat-tactical-actions">
         <button
           type="button"
-          class="ostrze-tactical-action-btn"
+          class="ostrze-tactical-action-btn ${maneuverState.canUse ? 'is-ready' : ''}"
           data-combat-maneuver="true"
           ${maneuverState.canUse ? '' : 'disabled'}
           title="${this.escape(maneuverState.maneuver.description)}"
@@ -450,29 +490,35 @@ export class CombatTargetOverlay {
       </div>
     `;
 
+    const oddsClass = estHitPct >= 75 ? 'is-high' : estHitPct >= 50 ? 'is-mid' : 'is-low';
+
     this.root.innerHTML = `
-      <aside class="ostrze-combat-target-card ${isCritFlash ? 'is-crit-flash' : ''}">
+      <aside class="ostrze-combat-target-card ${isCritFlash ? 'is-crit-flash' : ''} ${executionBonus.isExecutable ? 'is-executable' : ''}">
         ${tabsHtml}
         ${telegraphHtml}
         <div class="ostrze-combat-target-head">
           ${portraitHtml}
           <div class="ostrze-combat-target-info">
             <div class="ostrze-combat-target-name">
-              ${this.escape(target.recipe.name)}
+              <span class="ostrze-combat-target-title">${this.escape(target.recipe.name)}</span>
               <span class="ostrze-combat-archetype">${archetypeLabels[archetype]}</span>
             </div>
-            <div class="ostrze-combat-target-stats">
-              <span>AP: <strong class="ostrze-num">${c.ap}/${c.maxAp}</strong></span>
-              <span>Obrona: <strong class="ostrze-num">${defenseVal}</strong></span>
-            </div>
-            <div class="ostrze-hp-bar" style="margin-top:6px;">
+            <div class="ostrze-hp-bar ostrze-combat-hp-bar">
               <div class="ostrze-hp-fill ${hpPct <= 30 ? 'is-low' : ''}" style="width:${hpPct}%"></div>
               <span class="ostrze-hp-label">${c.hp} / ${c.maxHp} HP</span>
+            </div>
+            <div class="ostrze-combat-target-stats">
+              <span class="ostrze-combat-stat-chip">AP <strong class="ostrze-num">${c.ap}/${c.maxAp}</strong></span>
+              <span class="ostrze-combat-stat-chip">Obrona <strong class="ostrze-num">${defenseVal}</strong></span>
             </div>
           </div>
         </div>
         <div class="ostrze-combat-attack-preview">
-          <span>⚔️ Twój atak (${this.escape(dmgTypeLabel)}): <strong class="ostrze-num">${estMin}–${estMax} obr.</strong> · <span class="ostrze-num">${estHitPct}%</span></span>
+          <div class="ostrze-combat-forecast-main">
+            <span class="ostrze-combat-forecast-label">⚔️ Twój atak (${this.escape(dmgTypeLabel)}):</span>
+            <strong class="ostrze-combat-forecast-dmg ostrze-num">${estMin}–${estMax} obr.</strong>
+            <span class="ostrze-combat-hit-odds ${oddsClass} ostrze-num">${estHitPct}%</span>
+          </div>
           ${multBadge}
         </div>
         ${activeSynergyHtml}
@@ -487,6 +533,10 @@ export class CombatTargetOverlay {
       btn.addEventListener(
         'click',
         () => {
+          if (this.onRequestManeuver) {
+            this.onRequestManeuver(target.id);
+            return;
+          }
           const res = this.engine.performPlayerWeaponManeuver(target.id);
           if (res.ok) {
             ostrzeAudio.playManeuverSfx();
