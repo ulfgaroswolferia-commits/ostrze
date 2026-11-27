@@ -1,3 +1,4 @@
+import { getSlavicPortrait } from '@ulf/assets/slavicPortraits';
 import { ostrzeAudio } from '../../audio/ostrzeAudio';
 import { getPixArtMeta } from '../../assets/pixArt';
 import type {
@@ -38,6 +39,12 @@ import { getStats } from '../../rules/stats';
 import { getOstrzeLocationMeta } from '../../rules/travel';
 import { escapeHtml } from '../escapeHtml';
 import { mountModalCard } from '../mountModalCard';
+import {
+  EQUIPMENT_SLOT_META,
+  INVENTORY_FILTER_META,
+  renderSlavicIcon,
+  type SlavicIconId
+} from '../slavicIcons';
 
 export type CharacterSheetTab = 'stats' | 'gear' | 'journal' | 'bestiary' | 'chronicle';
 
@@ -366,16 +373,9 @@ export function renderCharacterSheetView(params: {
     data,
     activeGearCategoryFilter
   );
-  const gearFilterMeta: ReadonlyArray<{ id: InventoryCategoryFilter; label: string }> = [
-    { id: 'all', label: 'Wszystkie' },
-    { id: 'weapon', label: '⚔️ Broń' },
-    { id: 'armor', label: '🛡️ Pancerz' },
-    { id: 'consumable', label: '🧪 Zużywalne' },
-    { id: 'other', label: '📦 Inne' }
-  ];
   const gearFiltersHtml = `
     <div class="ostrze-gear-filters" role="tablist" aria-label="Filtr kategorii ekwipunku">
-      ${gearFilterMeta
+      ${INVENTORY_FILTER_META
         .map(
           (f) => `
           <button
@@ -384,7 +384,9 @@ export function renderCharacterSheetView(params: {
             data-cs-gear-filter="${f.id}"
             ${f.id !== 'all' && gearCounts[f.id] === 0 ? 'disabled' : ''}
           >
-            ${f.label} <span class="ostrze-gear-filter-count">${gearCounts[f.id]}</span>
+            ${renderSlavicIcon(f.icon)}
+            <span>${f.label}</span>
+            <span class="ostrze-gear-filter-count">${gearCounts[f.id]}</span>
           </button>
         `
         )
@@ -398,7 +400,7 @@ export function renderCharacterSheetView(params: {
   const quickBeltStripHtml = `
     <div class="ostrze-belt-strip" data-cs-quickbelt-strip="true">
       <div class="ostrze-belt-strip-head">
-        <span class="ostrze-belt-strip-title">Pas Szybkiego Użycia <kbd class="ostrze-kbd">4–7</kbd></span>
+        <span class="ostrze-belt-strip-title ostrze-ico-title">${renderSlavicIcon('belt')}<span>Pas Szybkiego Użycia</span> <kbd class="ostrze-kbd">4–7</kbd></span>
         <span class="ostrze-belt-strip-hint">
           ${
             selectedQuickBeltSlot !== null
@@ -508,27 +510,46 @@ export function renderCharacterSheetView(params: {
   const wola = state.vars.wola ?? 0;
   const dlug = state.vars.dlug ?? 0;
 
-  const equippedEntries = Object.entries(state.inventory.equipped).filter(
-    (entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].length > 0
-  );
-  const equippedHtml =
-    equippedEntries.length > 0
-      ? equippedEntries
-          .map(([slot, itemId]) => {
-            const item = data.items.find((i) => i.id === itemId);
-            const pills = renderItemStatPillsHtml(item, null, data);
-            return `
-              <div class="ostrze-row">
-                <div style="flex:1;min-width:0;">
-                  <div><span style="text-transform:capitalize;color:#9e9689">${escapeHtml(slot)}:</span> <strong>${escapeHtml(item?.name ?? itemId)}</strong></div>
-                  ${pills}
-                </div>
-                <button type="button" class="ostrze-hub-btn" data-cs-unequip="${escapeHtml(slot)}">Zdejmij</button>
+  const knownSlotSet = new Set<string>(EQUIPMENT_SLOT_META.map((s) => s.slot));
+  const extraEquippedSlots = Object.entries(state.inventory.equipped)
+    .filter(([slot, itemId]) => !knownSlotSet.has(slot) && typeof itemId === 'string' && itemId.length > 0)
+    .map(([slot]) => ({ slot, label: slot, icon: 'pack' as SlavicIconId }));
+
+  const allEquipmentSlots: ReadonlyArray<{ slot: string; label: string; icon: SlavicIconId }> = [
+    ...EQUIPMENT_SLOT_META,
+    ...extraEquippedSlots
+  ];
+  const equippedHtml = `
+    <div class="ostrze-equip-slots-grid" data-cs-equip-slots="true">
+      ${allEquipmentSlots
+        .map(({ slot, label, icon }) => {
+          const itemId = state.inventory.equipped[slot];
+          const hasItem = typeof itemId === 'string' && itemId.length > 0;
+          const item = hasItem ? data.items.find((i) => i.id === itemId) : undefined;
+          const pills = hasItem ? renderItemStatPillsHtml(item, null, data) : '';
+          return `
+            <div class="ostrze-equip-slot-card ${hasItem ? 'is-filled' : 'is-empty'}" data-equip-slot="${escapeHtml(slot)}">
+              <div class="ostrze-equip-slot-top">
+                <span class="ostrze-equip-slot-badge">${renderSlavicIcon(icon)}<span>${escapeHtml(label)}</span></span>
+                ${
+                  hasItem
+                    ? `<button type="button" class="ostrze-equip-unequip-btn" data-cs-unequip="${escapeHtml(slot)}" aria-label="Zdejmij ${escapeHtml(item?.name ?? itemId)}" title="Zdejmij ${escapeHtml(item?.name ?? itemId)}">Zdejmij</button>`
+                    : ''
+                }
               </div>
-            `;
-          })
-          .join('')
-      : '<div class="ostrze-subtitle" style="margin-bottom:0">Brak założonego ekwipunku.</div>';
+              <div class="ostrze-equip-slot-body">
+                ${
+                  hasItem
+                    ? `<strong class="ostrze-equip-slot-name">${escapeHtml(item?.name ?? itemId)}</strong>${pills}`
+                    : `<span class="ostrze-equip-slot-empty">Pusty slot</span>`
+                }
+              </div>
+            </div>
+          `;
+        })
+        .join('')}
+    </div>
+  `;
 
   const questEntries = Object.entries(state.quests).filter(([, st]) => st && st !== 'none');
   const activeQuests = questEntries.filter(([, st]) => st === 'active');
@@ -594,13 +615,15 @@ export function renderCharacterSheetView(params: {
                 .join('')}</ul>`
             : '';
         return `
-          <div class="ostrze-row ostrze-quest-row">
-            <div style="flex:1">
-              <strong>${escapeHtml(def?.name ?? qId)}</strong>
-              ${def?.description ? `<div class="ostrze-shop-desc">${escapeHtml(def.description)}</div>` : ''}
+          <div class="ostrze-row ostrze-quest-row ${status === 'completed' ? 'is-completed' : ''}">
+            <div style="flex:1;min-width:0;">
+              <strong class="ostrze-quest-name">${escapeHtml(def?.name ?? qId)}</strong>
+              ${def?.description ? `<div class="ostrze-shop-desc ostrze-lore-copy">${escapeHtml(def.description)}</div>` : ''}
               ${objectivesHtml}
             </div>
-            <span class="ostrze-shop-tag">${status === 'completed' ? '✓ Ukończone' : 'Aktywne'}</span>
+            <span class="ostrze-seal-tag ${status === 'completed' ? 'is-done' : 'is-active'}">
+              ${status === 'completed' ? `${renderSlavicIcon('check')}<span>Ukończone</span>` : `${renderSlavicIcon('quest')}<span>Aktywne</span>`}
+            </span>
           </div>
         `;
       })
@@ -650,10 +673,10 @@ export function renderCharacterSheetView(params: {
       return `
         <div class="ostrze-keepsake-card">
           <div class="ostrze-notice-head">
-            <span class="ostrze-notice-title">🕯️ ${escapeHtml(item?.name ?? k.owner)}</span>
-            <span class="ostrze-shop-tag">${honored ? '✓ Uczczono' : 'Pamiątka'}</span>
+            <span class="ostrze-notice-title ostrze-ico-title">${renderSlavicIcon('candle')}<span>${escapeHtml(item?.name ?? k.owner)}</span></span>
+            <span class="ostrze-seal-tag ${honored ? 'is-done' : ''}">${honored ? `${renderSlavicIcon('check')}<span>Uczczono</span>` : 'Pamiątka'}</span>
           </div>
-          <div class="ostrze-shop-desc">${escapeHtml(honored ? k.honoredText : k.pendingText)}</div>
+          <div class="ostrze-shop-desc ostrze-lore-copy">${escapeHtml(honored ? k.honoredText : k.pendingText)}</div>
         </div>
       `;
     })
@@ -678,16 +701,16 @@ export function renderCharacterSheetView(params: {
         return `
           <div class="ostrze-bestiary-card is-locked">
             <div class="ostrze-bestiary-head">
-              <strong>❓ Nieznany przeciwnik</strong>
+              <strong class="ostrze-ico-title">${renderSlavicIcon('beast')}<span>Nieznany przeciwnik</span></strong>
               <span class="ostrze-shop-tag">${escapeHtml(entry.archetypeLabel)}</span>
             </div>
-            <div class="ostrze-shop-desc">Spotkaj lub pokonaj tego wroga na szlaku, aby poznać jego słabości i taktykę.</div>
+            <div class="ostrze-shop-desc ostrze-lore-copy">Spotkaj lub pokonaj tego wroga na szlaku, aby poznać jego słabości i taktykę.</div>
           </div>
         `;
       }
       const pixMeta = entry.pixArtId ? getPixArtMeta(entry.pixArtId) : null;
       const portraitHtml = pixMeta
-        ? `<img class="ostrze-bestiary-portrait ostrze-pix-art" src="${escapeHtml(pixMeta.dataUri)}" width="${pixMeta.width}" height="${pixMeta.height}" alt="${escapeHtml(entry.name)}" />`
+        ? `<div class="ostrze-bestiary-portrait-wrap"><img class="ostrze-bestiary-portrait ostrze-pix-art" src="${escapeHtml(pixMeta.dataUri)}" width="${pixMeta.width}" height="${pixMeta.height}" alt="${escapeHtml(entry.name)}" /></div>`
         : '';
       const resistHtml = entry.resistances
         .map(
@@ -696,7 +719,7 @@ export function renderCharacterSheetView(params: {
         )
         .join('');
       const hunterBadge = entry.hunterLoreActive
-        ? `<span class="ostrze-combat-pill is-defend" title="Pokonano co najmniej ${HUNTER_LORE_KILL_THRESHOLD} szt. — stała premia +1 obr. przeciwko temu wrogowi">🎯 Wiedza Łowiecka (+1 obr.)</span>`
+        ? `<span class="ostrze-combat-pill is-defend ostrze-ico-pill" title="Pokonano co najmniej ${HUNTER_LORE_KILL_THRESHOLD} szt. — stała premia +1 obr. przeciwko temu wrogowi">${renderSlavicIcon('target')}<span>Wiedza Łowiecka (+1 obr.)</span></span>`
         : `<span class="ostrze-shop-tag">Pokonano: ${entry.killCount}/${HUNTER_LORE_KILL_THRESHOLD} do premii +1 obr.</span>`;
       return `
         <div class="ostrze-bestiary-card is-unlocked">
@@ -704,23 +727,23 @@ export function renderCharacterSheetView(params: {
             ${portraitHtml}
             <div class="ostrze-bestiary-meta">
               <div class="ostrze-bestiary-head">
-                <strong>${escapeHtml(entry.name)}</strong>
+                <strong class="ostrze-bestiary-name">${escapeHtml(entry.name)}</strong>
                 <span class="ostrze-shop-tag">${escapeHtml(entry.archetypeLabel)}</span>
               </div>
               <div class="ostrze-bestiary-stats">
-                <span>HP: <strong>${entry.hp}</strong></span>
-                <span>AP: <strong>${entry.ap}</strong></span>
-                <span>Obrona: <strong>${entry.defense}</strong></span>
-                <span>Pokonano: <strong>${entry.killCount}</strong></span>
+                <span>HP: <strong class="ostrze-num">${entry.hp}</strong></span>
+                <span>AP: <strong class="ostrze-num">${entry.ap}</strong></span>
+                <span>Obrona: <strong class="ostrze-num">${entry.defense}</strong></span>
+                <span>Pokonano: <strong class="ostrze-num">${entry.killCount}</strong></span>
               </div>
-              <div class="ostrze-combat-pills" style="margin-top:4px;">
+              <div class="ostrze-combat-pills" style="margin-top:5px;">
                 ${hunterBadge}
                 ${resistHtml}
               </div>
             </div>
           </div>
-          <div class="ostrze-shop-desc" style="margin-top:6px;">${escapeHtml(entry.loreText)}</div>
-          <div class="ostrze-bestiary-tip">💡 <strong>Taktyka:</strong> ${escapeHtml(entry.tacticalTip)}</div>
+          <div class="ostrze-shop-desc ostrze-lore-copy" style="margin-top:8px;">${escapeHtml(entry.loreText)}</div>
+          <div class="ostrze-bestiary-tip">${renderSlavicIcon('tip')}<span><strong>Taktyka:</strong> ${escapeHtml(entry.tacticalTip)}</span></div>
         </div>
       `;
     })
@@ -730,9 +753,11 @@ export function renderCharacterSheetView(params: {
     .map(
       (ach) => `
         <div class="ostrze-ach-card ${ach.unlocked ? 'is-unlocked' : ''}">
-          <div class="ostrze-ach-icon">${ach.icon}</div>
+          <div class="ostrze-ach-seal ${ach.unlocked ? 'is-unlocked' : ''}">
+            ${renderSlavicIcon(ach.unlocked ? 'trophy' : 'star')}
+          </div>
           <div class="ostrze-ach-body">
-            <div class="ostrze-ach-title">${escapeHtml(ach.title)} ${ach.unlocked ? '✓' : ''}</div>
+            <div class="ostrze-ach-title">${escapeHtml(ach.title)}</div>
             <div class="ostrze-ach-desc">${escapeHtml(ach.description)}</div>
           </div>
         </div>
@@ -945,12 +970,13 @@ export function renderCharacterSheetView(params: {
     }
   };
 
+  const heroPortraitUrl = getSlavicPortrait('player');
   const footerHtml = perkGuardVisible
     ? `
         <div class="ostrze-modal-footer is-perk-guard" data-cs-perk-guard="true">
-          <span class="ostrze-perk-guard-text">⚠️ Masz jeszcze niewybrany Talent (${ch.freePerkPicks})!</span>
+          <span class="ostrze-perk-guard-text ostrze-ico-title">${renderSlavicIcon('warn')}<span>Masz jeszcze niewybrany Talent (${ch.freePerkPicks})!</span></span>
           <div class="ostrze-perk-guard-actions">
-            <button type="button" class="ostrze-hub-btn is-alert" data-cs-guard-go-perks="true">★ Przejdź do Talentów</button>
+            <button type="button" class="ostrze-hub-btn is-alert" data-cs-guard-go-perks="true">Przejdź do Talentów</button>
             <button type="button" class="ostrze-hub-btn" data-cs-guard-force-close="true">Zamknij mimo to</button>
           </div>
         </div>
@@ -975,13 +1001,18 @@ export function renderCharacterSheetView(params: {
     'ostrze-card ostrze-cs-card',
     `
         <div class="ostrze-cs-header">
-          <div class="ostrze-cs-identity">
-            <h2 class="ostrze-title" style="margin-bottom:3px">${escapeHtml(ch.name)} — Poziom ${ch.level}</h2>
-            <div class="ostrze-shop-meta">
-              <span class="ostrze-shop-tag">${escapeHtml(cls?.name ?? ch.classId)}</span>
-              <span class="ostrze-shop-tag">AP: ${stats.derived.ap}</span>
-              <span class="ostrze-shop-tag">Wola: ${wola} · Dług: ${dlug}</span>
-              <span class="ostrze-purse-pill">🪙 ${ch.money} gr</span>
+          <div class="ostrze-cs-identity-wrap">
+            <div class="ostrze-cs-portrait-frame">
+              <img class="ostrze-cs-portrait" src="${escapeHtml(heroPortraitUrl)}" alt="${escapeHtml(ch.name)}" />
+            </div>
+            <div class="ostrze-cs-identity">
+              <h2 class="ostrze-title ostrze-cs-hero-name">${escapeHtml(ch.name)} <span class="ostrze-cs-level-pill">Poz. ${ch.level}</span></h2>
+              <div class="ostrze-shop-meta">
+                <span class="ostrze-shop-tag">${escapeHtml(cls?.name ?? ch.classId)}</span>
+                <span class="ostrze-shop-tag ostrze-num">AP: ${stats.derived.ap}</span>
+                <span class="ostrze-shop-tag ostrze-num">Wola: ${wola} · Dług: ${dlug}</span>
+                <span class="ostrze-purse-pill ostrze-ico-pill">${renderSlavicIcon('coin')}<strong class="ostrze-num">${ch.money} gr</strong></span>
+              </div>
             </div>
           </div>
           <div class="ostrze-cs-header-right">
@@ -994,28 +1025,28 @@ export function renderCharacterSheetView(params: {
                 <div class="ostrze-xp-bar" style="margin:0;flex:1;">
                   <div class="ostrze-xp-fill" style="width:${xpPct}%"></div>
                 </div>
-                <span class="ostrze-cs-xp-text">${ch.xp}/${nextLvXp} XP</span>
+                <span class="ostrze-cs-xp-text ostrze-num">${ch.xp}/${nextLvXp} XP</span>
               </div>
             </div>
             <button type="button" class="ostrze-modal-close-x" data-cs-close-top="true" aria-label="Zamknij" title="Zamknij [ESC]">×</button>
           </div>
         </div>
 
-        <div class="ostrze-cs-tabs">
-          <button type="button" class="ostrze-cs-tab ${activeTab === 'stats' ? 'is-active' : ''}" data-cs-tab="stats">
-            Postać i Rozwój <kbd class="ostrze-kbd">K</kbd> ${pendingPts > 0 ? `<span class="ostrze-cs-tab-badge">+${pendingPts}</span>` : ''}
+        <div class="ostrze-cs-tabs" role="tablist" aria-label="Sekcje karty postaci">
+          <button type="button" role="tab" aria-selected="${activeTab === 'stats'}" class="ostrze-cs-tab ${activeTab === 'stats' ? 'is-active' : ''}" data-cs-tab="stats">
+            ${renderSlavicIcon('star')}<span>Postać i Rozwój</span> <kbd class="ostrze-kbd">K</kbd> ${pendingPts > 0 ? `<span class="ostrze-cs-tab-badge">+${pendingPts}</span>` : ''}
           </button>
-          <button type="button" class="ostrze-cs-tab ${activeTab === 'gear' ? 'is-active' : ''}" data-cs-tab="gear">
-            Ekwipunek (${state.inventory.items.length}) <kbd class="ostrze-kbd">I</kbd>
+          <button type="button" role="tab" aria-selected="${activeTab === 'gear'}" class="ostrze-cs-tab ${activeTab === 'gear' ? 'is-active' : ''}" data-cs-tab="gear">
+            ${renderSlavicIcon('weapon')}<span>Ekwipunek (${state.inventory.items.length})</span> <kbd class="ostrze-kbd">I</kbd>
           </button>
-          <button type="button" class="ostrze-cs-tab ${activeTab === 'journal' ? 'is-active' : ''}" data-cs-tab="journal">
-            Dziennik <kbd class="ostrze-kbd">J</kbd>
+          <button type="button" role="tab" aria-selected="${activeTab === 'journal'}" class="ostrze-cs-tab ${activeTab === 'journal' ? 'is-active' : ''}" data-cs-tab="journal">
+            ${renderSlavicIcon('quest')}<span>Dziennik</span> <kbd class="ostrze-kbd">J</kbd> ${activeQuests.length > 0 ? `<span class="ostrze-cs-tab-count">${activeQuests.length}</span>` : ''}
           </button>
-          <button type="button" class="ostrze-cs-tab ${activeTab === 'bestiary' ? 'is-active' : ''}" data-cs-tab="bestiary">
-            🐺 Bestiariusz (${unlockedBestiaryCount}/${bestiaryEntries.length}) <kbd class="ostrze-kbd">B</kbd>
+          <button type="button" role="tab" aria-selected="${activeTab === 'bestiary'}" class="ostrze-cs-tab ${activeTab === 'bestiary' ? 'is-active' : ''}" data-cs-tab="bestiary">
+            ${renderSlavicIcon('beast')}<span>Bestiariusz (${unlockedBestiaryCount}/${bestiaryEntries.length})</span> <kbd class="ostrze-kbd">B</kbd>
           </button>
-          <button type="button" class="ostrze-cs-tab ${activeTab === 'chronicle' ? 'is-active' : ''}" data-cs-tab="chronicle">
-            🏆 Kronika (${progress.unlockedAchievements}/${progress.totalAchievements})
+          <button type="button" role="tab" aria-selected="${activeTab === 'chronicle'}" class="ostrze-cs-tab ${activeTab === 'chronicle' ? 'is-active' : ''}" data-cs-tab="chronicle">
+            ${renderSlavicIcon('trophy')}<span>Kronika (${progress.unlockedAchievements}/${progress.totalAchievements})</span>
           </button>
         </div>
 

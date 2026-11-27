@@ -24,6 +24,7 @@ import { getStats } from '../rules/stats';
 import { getWorldAtmosphere } from '../rules/worldCycle';
 import { escapeHtml } from './escapeHtml';
 import { mountModalCard } from './mountModalCard';
+import { INVENTORY_FILTER_META, renderSlavicIcon } from './slavicIcons';
 import { renderStoryVistaBannerHtml } from './storyVistaBanner';
 import {
   type CampfireModalOptions,
@@ -782,14 +783,6 @@ export class OstrzeModalUi {
     const stockEntries = shop?.stock ?? [];
     const invEntries = this.state.inventory.items;
 
-    const shopFilterMeta: ReadonlyArray<{ id: InventoryCategoryFilter; label: string }> = [
-      { id: 'all', label: 'Wszystkie' },
-      { id: 'weapon', label: '⚔️ Broń' },
-      { id: 'armor', label: '🛡️ Pancerz' },
-      { id: 'consumable', label: '🧪 Zużywalne' },
-      { id: 'other', label: '📦 Inne' }
-    ];
-
     const categoryCounts: Record<InventoryCategoryFilter, number> = {
       all: stockEntries.length + invEntries.length,
       weapon: 0,
@@ -820,7 +813,7 @@ export class OstrzeModalUi {
 
     const shopFiltersHtml = `
       <div class="ostrze-gear-filters ostrze-shop-filters" role="tablist" aria-label="Filtr kategorii w kramie" data-shop-filters="true">
-        ${shopFilterMeta
+        ${INVENTORY_FILTER_META
           .map(
             (f) => `
             <button
@@ -829,7 +822,7 @@ export class OstrzeModalUi {
               data-shop-filter="${f.id}"
               ${f.id !== 'all' && categoryCounts[f.id] === 0 ? 'disabled' : ''}
             >
-              ${f.label} <span class="ostrze-gear-filter-count">${categoryCounts[f.id]}</span>
+              ${renderSlavicIcon(f.icon)}<span>${f.label}</span> <span class="ostrze-gear-filter-count">${categoryCounts[f.id]}</span>
             </button>
           `
           )
@@ -923,9 +916,9 @@ export class OstrzeModalUi {
           <div class="ostrze-shop-header">
             ${portraitHtml}
             <div style="flex:1;min-width:0;">
-              <h2 class="ostrze-title" style="margin-bottom:4px;">${this.escape(shop?.name ?? 'Kram')}</h2>
+              <h2 class="ostrze-title ostrze-ico-title" style="margin-bottom:4px;">${renderSlavicIcon('shop')}<span>${this.escape(shop?.name ?? 'Kram')}</span></h2>
               <div class="ostrze-shop-meta">
-                <span class="ostrze-purse-pill">🪙 Sakiewka: <strong>${money} gr</strong></span>
+                <span class="ostrze-purse-pill ostrze-ico-pill">${renderSlavicIcon('coin')}<span>Sakiewka:</span> <strong class="ostrze-num">${money} gr</strong></span>
                 <span class="ostrze-shop-tag">Handel: ${handel}%</span>
               </div>
             </div>

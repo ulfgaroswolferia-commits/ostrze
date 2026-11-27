@@ -4,6 +4,7 @@ import { getStats } from '../../rules/stats';
 import { getWorldAtmosphere } from '../../rules/worldCycle';
 import { escapeHtml } from '../escapeHtml';
 import { mountModalCard } from '../mountModalCard';
+import { renderSlavicIcon, type SlavicIconId } from '../slavicIcons';
 
 export interface CampfireModalOptions {
   onPerform: (recipeId: string) => { ok: boolean; message: string };
@@ -25,11 +26,15 @@ export function renderCampfireView(params: {
   const atmo = getWorldAtmosphere(state, data);
   const stats = ch ? getStats(state, data) : null;
 
-  const groups: Array<{ key: 'alchemy' | 'weapon' | 'cooking' | 'sleep'; title: string }> = [
-    { key: 'alchemy', title: 'Alchemia i Opatrunki' },
-    { key: 'weapon', title: 'Konserwacja Ostrza' },
-    { key: 'cooking', title: 'Gotowanie nad Ogniskiem' },
-    { key: 'sleep', title: 'Sen i Regeneracja' }
+  const groups: Array<{
+    key: 'alchemy' | 'weapon' | 'cooking' | 'sleep';
+    title: string;
+    icon: SlavicIconId;
+  }> = [
+    { key: 'alchemy', title: 'Alchemia i Opatrunki', icon: 'consumable' },
+    { key: 'weapon', title: 'Konserwacja Ostrza', icon: 'weapon' },
+    { key: 'cooking', title: 'Gotowanie nad Ogniskiem', icon: 'candle' },
+    { key: 'sleep', title: 'Sen i Regeneracja', icon: 'night' }
   ];
 
   const sectionsHtml = groups
@@ -67,7 +72,7 @@ export function renderCampfireView(params: {
           `;
         })
         .join('');
-      return `<div class="ostrze-panel ostrze-camp-panel"><h3>${escapeHtml(g.title)}</h3>${rows}</div>`;
+      return `<div class="ostrze-panel ostrze-camp-panel"><h3 class="ostrze-ico-title">${renderSlavicIcon(g.icon)}<span>${escapeHtml(g.title)}</span></h3>${rows}</div>`;
     })
     .join('');
 
@@ -76,9 +81,9 @@ export function renderCampfireView(params: {
       <div class="ostrze-camp-wait-bar">
         <span class="ostrze-camp-wait-label">Przewiń czas:</span>
         <div class="ostrze-camp-wait-btns">
-          <button type="button" class="ostrze-hub-btn" data-camp-wait="6">🌅 Świt (06:00)</button>
-          <button type="button" class="ostrze-hub-btn" data-camp-wait="19">🌆 Zmierzch (19:00)</button>
-          <button type="button" class="ostrze-hub-btn" data-camp-wait="21">🌙 Noc (21:00)</button>
+          <button type="button" class="ostrze-hub-btn ostrze-ico-btn" data-camp-wait="6">${renderSlavicIcon('dawn')}<span>Świt (06:00)</span></button>
+          <button type="button" class="ostrze-hub-btn ostrze-ico-btn" data-camp-wait="19">${renderSlavicIcon('dusk')}<span>Zmierzch (19:00)</span></button>
+          <button type="button" class="ostrze-hub-btn ostrze-ico-btn" data-camp-wait="21">${renderSlavicIcon('night')}<span>Noc (21:00)</span></button>
         </div>
       </div>
     `
