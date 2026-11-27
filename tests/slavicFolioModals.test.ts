@@ -9,10 +9,12 @@ import {
   renderSlavicIcon
 } from '../src/game/ui/slavicIcons';
 import { renderCampfireView } from '../src/game/ui/views/CampfireView';
+import { renderCampaignSummaryView } from '../src/game/ui/views/CampaignSummaryView';
 import {
   type CharacterSheetTab,
   renderCharacterSheetView
 } from '../src/game/ui/views/CharacterSheetView';
+import { renderPauseMenuView } from '../src/game/ui/views/PauseMenuView';
 
 function makeFakeRoot(): HTMLElement {
   return {
@@ -145,5 +147,92 @@ describe('Slavic Folio Modals — Character Sheet, 8-Slot Rynsztunek & SVG Icono
     expect(renderSlavicIcon('dawn')).toContain('aria-hidden="true"');
     expect(renderSlavicIcon('dusk')).toContain('aria-hidden="true"');
     expect(renderSlavicIcon('night')).toContain('aria-hidden="true"');
+  });
+
+  it('uses inline two-step confirmation in Pause Menu and Slavic SVG icons in Pause & Summary', () => {
+    let newGameClicks = 0;
+    let focusedSelector: string | null = null;
+    const listeners = new Map<string, () => void>();
+    const interactiveRoot = {
+      innerHTML: '',
+      querySelector(sel: string) {
+        const idMatch = /^#([\w-]+)$/.exec(sel);
+        if (idMatch && !interactiveRoot.innerHTML.includes(`id="${idMatch[1]}"`)) {
+          return null;
+        }
+        return {
+          addEventListener: (_ev: string, fn: () => void) => {
+            listeners.set(sel, fn);
+          },
+          focus: () => {
+            focusedSelector = sel;
+          }
+        };
+      },
+      querySelectorAll: () => []
+    } as unknown as HTMLElement;
+
+    renderPauseMenuView({
+      root: interactiveRoot,
+      pm: {
+        hasSave: true,
+        isMuted: false,
+        difficultyLabel: 'Klasyczny',
+        onCycleDifficulty: () => 'Wyzwanie',
+        onSave: () => undefined,
+        onLoad: () => undefined,
+        onOpenKey: () => undefined,
+        onOpenHelp: () => undefined,
+        onToggleMute: () => true,
+        onNewGame: () => {
+          newGameClicks += 1;
+        }
+      },
+      onRerender: () => undefined,
+      onClose: () => undefined,
+      onDismissForAction: () => undefined
+    });
+
+    expect(interactiveRoot.innerHTML).toContain('ostrze-svg-ico');
+    expect(interactiveRoot.innerHTML).not.toContain('💾');
+    expect(interactiveRoot.innerHTML).not.toContain('data-pm-confirm-box="true"');
+    expect(listeners.has('#ostrze-pm-new-confirm')).toBe(false);
+
+    // First click reveals inline confirm and focuses safe Cancel button
+    listeners.get('#ostrze-pm-new')?.();
+    expect(newGameClicks).toBe(0);
+    expect(focusedSelector).toBe('#ostrze-pm-new-cancel');
+    expect(interactiveRoot.innerHTML).toContain('data-pm-confirm-box="true"');
+    expect(interactiveRoot.innerHTML).toContain('Potwierdź nową grę');
+
+    // Cancel hides confirm box and restores focus to New Game button
+    listeners.get('#ostrze-pm-new-cancel')?.();
+    expect(focusedSelector).toBe('#ostrze-pm-new');
+    expect(interactiveRoot.innerHTML).not.toContain('data-pm-confirm-box="true"');
+
+    // Re-open and confirm triggers onNewGame
+    listeners.get('#ostrze-pm-new')?.();
+    listeners.get('#ostrze-pm-new-confirm')?.();
+    expect(newGameClicks).toBe(1);
+
+    // Campaign summary uses SVG icons and Lora epilogue prose
+    const director = makeTestDirector();
+    const summaryRoot = makeFakeRoot();
+    renderCampaignSummaryView({
+      root: summaryRoot,
+      state: director.state,
+      data: ORIGIN_DATA,
+      opts: {
+        viaOblawa: true,
+        onStayFreeRoam: () => undefined,
+        onExportHeroKey: () => undefined,
+        onNewGame: () => undefined
+      },
+      onClose: () => undefined
+    });
+    expect(summaryRoot.innerHTML).toContain('ostrze-narrative-prose');
+    expect(summaryRoot.innerHTML).toContain('ostrze-svg-ico');
+    expect(summaryRoot.innerHTML).not.toContain('🏁');
+    expect(summaryRoot.innerHTML).not.toContain('🗺️');
   });
 });

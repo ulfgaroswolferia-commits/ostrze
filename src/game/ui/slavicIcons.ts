@@ -36,6 +36,20 @@ export type SlavicIconId =
   | 'warn'
   | 'key'
   | 'lock'
+  | 'play'
+  | 'save'
+  | 'load'
+  | 'help'
+  | 'soundOn'
+  | 'soundOff'
+  | 'refresh'
+  | 'keyboard'
+  | 'book'
+  | 'flame'
+  | 'storm'
+  | 'map'
+  | 'scroll'
+  | 'copy'
   | 'all';
 
 const ICON_PATHS: Readonly<Record<SlavicIconId, string>> = {
@@ -67,7 +81,21 @@ const ICON_PATHS: Readonly<Record<SlavicIconId, string>> = {
   info: '<circle cx="8" cy="8" r="5.5"/><path d="M8 7.4v3.4M8 5.2h.01"/>',
   warn: '<path d="M8 2.4 14 13H2L8 2.4Z"/><path d="M8 6.4v3.2M8 11.2h.01"/>',
   key: '<circle cx="5.4" cy="8" r="2.8"/><path d="M8.2 8h5.6M11.6 8v2.2M13.6 8v1.6"/>',
-  lock: '<rect x="3.5" y="7.2" width="9" height="6.3" rx="1.2"/><path d="M5.5 7.2V5.4a2.5 2.5 0 0 1 5 0v1.8"/>'
+  lock: '<rect x="3.5" y="7.2" width="9" height="6.3" rx="1.2"/><path d="M5.5 7.2V5.4a2.5 2.5 0 0 1 5 0v1.8"/>',
+  play: '<polygon points="4.5,3 13,8 4.5,13"/>',
+  save: '<path d="M3 3h8l2 2v8H3V3Z"/><path d="M5.5 3v3.5h4.5V3M5.5 13v-3.5h5V13"/>',
+  load: '<path d="M2.5 5.2h4l1.4 1.6h5.6v6H2.5v-7.6Z"/>',
+  help: '<circle cx="8" cy="8" r="5.6"/><path d="M6.3 6.3a1.8 1.8 0 0 1 3.4.7c0 1.2-1.7 1.5-1.7 2.4M8 11.4h.01"/>',
+  soundOn: '<path d="M3 6.5h2.6L9 3.6v8.8L5.6 9.5H3V6.5Z"/><path d="M11.2 5.6a3.4 3.4 0 0 1 0 4.8M13 3.9a5.8 5.8 0 0 1 0 8.2"/>',
+  soundOff: '<path d="M3 6.5h2.6L9 3.6v8.8L5.6 9.5H3V6.5Z"/><path d="M11.4 6.2 14 9.8M14 6.2l-2.6 3.6"/>',
+  refresh: '<path d="M12.8 6.4A5 5 0 1 0 12.6 10"/><path d="M12.8 3.2v3.2H9.6"/>',
+  keyboard: '<rect x="2" y="4.2" width="12" height="7.6" rx="1.2"/><path d="M4.5 7h.01M7 7h.01M9.5 7h.01M11.5 7h.01M5 9.5h6"/>',
+  book: '<path d="M2.5 3.6h4.2A1.8 1.8 0 0 1 8 5v8.2a1.4 1.4 0 0 0-1.3-.9H2.5V3.6Z"/><path d="M13.5 3.6H9.3A1.8 1.8 0 0 0 8 5v8.2a1.4 1.4 0 0 1 1.3-.9h4.2V3.6Z"/>',
+  flame: '<path d="M8.4 2.2c2.2 2.2 3.8 4.2 3.8 6.6a4.2 4.2 0 1 1-8.4 0c0-1.6.9-3.2 2.2-4.4 0 1.4.8 2.2 1.6 2.2-.3-1.6.1-3.1.8-4.4Z"/>',
+  storm: '<path d="M4.5 9.5a2.6 2.6 0 0 1 .4-5.1 3.4 3.4 0 0 1 6.5.8 2.2 2.2 0 0 1 .3 4.3"/><path d="M8.6 8.2 6.8 11h2.1l-1.3 2.8"/>',
+  map: '<path d="M2.5 4.2 6 2.8l4 1.4 3.5-1.4v9l-3.5 1.4-4-1.4-3.5 1.4v-9Z"/><path d="M6 2.8v9M10 4.2v9" opacity="0.65"/>',
+  scroll: '<path d="M4.5 3.2h7.2a1.5 1.5 0 0 1 0 3H11v6.6a1.5 1.5 0 0 1-1.5 1.5H4.2a1.5 1.5 0 0 1-1.5-1.5V4.7a1.5 1.5 0 0 1 1.8-1.5Z"/><path d="M5.5 7.2h3.4M5.5 9.6h3.4" opacity="0.7"/>',
+  copy: '<rect x="5.5" y="5.5" width="7.5" height="8" rx="1"/><path d="M10.5 5.5V3.5a1 1 0 0 0-1-1h-5.5a1 1 0 0 0-1 1v6.5a1 1 0 0 0 1 1h2"/>'
 };
 
 export const SLAVIC_ORNAMENT_SVG = `<svg class="ostrze-dlg-ornament-svg" viewBox="0 0 120 10" fill="none" aria-hidden="true"><line x1="0" y1="5" x2="46" y2="5" stroke="currentColor" stroke-opacity="0.38"/><polygon points="60,1 65,5 60,9 55,5" fill="currentColor" fill-opacity="0.72"/><circle cx="49" cy="5" r="1.2" fill="currentColor" fill-opacity="0.5"/><circle cx="71" cy="5" r="1.2" fill="currentColor" fill-opacity="0.5"/><line x1="74" y1="5" x2="120" y2="5" stroke="currentColor" stroke-opacity="0.38"/></svg>`;

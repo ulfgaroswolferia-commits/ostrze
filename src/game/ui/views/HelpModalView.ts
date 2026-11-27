@@ -1,5 +1,6 @@
 import { escapeHtml } from '../escapeHtml';
 import { mountModalCard } from '../mountModalCard';
+import { renderSlavicIcon, type SlavicIconId } from '../slavicIcons';
 
 export type HelpModalTab = 'controls' | 'guide';
 
@@ -48,34 +49,34 @@ const CONTROL_GROUPS: ReadonlyArray<{
   }
 ];
 
-const GUIDE_SECTIONS: ReadonlyArray<{ icon: string; title: string; body: string }> = [
+const GUIDE_SECTIONS: ReadonlyArray<{ icon: SlavicIconId; title: string; body: string }> = [
   {
-    icon: '🔥',
+    icon: 'flame',
     title: 'Odporności i podatności wrogów',
     body: 'Karta celu w prawym górnym rogu pokazuje odporności i podatności wybranego wroga. Upiory odpychają zwykłą stal (-90% cięte/kłute), ale są silnie podatne na ogień (Flasza oleju) i Gwiezdne Ostrze wykute przez kowala Bogdana.'
   },
   {
-    icon: '🛡️',
+    icon: 'armor',
     title: 'Garda [3], Riposta i Przełamanie Gardy',
     body: 'Gdy boss szykuje potężny cios, nad kartą celu pojawia się ostrzeżenie. Włączenie Gardy [3] zmniejsza obrażenia, a przy uniku lub mocnym bloku w zwarciu uruchamia darmową Ripostę (1× na rundę). Ciężki cios [2], Manewr [R] lub perk Mistrz finty przełamują Gardę wroga (+25% obr., -1 AP).'
   },
   {
-    icon: '⚔️',
+    icon: 'weapon',
     title: 'Synergie statusów (Ustaw → Dobij)',
     body: 'Łącz efekty w walce: Krwawienie + cios w zwarciu daje Krwawą Rzeź (+20% obr., +10% kryt), Podpalenie + silny cios/manewr wywołuje Wybuch Żaru (+5 obr. ognia i +1 t. podpalenia), a Oszołomienie lub Okaleczenie nóg odsłania Lukę w Obronie (+15% trafienia i +15% obr.).'
   },
   {
-    icon: '⛺',
+    icon: 'candle',
     title: 'Ognisko, alchemia i zbieranie ziół',
     body: 'Kliknij dowolne ognisko, aby uwarzyć napary, wytopić łój do ostrza (+2 obr.), przygotować Flaszę oleju, Świecę dymną, ugotować posiłek lub przespać noc (usuwa Zmęczenie i leczy). W lasach zbieraj zioła i jagody z krzewów.'
   },
   {
-    icon: '🌩️',
+    icon: 'storm',
     title: 'Zjawiska atmosferyczne i pora dnia',
     body: 'Burza Iskier, Mgła Ciszy, Ulewa czy Noc bez Gwiazd wpływają na widoczność, walkę i czas podróży. Mgła Ciszy blokuje broń prochową, ale wspiera skradanie (+20%). Aktywne zjawisko widać na górnej odznace HUD i na Mapie [M].'
   },
   {
-    icon: '🩹',
+    icon: 'consumable',
     title: 'Statusy bojowe i perki',
     body: 'Krwawienie i Zatrucie zadają obrażenia na początku tury — wyleczysz je z Pasa [4]–[7] (opatrunek, odtrutka). Cyrulik wzmacnia leczenie o +25%, Sokole oko dodaje +2 obr. do rzutów, a Nieugięty chroni przed strachem i ogłuszeniem.'
   }
@@ -116,8 +117,8 @@ export function renderHelpModalView(params: HelpModalViewParams): void {
             ${GUIDE_SECTIONS.map(
               (sec) => `
                 <article class="ostrze-panel ostrze-help-guide-card">
-                  <h3>${sec.icon} ${escapeHtml(sec.title)}</h3>
-                  <p>${escapeHtml(sec.body)}</p>
+                  <h3 class="ostrze-ico-title">${renderSlavicIcon(sec.icon)}<span>${escapeHtml(sec.title)}</span></h3>
+                  <p class="ostrze-lore-copy">${escapeHtml(sec.body)}</p>
                 </article>
               `
             ).join('')}
@@ -128,9 +129,9 @@ export function renderHelpModalView(params: HelpModalViewParams): void {
       root,
       'ostrze-card ostrze-help-card',
       `
-          <div class="ostrze-worldmap-header">
+          <div class="ostrze-worldmap-header ostrze-modal-head">
             <div>
-              <h2 class="ostrze-title" style="margin-bottom:4px;">❓ Pomoc i sterowanie — Ostrze 2.5D</h2>
+              <h2 class="ostrze-title ostrze-ico-title" style="margin-bottom:4px;">${renderSlavicIcon('help')}<span>Pomoc i sterowanie — Ostrze 2.5D</span></h2>
               <div class="ostrze-subtitle" style="margin-bottom:0;">
                 Skróty klawiszowe i najważniejsze zasady przetrwania na Pogórzu oraz w Głuszu.
               </div>
@@ -141,14 +142,14 @@ export function renderHelpModalView(params: HelpModalViewParams): void {
                 data-help-tab="controls"
                 role="tab"
                 aria-selected="${activeTab === 'controls' ? 'true' : 'false'}">
-                ⌨️ Sterowanie i skróty
+                ${renderSlavicIcon('keyboard')}<span>Sterowanie i skróty</span>
               </button>
               <button type="button"
                 class="ostrze-cs-tab ${activeTab === 'guide' ? 'is-active' : ''}"
                 data-help-tab="guide"
                 role="tab"
                 aria-selected="${activeTab === 'guide' ? 'true' : 'false'}">
-                📖 Poradnik Ostrza
+                ${renderSlavicIcon('book')}<span>Poradnik Ostrza</span>
               </button>
               <button type="button" class="ostrze-modal-close-x" data-help-close-top="true" aria-label="Zamknij" title="Zamknij [ESC]">×</button>
             </div>

@@ -4,6 +4,8 @@ import { getDifficultyProfile, getOstrzeDifficulty } from '../../rules/difficult
 import { getVisitedOstrzeLocations, OSTRZE_LOCATIONS } from '../../rules/travel';
 import { escapeHtml } from '../escapeHtml';
 import { mountModalCard } from '../mountModalCard';
+import { renderSlavicIcon, SLAVIC_ORNAMENT_SVG } from '../slavicIcons';
+import { formatDialogueProseHtml } from './DialogueView';
 
 export interface CampaignSummaryOptions {
   viaOblawa: boolean;
@@ -110,30 +112,31 @@ export function renderCampaignSummaryView(params: {
     root,
     'ostrze-card ostrze-summary-card',
     `
-        <div class="ostrze-summary-badge">🏁 ${escapeHtml(s.moralPathTitle)} · Trudność: ${escapeHtml(s.difficultyLabel)}</div>
+        <div class="ostrze-summary-badge ostrze-ico-pill">${renderSlavicIcon('trophy')}<span>${escapeHtml(s.moralPathTitle)} · Trudność: ${escapeHtml(s.difficultyLabel)}</span></div>
         <h2 class="ostrze-title" style="margin-bottom:4px;">${escapeHtml(s.title)}</h2>
-        <p class="ostrze-subtitle" style="margin-bottom:14px;">${escapeHtml(s.subtitle)}</p>
-        <div class="ostrze-prose" style="margin-bottom:16px;">${escapeHtml(s.epilogueText)}</div>
+        <p class="ostrze-subtitle ostrze-lore-copy" style="margin-bottom:14px;font-style:italic;">${escapeHtml(s.subtitle)}</p>
+        <div class="ostrze-prose ostrze-narrative-prose" style="margin-bottom:14px;">${formatDialogueProseHtml(s.epilogueText)}</div>
+        <div class="ostrze-narrative-ornament" aria-hidden="true">${SLAVIC_ORNAMENT_SVG}</div>
         <div class="ostrze-summary-grid">
           <div class="ostrze-panel">
             <h3>Bohater</h3>
             <div class="ostrze-row"><span>Imię i klasa</span><strong>${escapeHtml(s.heroName)} · ${escapeHtml(s.className)}</strong></div>
-            <div class="ostrze-row"><span>Poziom / XP</span><strong>Poz. ${s.level} (${s.xp} XP)</strong></div>
-            <div class="ostrze-row"><span>Sakiewka</span><strong>${s.money} gr</strong></div>
-            <div class="ostrze-row"><span>Osie moralne</span><strong>Wola ${s.wola} · Dług ${s.dlug}</strong></div>
+            <div class="ostrze-row"><span>Poziom / XP</span><strong class="ostrze-num">Poz. ${s.level} (${s.xp} XP)</strong></div>
+            <div class="ostrze-row"><span>Sakiewka</span><strong class="ostrze-num">${s.money} gr</strong></div>
+            <div class="ostrze-row"><span>Osie moralne</span><strong class="ostrze-num">Wola ${s.wola} · Dług ${s.dlug}</strong></div>
           </div>
           <div class="ostrze-panel">
             <h3>Kronika kampanii</h3>
-            <div class="ostrze-row"><span>Ukończone zadania</span><strong>${s.completedQuests}</strong></div>
-            <div class="ostrze-row"><span>Poznane lokacje</span><strong>${s.visitedCount} / ${s.totalLocations}</strong></div>
-            <div class="ostrze-row"><span>Dokonania</span><strong>${s.unlockedAchievements} / ${s.totalAchievements}</strong></div>
+            <div class="ostrze-row"><span>Ukończone zadania</span><strong class="ostrze-num">${s.completedQuests}</strong></div>
+            <div class="ostrze-row"><span>Poznane lokacje</span><strong class="ostrze-num">${s.visitedCount} / ${s.totalLocations}</strong></div>
+            <div class="ostrze-row"><span>Dokonania</span><strong class="ostrze-num">${s.unlockedAchievements} / ${s.totalAchievements}</strong></div>
             <div class="ostrze-row"><span>Pamiątki z Brzeziny</span><strong>${s.keepsakes.length > 0 ? escapeHtml(s.keepsakes.join(', ')) : 'Brak'}</strong></div>
           </div>
         </div>
         <div class="ostrze-summary-actions">
-          ${opts.onExportHeroKey ? `<button type="button" class="ostrze-btn" data-summary-action="export-key">🔑 Eksportuj Klucz Bohatera (Akt III)</button>` : ''}
-          <button type="button" class="ostrze-hub-btn" data-summary-action="free-roam">🗺️ Zostań w okolicach Głuszca</button>
-          ${opts.onNewGame ? `<button type="button" class="ostrze-hub-btn" data-summary-action="new-game">🔄 Nowa gra</button>` : ''}
+          ${opts.onExportHeroKey ? `<button type="button" class="ostrze-btn ostrze-ico-btn" data-summary-action="export-key">${renderSlavicIcon('key')}<span>Eksportuj Klucz Bohatera (Akt III)</span></button>` : ''}
+          <button type="button" class="ostrze-hub-btn ostrze-ico-btn" data-summary-action="free-roam">${renderSlavicIcon('map')}<span>Zostań w okolicach Głuszca</span></button>
+          ${opts.onNewGame ? `<button type="button" class="ostrze-hub-btn ostrze-ico-btn" data-summary-action="new-game">${renderSlavicIcon('refresh')}<span>Nowa gra</span></button>` : ''}
         </div>
     `
   );

@@ -7180,3 +7180,52 @@ h3 .ostrze-kbd {
   font-size: 0.86rem;
   line-height: 1.48;
 }
+
+/* ==========================================================================
+   System Modals Polish (Pause Menu Inline Confirm, Help, Summary, Notice, Key)
+   ========================================================================== */
+
+.ostrze-pause-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(84, 24, 24, 0.42), rgba(38, 12, 12, 0.62));
+  border: 1px solid rgba(248, 113, 113, 0.48);
+}
+
+.ostrze-pause-confirm-text {
+  font-size: 0.8rem;
+  line-height: 1.42;
+  color: #fecaca;
+  text-align: left;
+  align-items: flex-start;
+}
+
+.ostrze-pause-confirm-text .ostrze-svg-ico {
+  color: #f87171;
+  margin-top: 2px;
+}
+
+.ostrze-pause-confirm .ostrze-pause-btn {
+  justify-content: center;
+}
+
+.ostrze-notice-card {
+  background: linear-gradient(180deg, rgba(26, 21, 16, 0.88), rgba(14, 11, 9, 0.94));
+  border: 1px solid rgba(164, 126, 68, 0.28);
+  border-radius: 6px;
+}
+
+.ostrze-key-textarea {
+  background: rgba(10, 8, 6, 0.88);
+  border: 1px solid rgba(176, 134, 68, 0.45);
+  color: #f4e8d2;
+}
+
+.ostrze-key-textarea:focus-visible {
+  border-color: #f3cd7e;
+  outline: 2px solid #e5b869;
+  outline-offset: 2px;
+}

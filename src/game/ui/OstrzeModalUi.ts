@@ -1157,14 +1157,14 @@ export class OstrzeModalUi {
         (entry) => `
           <div class="ostrze-notice-card">
             <div class="ostrze-notice-head">
-              <span class="ostrze-notice-title">${this.escape(entry.title)}</span>
-              <span class="ostrze-check-badge">${this.escape(entry.reward)}</span>
+              <span class="ostrze-notice-title ostrze-ico-title">${renderSlavicIcon('scroll')}<span>${this.escape(entry.title)}</span></span>
+              <span class="ostrze-seal-tag is-active">${this.escape(entry.reward)}</span>
             </div>
-            <div class="ostrze-subtitle" style="margin-bottom:6px">${this.escape(entry.author)}</div>
-            <div class="ostrze-prose" style="font-size:0.92rem;margin-bottom:10px">${this.escape(entry.body)}</div>
+            <div class="ostrze-subtitle ostrze-lore-copy" style="margin-bottom:6px;font-style:italic;">${this.escape(entry.author)}</div>
+            <div class="ostrze-prose ostrze-lore-copy" style="font-size:0.9rem;margin-bottom:10px">${this.escape(entry.body)}</div>
             ${
               entry.actionLabel
-                ? `<button class="ostrze-hub-btn" data-nb-act="${this.escape(entry.id)}" ${entry.actionDisabled ? 'disabled' : ''}>${this.escape(entry.actionLabel)}</button>`
+                ? `<button type="button" class="ostrze-hub-btn" data-nb-act="${this.escape(entry.id)}" ${entry.actionDisabled ? 'disabled' : ''}>${this.escape(entry.actionLabel)}</button>`
                 : ''
             }
           </div>
@@ -1186,7 +1186,7 @@ export class OstrzeModalUi {
       `
           <div class="ostrze-modal-head">
             <div>
-              <h2 class="ostrze-title" style="margin-bottom:3px;">Tablica Zleceń — Wilczy Bród</h2>
+              <h2 class="ostrze-title ostrze-ico-title" style="margin-bottom:3px;">${renderSlavicIcon('scroll')}<span>Tablica Zleceń — Wilczy Bród</span></h2>
               <p class="ostrze-subtitle" style="margin-bottom:0;">Ogłoszenia strażnicy, kontrakty łowieckie i wieści z pogórza.</p>
             </div>
             <button type="button" class="ostrze-modal-close-x" id="ostrze-nb-close-top" aria-label="Zamknij" title="Zamknij [ESC]">×</button>
@@ -1314,7 +1314,7 @@ export class OstrzeModalUi {
       'ostrze-card',
       `
           <div class="ostrze-modal-head">
-            <h2 class="ostrze-title" style="margin-bottom:0;">Klucz rozgrywki</h2>
+            <h2 class="ostrze-title ostrze-ico-title" style="margin-bottom:0;">${renderSlavicIcon('key')}<span>Klucz rozgrywki</span></h2>
             <button type="button" class="ostrze-modal-close-x" id="ostrze-key-close-top" aria-label="Zamknij" title="Zamknij [ESC]">×</button>
           </div>
           <p class="ostrze-subtitle" style="margin-bottom:12px;">
@@ -1326,7 +1326,7 @@ export class OstrzeModalUi {
                 <div style="margin-bottom:12px;">
                   <div class="ostrze-subtitle" style="margin-bottom:4px;font-size:0.82rem;">Twój aktualny klucz zapisu:</div>
                   <textarea class="ostrze-key-textarea" id="ostrze-key-export" readonly>${this.escape(modal.currentKey)}</textarea>
-                  <button type="button" class="ostrze-hub-btn" id="ostrze-key-copy">📋 Kopiuj klucz</button>
+                  <button type="button" class="ostrze-hub-btn ostrze-ico-btn" id="ostrze-key-copy">${renderSlavicIcon('copy')}<span>Kopiuj klucz</span></button>
                 </div>
               `
               : ''
@@ -1337,7 +1337,7 @@ export class OstrzeModalUi {
             <div id="ostrze-key-err" class="ostrze-error" style="display:none;"></div>
           </div>
           <div class="ostrze-modal-footer">
-            <button type="button" class="ostrze-btn" id="ostrze-key-load">Wczytaj z klucza</button>
+            <button type="button" class="ostrze-btn ostrze-ico-btn" id="ostrze-key-load">${renderSlavicIcon('load')}<span>Wczytaj z klucza</span></button>
             <button type="button" class="ostrze-hub-btn" id="ostrze-key-close">Zamknij <kbd class="ostrze-kbd">ESC</kbd></button>
           </div>
       `,
