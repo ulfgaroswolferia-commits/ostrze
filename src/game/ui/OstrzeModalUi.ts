@@ -24,7 +24,11 @@ import { getStats } from '../rules/stats';
 import { getWorldAtmosphere } from '../rules/worldCycle';
 import { escapeHtml } from './escapeHtml';
 import { mountModalCard } from './mountModalCard';
-import { INVENTORY_FILTER_META, renderSlavicIcon } from './slavicIcons';
+import {
+  INVENTORY_FILTER_META,
+  renderSlavicIcon,
+  SLAVIC_ORNAMENT_SVG
+} from './slavicIcons';
 import { renderStoryVistaBannerHtml } from './storyVistaBanner';
 import {
   type CampfireModalOptions,
@@ -40,7 +44,10 @@ import {
   hasUnspentPickablePerk,
   renderCharacterSheetView
 } from './views/CharacterSheetView';
-import { renderDialogueView } from './views/DialogueView';
+import {
+  formatDialogueProseHtml,
+  renderDialogueView
+} from './views/DialogueView';
 import {
   type HelpModalTab,
   renderHelpModalView
@@ -1001,17 +1008,22 @@ export class OstrzeModalUi {
 
     mountModalCard(
       this.root,
-      'ostrze-card ostrze-narrative-card',
+      `ostrze-card ostrze-narrative-card ${card.artId ? 'has-vista' : ''}`,
       `
-          <h2 class="ostrze-title">${this.escape(card.title)}</h2>
-          ${card.subtitle ? `<p class="ostrze-subtitle">${this.escape(card.subtitle)}</p>` : ''}
           ${artHtml}
-          <div class="ostrze-prose">${this.escape(card.text)}</div>
-          <div class="ostrze-narrative-footer">
-            <button class="ostrze-btn" data-action="narrative-next">
-              ${this.escape(card.buttonLabel ?? 'Dalej')}
-            </button>
-            <span class="ostrze-shortcut-hint">Enter / Spacja</span>
+          <div class="ostrze-narrative-body">
+            <div class="ostrze-narrative-head">
+              <h2 class="ostrze-title ostrze-narrative-title">${this.escape(card.title)}</h2>
+              ${card.subtitle ? `<p class="ostrze-subtitle ostrze-narrative-subtitle">${this.escape(card.subtitle)}</p>` : ''}
+            </div>
+            <div class="ostrze-prose ostrze-narrative-prose">${formatDialogueProseHtml(card.text)}</div>
+            <div class="ostrze-narrative-ornament" aria-hidden="true">${SLAVIC_ORNAMENT_SVG}</div>
+            <div class="ostrze-narrative-footer">
+              <button type="button" class="ostrze-btn ostrze-narrative-btn" data-action="narrative-next">
+                ${this.escape(card.buttonLabel ?? 'Dalej')}
+              </button>
+              <span class="ostrze-shortcut-hint"><kbd class="ostrze-kbd">Enter</kbd> / <kbd class="ostrze-kbd">Spacja</kbd></span>
+            </div>
           </div>
       `
     );
@@ -1194,42 +1206,44 @@ export class OstrzeModalUi {
       'ostrze-card ostrze-welcome-card',
       `
           ${bannerHtml}
-          <h1 class="ostrze-welcome-title">VOIDED</h1>
-          <p class="ostrze-welcome-subtitle">Na przekór gwiazdom</p>
+          <div class="ostrze-welcome-body">
+            <h1 class="ostrze-welcome-title">VOIDED</h1>
+            <div class="ostrze-welcome-ornament" aria-hidden="true">${SLAVIC_ORNAMENT_SVG}</div>
+            <p class="ostrze-welcome-subtitle">Na przekór gwiazdom</p>
 
-          <form class="ostrze-welcome-form" id="ostrze-welcome-form">
-            <input
-              id="ostrze-welcome-name"
-              class="ostrze-welcome-input"
-              type="text"
-              maxlength="${this.data.rules.creator.nameMax}"
-              placeholder="Wpisz imię"
-              value="${this.escape(this.draftName)}"
-              autocomplete="off"
-            />
-            <button type="submit" class="ostrze-btn" style="width:100%;font-size:1.05rem;">
-              Zaczynamy
-            </button>
-          </form>
+            <form class="ostrze-welcome-form" id="ostrze-welcome-form">
+              <label class="ostrze-sr-only" for="ostrze-welcome-name">Imię bohatera</label>
+              <input
+                id="ostrze-welcome-name"
+                class="ostrze-welcome-input"
+                type="text"
+                maxlength="${this.data.rules.creator.nameMax}"
+                placeholder="Wpisz imię wędrowca..."
+                value="${this.escape(this.draftName)}"
+                autocomplete="off"
+              />
+              <button type="submit" class="ostrze-btn ostrze-welcome-cta">
+                Zaczynamy
+              </button>
+            </form>
 
-          <div class="ostrze-welcome-secondary">
-            ${
-              welcome.hasSave && welcome.onContinue
-                ? `<button type="button" class="ostrze-hub-btn is-alert" id="ostrze-welcome-continue">Kontynuuj (${this.escape(welcome.savedSummary ?? 'zapis')})</button>`
-                : ''
-            }
-            ${
-              welcome.onOpenImportKey
-                ? `<button type="button" class="ostrze-hub-btn" id="ostrze-welcome-key">🔑 Klucz rozgrywki</button>`
-                : ''
-            }
-          </div>
+            <div class="ostrze-welcome-secondary">
+              ${
+                welcome.hasSave && welcome.onContinue
+                  ? `<button type="button" class="ostrze-hub-btn is-alert" id="ostrze-welcome-continue">Kontynuuj (${this.escape(welcome.savedSummary ?? 'zapis')})</button>`
+                  : ''
+              }
+              ${
+                welcome.onOpenImportKey
+                  ? `<button type="button" class="ostrze-hub-btn ostrze-ico-btn" id="ostrze-welcome-key">${renderSlavicIcon('key')}<span>Klucz rozgrywki</span></button>`
+                  : ''
+              }
+            </div>
 
-          <div class="ostrze-welcome-credits">
-            <div>Pomysł świata i gry: Twiist</div>
-            <div>Jest to port gry terminalowej typu HUD na silnik 2,5D.</div>
-            <div>Fabuła, dialogi etc.: Twiist</div>
-            <div>Silnik gry, port i wykonanie: Ulfgaros</div>
+            <div class="ostrze-welcome-credits">
+              <div>Pomysł świata i gry: Twiist · Fabuła i dialogi: Twiist</div>
+              <div>Port 2,5D, silnik i wykonanie: Ulfgaros</div>
+            </div>
           </div>
       `
     );

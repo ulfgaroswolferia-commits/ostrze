@@ -14,6 +14,7 @@ import {
 } from '../../rules/dialogueEngine';
 import { escapeHtml } from '../escapeHtml';
 import { mountModalCard } from '../mountModalCard';
+import { SLAVIC_ORNAMENT_SVG } from '../slavicIcons';
 import { renderStoryVistaBannerHtml } from '../storyVistaBanner';
 
 /**
@@ -150,7 +151,6 @@ const SVG_COIN = `<svg class="ostrze-dlg-ico" viewBox="0 0 16 16" fill="none" st
 const SVG_SHOP = `<svg class="ostrze-dlg-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5h10l-.8 7H3.8l-.8-7Z"/><path d="M5.5 6.5V5a2.5 2.5 0 0 1 5 0v1.5"/></svg>`;
 const SVG_QUEST = `<svg class="ostrze-dlg-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.8l1.6 4.1 4.4.4-3.3 2.9 1 4.3L8 11.2 4.3 13.5l1-4.3L2 6.3l4.4-.4L8 1.8Z"/></svg>`;
 const SVG_EXIT = `<svg class="ostrze-dlg-ico ostrze-dlg-ico--exit" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4.5 2.5 8 6 11.5"/><path d="M2.5 8h8a3 3 0 0 1 3 3v1"/></svg>`;
-const SVG_ORNAMENT = `<svg class="ostrze-dlg-ornament-svg" viewBox="0 0 120 10" fill="none" aria-hidden="true"><line x1="0" y1="5" x2="46" y2="5" stroke="currentColor" stroke-opacity="0.38"/><polygon points="60,1 65,5 60,9 55,5" fill="currentColor" fill-opacity="0.72"/><circle cx="49" cy="5" r="1.2" fill="currentColor" fill-opacity="0.5"/><circle cx="71" cy="5" r="1.2" fill="currentColor" fill-opacity="0.5"/><line x1="74" y1="5" x2="120" y2="5" stroke="currentColor" stroke-opacity="0.38"/></svg>`;
 
 const QUOTE_SEGMENT_RE = /(„[^”]+”|"[^"]+")/g;
 
@@ -360,7 +360,7 @@ export function renderDialogueView(params: {
             )
             .join('')}
         </div>
-        <div class="ostrze-dialogue-turn-rule" aria-hidden="true">${SVG_ORNAMENT}</div>
+        <div class="ostrze-dialogue-turn-rule" aria-hidden="true">${SLAVIC_ORNAMENT_SVG}</div>
       `
       : '';
 
@@ -376,7 +376,7 @@ export function renderDialogueView(params: {
 
   const choicesPaneHtml = `
     <div class="ostrze-dialogue-choices-pane">
-      <div class="ostrze-dialogue-choices-divider" aria-hidden="true">${SVG_ORNAMENT}</div>
+      <div class="ostrze-dialogue-choices-divider" aria-hidden="true">${SLAVIC_ORNAMENT_SVG}</div>
       <div class="ostrze-dialogue-options">${optionsHtml}</div>
       <div class="ostrze-dialogue-hint">
         <span><kbd class="ostrze-kbd">1–9</kbd> wybierz odpowiedź</span>

@@ -32,6 +32,8 @@ export type SlavicIconId =
   | 'dusk'
   | 'night'
   | 'warn'
+  | 'key'
+  | 'lock'
   | 'all';
 
 const ICON_PATHS: Readonly<Record<SlavicIconId, string>> = {
@@ -59,8 +61,12 @@ const ICON_PATHS: Readonly<Record<SlavicIconId, string>> = {
   dawn: '<path d="M2.5 11.5h11M4.5 11.5a3.5 3.5 0 0 1 7 0M8 4v2M4.3 5.8l1.2 1.2M11.7 5.8l-1.2 1.2"/>',
   dusk: '<path d="M2.5 10.8h11M4.5 10.8a3.5 3.5 0 0 1 7 0M4.5 13h7" opacity="0.9"/>',
   night: '<path d="M11.6 10.2A4.8 4.8 0 0 1 5.8 4.4a5 5 0 1 0 5.8 5.8Z"/>',
-  warn: '<path d="M8 2.4 14 13H2L8 2.4Z"/><path d="M8 6.4v3.2M8 11.2h.01"/>'
+  warn: '<path d="M8 2.4 14 13H2L8 2.4Z"/><path d="M8 6.4v3.2M8 11.2h.01"/>',
+  key: '<circle cx="5.4" cy="8" r="2.8"/><path d="M8.2 8h5.6M11.6 8v2.2M13.6 8v1.6"/>',
+  lock: '<rect x="3.5" y="7.2" width="9" height="6.3" rx="1.2"/><path d="M5.5 7.2V5.4a2.5 2.5 0 0 1 5 0v1.8"/>'
 };
+
+export const SLAVIC_ORNAMENT_SVG = `<svg class="ostrze-dlg-ornament-svg" viewBox="0 0 120 10" fill="none" aria-hidden="true"><line x1="0" y1="5" x2="46" y2="5" stroke="currentColor" stroke-opacity="0.38"/><polygon points="60,1 65,5 60,9 55,5" fill="currentColor" fill-opacity="0.72"/><circle cx="49" cy="5" r="1.2" fill="currentColor" fill-opacity="0.5"/><circle cx="71" cy="5" r="1.2" fill="currentColor" fill-opacity="0.5"/><line x1="74" y1="5" x2="120" y2="5" stroke="currentColor" stroke-opacity="0.38"/></svg>`;
 
 export function renderSlavicIcon(id: SlavicIconId, className = 'ostrze-svg-ico'): string {
   const inner = ICON_PATHS[id] ?? ICON_PATHS.star;
