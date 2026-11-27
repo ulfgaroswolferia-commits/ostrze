@@ -27,7 +27,8 @@ import { mountModalCard } from './mountModalCard';
 import {
   INVENTORY_FILTER_META,
   renderSlavicIcon,
-  SLAVIC_ORNAMENT_SVG
+  SLAVIC_ORNAMENT_SVG,
+  type SlavicIconId
 } from './slavicIcons';
 import { renderStoryVistaBannerHtml } from './storyVistaBanner';
 import {
@@ -108,6 +109,19 @@ export interface WelcomeScreenData {
 
 let activeModalUi: OstrzeModalUi | null = null;
 
+const TOAST_TONE_ICON: Readonly<Record<'info' | 'gold' | 'success', SlavicIconId>> = {
+  info: 'info',
+  gold: 'star',
+  success: 'check'
+};
+
+const TIME_OF_DAY_ICON: Readonly<Record<'swit' | 'dzien' | 'zmierzch' | 'noc', SlavicIconId>> = {
+  swit: 'dawn',
+  dzien: 'day',
+  zmierzch: 'dusk',
+  noc: 'night'
+};
+
 export class OstrzeModalUi {
   private readonly root: HTMLElement;
   private readonly hubRoot: HTMLElement;
@@ -173,6 +187,7 @@ export class OstrzeModalUi {
     this.root = this.createOrReuseRoot('ostrze-overlay-root');
     this.hubRoot = this.createOrReuseRoot('ostrze-hub-root');
     this.toastRoot = this.createOrReuseRoot('ostrze-toast-root', 'ostrze-toast-stack');
+    this.toastRoot.setAttribute?.('aria-live', 'polite');
 
     // Isolate pointer, mouse, and wheel events while any Ostrze modal overlay is open
     // (leave pointermove/mousemove bubbling so IsoSceneView's window handler immediately
@@ -543,7 +558,9 @@ export class OstrzeModalUi {
     }
     const el = document.createElement('div');
     el.className = `ostrze-toast ${tone === 'gold' ? 'is-gold' : tone === 'success' ? 'is-success' : ''}`;
-    el.textContent = text;
+    el.setAttribute('role', 'status');
+    const iconId = TOAST_TONE_ICON[tone];
+    el.innerHTML = `<span class="ostrze-toast-seal">${renderSlavicIcon(iconId)}</span><span class="ostrze-toast-text">${this.escape(text)}</span>`;
     this.toastRoot.appendChild(el);
     window.setTimeout(() => {
       el.classList?.add('is-leaving');
@@ -668,7 +685,7 @@ export class OstrzeModalUi {
     const hasFreePerk = Boolean(ch && ch.freePerkPicks > 0);
     const levelUpBtnHtml =
       pendingPts > 0
-        ? `<button type="button" class="ostrze-hub-btn is-alert ostrze-hub-levelup-btn" data-hub-levelup="true" title="Otwórz Kartę Postaci [K] i rozdaj punkty rozwoju">✨ Awans (+${pendingPts})${hasFreePerk ? ' · Talent!' : ''} <kbd class="ostrze-kbd">K</kbd></button>`
+        ? `<button type="button" class="ostrze-hub-btn is-alert ostrze-hub-levelup-btn ostrze-ico-btn" data-hub-levelup="true" title="Otwórz Kartę Postaci [K] i rozdaj punkty rozwoju">${renderSlavicIcon('star')}<span>Awans (+${pendingPts})${hasFreePerk ? ' · Talent!' : ''}</span> <kbd class="ostrze-kbd">K</kbd></button>`
         : '';
 
     const btns = this.hubPanel.actions
@@ -718,18 +735,21 @@ export class OstrzeModalUi {
       : '';
     const hasAtmoPills = Boolean(phenomPillHtml || effectPillsHtml);
 
+    const timeIconId = TIME_OF_DAY_ICON[atmo.timeOfDay] ?? 'night';
+    const toggleLabel = this.hubCollapsed ? 'Rozwiń tracker celu' : 'Zwiń tracker celu';
+
     const nextHubHtml = `
       <div class="ostrze-hub-bar ${this.hubCollapsed ? 'is-collapsed' : ''}">
         <div class="ostrze-hub-header">
           <div class="ostrze-hub-title">${this.escape(this.hubPanel.title)}</div>
           <div class="ostrze-hub-head-right">
-            <span class="ostrze-hub-clock" title="Pora dnia i godzina">${this.escape(atmo.timeLabel)} · ${this.escape(atmo.clockText)}</span>
+            <span class="ostrze-hub-clock ostrze-ico-pill" title="Pora dnia i godzina">${renderSlavicIcon(timeIconId)}<span class="ostrze-num">${this.escape(atmo.timeLabel)} · ${this.escape(atmo.clockText)}</span></span>
             ${
               this.hubCollapsed && pendingPts > 0
-                ? `<button type="button" class="ostrze-hub-mini-lvl" data-hub-levelup="true" title="Awans postaci (+${pendingPts})">✨+${pendingPts}</button>`
+                ? `<button type="button" class="ostrze-hub-mini-lvl ostrze-ico-pill" data-hub-levelup="true" title="Awans postaci (+${pendingPts})">${renderSlavicIcon('star')}<span>+${pendingPts}</span></button>`
                 : ''
             }
-            <button type="button" class="ostrze-hub-toggle" data-hub-toggle title="${this.hubCollapsed ? 'Rozwiń tracker celu' : 'Zwiń tracker celu'}">
+            <button type="button" class="ostrze-hub-toggle" data-hub-toggle aria-expanded="${!this.hubCollapsed}" aria-label="${toggleLabel}" title="${toggleLabel}">
               ${this.hubCollapsed ? '+' : '–'}
             </button>
           </div>

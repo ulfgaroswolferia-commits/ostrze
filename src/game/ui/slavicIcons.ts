@@ -29,8 +29,10 @@ export type SlavicIconId =
   | 'target'
   | 'tip'
   | 'dawn'
+  | 'day'
   | 'dusk'
   | 'night'
+  | 'info'
   | 'warn'
   | 'key'
   | 'lock'
@@ -59,8 +61,10 @@ const ICON_PATHS: Readonly<Record<SlavicIconId, string>> = {
   target: '<circle cx="8" cy="8" r="5.5"/><circle cx="8" cy="8" r="2.6"/><circle cx="8" cy="8" r="0.7" fill="currentColor"/>',
   tip: '<path d="M5.8 11.2h4.4M6.4 13.2h3.2M5.2 8.2a3.4 3.4 0 1 1 5.6 0c-.5.6-.8 1.3-.8 2h-4c0-.7-.3-1.4-.8-2Z"/>',
   dawn: '<path d="M2.5 11.5h11M4.5 11.5a3.5 3.5 0 0 1 7 0M8 4v2M4.3 5.8l1.2 1.2M11.7 5.8l-1.2 1.2"/>',
+  day: '<circle cx="8" cy="8" r="3"/><path d="M8 2.2v1.6M8 12.2v1.6M2.2 8h1.6M12.2 8h1.6M3.9 3.9l1.1 1.1M11 11l1.1 1.1M12.1 3.9 11 5M5 11l-1.1 1.1"/>',
   dusk: '<path d="M2.5 10.8h11M4.5 10.8a3.5 3.5 0 0 1 7 0M4.5 13h7" opacity="0.9"/>',
   night: '<path d="M11.6 10.2A4.8 4.8 0 0 1 5.8 4.4a5 5 0 1 0 5.8 5.8Z"/>',
+  info: '<circle cx="8" cy="8" r="5.5"/><path d="M8 7.4v3.4M8 5.2h.01"/>',
   warn: '<path d="M8 2.4 14 13H2L8 2.4Z"/><path d="M8 6.4v3.2M8 11.2h.01"/>',
   key: '<circle cx="5.4" cy="8" r="2.8"/><path d="M8.2 8h5.6M11.6 8v2.2M13.6 8v1.6"/>',
   lock: '<rect x="3.5" y="7.2" width="9" height="6.3" rx="1.2"/><path d="M5.5 7.2V5.4a2.5 2.5 0 0 1 5 0v1.8"/>'

@@ -138,4 +138,12 @@ describe('Slavic Folio Modals — Character Sheet, 8-Slot Rynsztunek & SVG Icono
     expect(root.innerHTML).not.toContain('🌅');
     expect(root.innerHTML).not.toContain('🌙');
   });
+
+  it('renders day and info Slavic SVG icons for Exploration HUD clock and heraldic toasts', () => {
+    expect(renderSlavicIcon('day')).toContain('<circle cx="8" cy="8" r="3"/>');
+    expect(renderSlavicIcon('info')).toContain('aria-hidden="true"');
+    expect(renderSlavicIcon('dawn')).toContain('aria-hidden="true"');
+    expect(renderSlavicIcon('dusk')).toContain('aria-hidden="true"');
+    expect(renderSlavicIcon('night')).toContain('aria-hidden="true"');
+  });
 });

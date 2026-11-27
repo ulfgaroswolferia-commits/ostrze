@@ -6913,3 +6913,270 @@ h3 .ostrze-kbd {
     padding-right: 18px;
   }
 }
+
+/* ==========================================================================
+   Slavic Exploration HUD ("Świat na pierwszym planie")
+   Cohesive dark oak, wrought iron & antique brass across Hub Tracker,
+   Heraldic Toasts, Hero Card, Top Bar, Chronicle Drawer & Help Medallion
+   ========================================================================== */
+
+/* --- Compact Objective Tracker (.ostrze-hub-bar) --- */
+.ostrze-hub-bar {
+  background:
+    radial-gradient(ellipse at 12% 0%, rgba(212, 160, 76, 0.11) 0%, rgba(212, 160, 76, 0) 54%),
+    linear-gradient(180deg, rgba(22, 18, 14, 0.92) 0%, rgba(12, 10, 8, 0.94) 100%);
+  border: 1px solid rgba(186, 142, 72, 0.46);
+  border-radius: 7px;
+  box-shadow:
+    inset 0 1px 0 rgba(250, 224, 162, 0.18),
+    inset 0 0 0 1px rgba(10, 8, 6, 0.72),
+    0 14px 32px rgba(0, 0, 0, 0.68);
+  padding: 10px 12px;
+  backdrop-filter: blur(6px);
+}
+
+.ostrze-hub-bar.is-collapsed {
+  padding: 7px 11px;
+}
+
+.ostrze-hub-bar.is-collapsed .ostrze-hub-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ostrze-hub-title {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #f5dfb0;
+  letter-spacing: 0.03em;
+}
+
+.ostrze-hub-clock {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(14, 11, 8, 0.76);
+  border: 1px solid rgba(176, 134, 68, 0.34);
+  color: #dec9a0;
+  font-size: 0.71rem;
+  white-space: nowrap;
+}
+
+.ostrze-hub-clock .ostrze-svg-ico {
+  width: 12px;
+  height: 12px;
+  color: #e5b869;
+}
+
+.ostrze-hub-toggle {
+  background: linear-gradient(180deg, rgba(32, 26, 20, 0.9), rgba(16, 13, 10, 0.94));
+  border: 1px solid rgba(164, 126, 68, 0.42);
+  color: #cbbba0;
+}
+
+.ostrze-hub-toggle:hover {
+  border-color: #e5b869;
+  color: #fff3d6;
+}
+
+.ostrze-hub-toggle:focus-visible,
+.ostrze-hub-mini-lvl:focus-visible {
+  outline: 2px solid #e5b869;
+  outline-offset: 2px;
+}
+
+.ostrze-hub-mini-lvl {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(112, 76, 26, 0.92), rgba(62, 42, 14, 0.96));
+  border: 1px solid #e5b869;
+  color: #fff4d8;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ostrze-hub-mini-lvl:hover {
+  background: linear-gradient(180deg, rgba(146, 100, 34, 0.96), rgba(88, 58, 18, 0.98));
+  border-color: #fde047;
+  color: #fffbeb;
+}
+
+.ostrze-hub-meta {
+  font-family: 'Lora', Georgia, serif;
+  font-size: 0.8rem;
+  line-height: 1.42;
+  color: #c7baa4;
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+.ostrze-hub-quests {
+  font-size: 0.79rem;
+  line-height: 1.42;
+  color: #9ce6b8;
+  margin-bottom: 8px;
+}
+
+/* --- Atmosphere, Phenomenon & Buff/Debuff Pills --- */
+.ostrze-hub-bar .ostrze-atmo-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 5px 0 6px;
+}
+
+.ostrze-atmo-pill {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.69rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.ostrze-atmo-pill.is-phenom {
+  background: linear-gradient(180deg, rgba(84, 52, 108, 0.42), rgba(44, 26, 62, 0.62));
+  border: 1px solid rgba(188, 142, 224, 0.52);
+  color: #e9d5ff;
+}
+
+.ostrze-atmo-pill.is-buff {
+  background: linear-gradient(180deg, rgba(24, 88, 52, 0.44), rgba(14, 48, 28, 0.64));
+  border: 1px solid rgba(74, 222, 128, 0.48);
+  color: #bbf7d0;
+}
+
+.ostrze-atmo-pill.is-debuff {
+  background: linear-gradient(180deg, rgba(114, 28, 28, 0.46), rgba(56, 14, 14, 0.68));
+  border: 1px solid rgba(248, 113, 113, 0.52);
+  color: #fecaca;
+}
+
+/* --- Heraldic Toast Ribbons --- */
+.ostrze-toast {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 15px 8px 11px;
+  border-radius: 6px;
+  background:
+    radial-gradient(ellipse at 0% 50%, rgba(212, 160, 76, 0.14), rgba(212, 160, 76, 0) 58%),
+    linear-gradient(180deg, rgba(26, 21, 16, 0.96) 0%, rgba(13, 10, 8, 0.98) 100%);
+  border: 1px solid rgba(196, 152, 78, 0.56);
+  box-shadow:
+    inset 0 1px 0 rgba(250, 224, 162, 0.2),
+    0 14px 32px rgba(0, 0, 0, 0.78);
+  color: #f4ebd8;
+  font-size: 0.87rem;
+}
+
+.ostrze-toast-seal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: rgba(12, 10, 8, 0.64);
+  border: 1px solid rgba(196, 152, 78, 0.56);
+  color: #e5b869;
+}
+
+.ostrze-toast.is-gold {
+  border-color: #f3cd7e;
+  background:
+    radial-gradient(ellipse at 0% 50%, rgba(245, 190, 72, 0.24), rgba(245, 190, 72, 0) 62%),
+    linear-gradient(180deg, rgba(44, 32, 16, 0.96) 0%, rgba(22, 16, 9, 0.98) 100%);
+  color: #fef3c7;
+}
+
+.ostrze-toast.is-gold .ostrze-toast-seal {
+  border-color: #fde047;
+  color: #fef08a;
+}
+
+.ostrze-toast.is-success {
+  border-color: rgba(74, 222, 128, 0.58);
+  background:
+    radial-gradient(ellipse at 0% 50%, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0) 62%),
+    linear-gradient(180deg, rgba(20, 42, 28, 0.96) 0%, rgba(11, 22, 15, 0.98) 100%);
+  color: #dcfce7;
+}
+
+.ostrze-toast.is-success .ostrze-toast-seal {
+  border-color: rgba(74, 222, 128, 0.62);
+  color: #86efac;
+}
+
+/* --- Floating Help Medallion (?) --- */
+.ostrze-help-fab {
+  background:
+    radial-gradient(circle at 35% 25%, rgba(212, 160, 76, 0.2), rgba(22, 18, 14, 0.95) 72%);
+  border: 1px solid rgba(196, 152, 78, 0.58);
+  color: #f6e1b4;
+  font-family: 'Cinzel', Georgia, serif;
+  box-shadow:
+    inset 0 1px 0 rgba(254, 240, 180, 0.24),
+    0 8px 20px rgba(0, 0, 0, 0.65);
+}
+
+.ostrze-help-fab:hover,
+.ostrze-help-fab:focus-visible {
+  border-color: #f3cd7e;
+  color: #fff8e6;
+  outline: 2px solid #e5b869;
+  outline-offset: 2px;
+}
+
+/* --- Engine HUD Harmonization (Dark Oak & Antique Brass without modifying engine/) --- */
+#hud-root .top-bar {
+  background: linear-gradient(180deg, rgba(20, 16, 12, 0.92) 0%, rgba(11, 9, 7, 0.88) 100%);
+  border-bottom: 1px solid rgba(182, 138, 70, 0.36);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+}
+
+#hud-root .hero-card {
+  background:
+    radial-gradient(ellipse at 0% 0%, rgba(212, 160, 76, 0.12) 0%, rgba(212, 160, 76, 0) 58%),
+    linear-gradient(180deg, rgba(24, 19, 15, 0.94) 0%, rgba(12, 10, 8, 0.96) 100%);
+  border: 1px solid rgba(186, 142, 72, 0.48);
+  box-shadow:
+    inset 0 1px 0 rgba(250, 224, 162, 0.18),
+    0 12px 28px rgba(0, 0, 0, 0.72);
+}
+
+#hud-root .bottom-hud:not(.combat-mode-active) .chronicle-log:not(.expanded) {
+  background: rgba(18, 14, 11, calc(0.1 + var(--chronicle-vis, 0) * 0.78));
+  border-color: rgba(186, 142, 72, calc(0.24 + var(--chronicle-vis, 0) * 0.3));
+}
+
+#hud-root .chronicle-log.expanded {
+  background:
+    radial-gradient(ellipse at 18% 0%, rgba(212, 160, 76, 0.11) 0%, rgba(212, 160, 76, 0) 52%),
+    linear-gradient(180deg, rgba(23, 18, 14, 0.97) 0%, rgba(12, 10, 8, 0.985) 100%);
+  border: 1px solid rgba(196, 152, 78, 0.54);
+  box-shadow:
+    inset 0 1px 0 rgba(250, 224, 162, 0.2),
+    0 20px 50px rgba(0, 0, 0, 0.84);
+}
+
+#hud-root .chronicle-log .log-header-title {
+  font-family: 'Cinzel', Georgia, serif;
+  letter-spacing: 0.03em;
+  color: #f3dba8;
+}
+
+#hud-root .chronicle-log .log-entries {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(182, 138, 70, 0.45) rgba(12, 10, 8, 0.4);
+}
+
+#hud-root .chronicle-log .log-line-text {
+  font-family: 'Lora', Georgia, serif;
+  font-size: 0.86rem;
+  line-height: 1.48;
+}
