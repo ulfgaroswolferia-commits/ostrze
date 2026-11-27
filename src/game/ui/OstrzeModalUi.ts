@@ -188,6 +188,8 @@ export class OstrzeModalUi {
             overlay.querySelector<HTMLElement>('.ostrze-help-body'),
             overlay.querySelector<HTMLElement>('.ostrze-cs-body'),
             overlay.querySelector<HTMLElement>('.ostrze-camp-grid'),
+            overlay.querySelector<HTMLElement>('.ostrze-dialogue-speech-pane'),
+            overlay.querySelector<HTMLElement>('.ostrze-dialogue-choices-pane'),
             overlay.querySelector<HTMLElement>('.ostrze-dialogue-body'),
             overlay.querySelector<HTMLElement>('.ostrze-card'),
             overlay
@@ -223,6 +225,25 @@ export class OstrzeModalUi {
           if (btn) {
             e.preventDefault();
             btn.click();
+            return;
+          }
+        }
+
+        if (!isTyping && this.activeDialogue && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+          const enabledBtns = Array.from(
+            this.root.querySelectorAll<HTMLButtonElement>('.ostrze-dialogue-opt:not(:disabled)')
+          );
+          if (enabledBtns.length > 0) {
+            e.preventDefault();
+            const currentIdx = enabledBtns.indexOf(document.activeElement as HTMLButtonElement);
+            const delta = e.key === 'ArrowDown' ? 1 : -1;
+            const nextIdx =
+              currentIdx < 0
+                ? delta > 0
+                  ? 0
+                  : enabledBtns.length - 1
+                : (currentIdx + delta + enabledBtns.length) % enabledBtns.length;
+            enabledBtns[nextIdx]?.focus();
             return;
           }
         }

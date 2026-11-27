@@ -16,12 +16,23 @@ import type { SeededRng } from './dice';
 import { getStats } from './stats';
 import { advanceMinutes } from './time';
 
+export interface DialogueTranscriptEntry {
+  speaker: string;
+  text: string;
+  playerChoiceText: string;
+  checkFeedback?: string;
+  checkOutcome?: 'success' | 'failure';
+}
+
 export interface ActiveOstrzeDialogue {
   dialogueId: string;
   nodeId: string;
   lastCheckFeedback?: string;
   lastCheckOutcome?: 'success' | 'failure';
+  lastCheckSkillLabel?: string;
   pendingShopId?: string;
+  history?: DialogueTranscriptEntry[];
+  visitedOptionKeys?: string[];
 }
 
 export interface VisibleDialogueOption {
@@ -30,6 +41,8 @@ export interface VisibleDialogueOption {
   checkLabel?: string;
   checkChance?: number;
   alreadyFailed: boolean;
+  alreadyVisited: boolean;
+  isFarewell: boolean;
 }
 
 export interface DialogueView {
@@ -41,6 +54,9 @@ export interface DialogueView {
   options: VisibleDialogueOption[];
   lastCheckFeedback?: string;
   lastCheckOutcome?: 'success' | 'failure';
+  lastCheckSkillLabel?: string;
+  history: DialogueTranscriptEntry[];
+  turnNumber: number;
 }
 
 function getDialogueDef(dialogueId: string, data: OriginGameData): DialogueFileDef {
@@ -196,11 +212,25 @@ export function startOstrzeDialogue(
   return {
     dialogueId,
     nodeId: def.start,
-    pendingShopId
+    pendingShopId,
+    history: [],
+    visitedOptionKeys: []
   };
 }
 
 const UNIMPLEMENTED_DEMO_QUESTS = new Set<string>();
+const MAX_TRANSCRIPT_ENTRIES = 12;
+
+function isFarewellOption(opt: DialogueOptionDef): boolean {
+  if (opt.check) return false;
+  const target = opt.goto ?? 'end';
+  if (target !== 'end') return false;
+  const actions = opt.actions ?? [];
+  const hasSignificantAction = actions.some((a) =>
+    Boolean(a.openShop || a.startQuest || a.completeQuest || a.giveItem || a.takeMoney)
+  );
+  return !hasSignificantAction;
+}
 
 export function getOstrzeDialogueView(
   session: ActiveOstrzeDialogue,
@@ -213,6 +243,7 @@ export function getOstrzeDialogueView(
     throw new Error(`Brak węzła "${session.nodeId}" w dialogu "${session.dialogueId}"`);
   }
 
+  const visitedSet = new Set(session.visitedOptionKeys ?? []);
   const options: VisibleDialogueOption[] = [];
   const rawOptions = node.options ?? [];
 
@@ -243,14 +274,20 @@ export function getOstrzeDialogueView(
       alreadyFailed = !canRetry && state.world.failedChecks.includes(checkKey);
     }
 
+    const visitKey = `${session.nodeId}:${opt.id ?? index}`;
+
     options.push({
       index,
       option: opt,
       checkLabel,
       checkChance,
-      alreadyFailed
+      alreadyFailed,
+      alreadyVisited: visitedSet.has(visitKey),
+      isFarewell: isFarewellOption(opt)
     });
   });
+
+  const history = session.history ?? [];
 
   return {
     dialogueId: session.dialogueId,
@@ -260,7 +297,10 @@ export function getOstrzeDialogueView(
     text: node.text,
     options,
     lastCheckFeedback: session.lastCheckFeedback,
-    lastCheckOutcome: session.lastCheckOutcome
+    lastCheckOutcome: session.lastCheckOutcome,
+    lastCheckSkillLabel: session.lastCheckSkillLabel,
+    history,
+    turnNumber: history.length + 1
   };
 }
 
@@ -279,9 +319,15 @@ export function chooseOstrzeDialogueOption(
   let nextNodeId = opt.goto ?? 'end';
   let feedback: string | undefined;
   let outcome: 'success' | 'failure' | undefined;
+  let checkSkillLabel: string | undefined;
 
   if (opt.check) {
     const checkId = opt.check.skill ?? opt.check.attribute ?? '';
+    const skillDef = data.skills.find((s) => s.id === checkId);
+    const attrDef = data.attributes.find((a) => a.id === checkId);
+    const checkName = skillDef?.name ?? attrDef?.name ?? checkId;
+    checkSkillLabel = `${checkName} ${opt.check.difficulty}`;
+
     const checkKey = `${session.dialogueId}:${session.nodeId}:${opt.id ?? optionIndex}`;
     const canRetry = Boolean((opt as { retry?: boolean }).retry ?? opt.check.retry);
     const res = rollDialogueCheck(
@@ -322,11 +368,31 @@ export function chooseOstrzeDialogueOption(
 
   const nodeResult = executeDialogueActions(targetNode.actions, state, data);
 
+  const nextHistory: DialogueTranscriptEntry[] = [
+    ...(session.history ?? []),
+    {
+      speaker: node.speaker ?? 'Rozmówca',
+      text: node.text,
+      playerChoiceText: opt.text,
+      checkFeedback: feedback,
+      checkOutcome: outcome
+    }
+  ].slice(-MAX_TRANSCRIPT_ENTRIES);
+
+  const visitKey = `${session.nodeId}:${opt.id ?? optionIndex}`;
+  const prevVisited = session.visitedOptionKeys ?? [];
+  const nextVisited = prevVisited.includes(visitKey)
+    ? prevVisited
+    : [...prevVisited, visitKey];
+
   return {
     dialogueId: session.dialogueId,
     nodeId: nextNodeId,
     lastCheckFeedback: feedback,
     lastCheckOutcome: outcome,
-    pendingShopId: nodeResult.pendingShopId ?? optResult.pendingShopId
+    lastCheckSkillLabel: checkSkillLabel,
+    pendingShopId: nodeResult.pendingShopId ?? optResult.pendingShopId,
+    history: nextHistory,
+    visitedOptionKeys: nextVisited
   };
 }
