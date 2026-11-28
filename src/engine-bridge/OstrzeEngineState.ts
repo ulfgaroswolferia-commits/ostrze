@@ -485,11 +485,12 @@ export class OstrzeEngineState extends CrpgGameState {
     if (enemy.combat.hp <= 0) {
       enemy.combat.isAlive = false;
       this.enemyBurnTurns.delete(enemy.id);
+      this.enemyBleedTurns.delete(enemy.id);
+      this.checkAndRecordEnemyKill(enemy, originId);
       this.addCombatLog(`🔥 ${enemy.recipe.name} ginie w płomieniach!`);
       const remainingHostiles = this.npcs.filter((n) => n.combat?.isHostile && n.combat.isAlive);
       if (remainingHostiles.length === 0) {
-        this.combatState.active = false;
-        this.addLog(`Zwycięstwo w walce! Pokonano: ${enemy.recipe.name}.`, 'important');
+        this.completeCombatVictory(`Zwycięstwo w walce! Pokonano: ${enemy.recipe.name}.`);
       } else if (this.combatState.selectedTargetId === enemy.id) {
         this.combatState.selectedTargetId = remainingHostiles[0].id;
       }
@@ -528,10 +529,7 @@ export class OstrzeEngineState extends CrpgGameState {
       this.addCombatLog(`🩸 ${enemy.recipe.name} wykrwawia się na polu bitwy!`);
       const remainingHostiles = this.npcs.filter((n) => n.combat?.isHostile && n.combat.isAlive);
       if (remainingHostiles.length === 0) {
-        this.combatState.active = false;
-        this.resetCombatTacticalSessions();
-        this.addLog(`Zwycięstwo w walce! Pokonano: ${enemy.recipe.name}.`, 'important');
-        this.onCombatEnded?.('victory');
+        this.completeCombatVictory(`Zwycięstwo w walce! Pokonano: ${enemy.recipe.name}.`);
       } else if (this.combatState.selectedTargetId === enemy.id) {
         this.combatState.selectedTargetId = remainingHostiles[0].id;
       }
@@ -619,10 +617,7 @@ export class OstrzeEngineState extends CrpgGameState {
       this.grantKillRushOnEnemyDefeat(attacker);
       const remainingHostiles = this.npcs.filter((n) => n.combat?.isHostile && n.combat.isAlive);
       if (remainingHostiles.length === 0) {
-        this.combatState.active = false;
-        this.resetCombatTacticalSessions();
-        this.addLog(`Zwycięstwo w walce! Riposta powaliła: ${attacker.recipe.name}.`, 'important');
-        this.onCombatEnded?.('victory');
+        this.completeCombatVictory(`Zwycięstwo w walce! Riposta powaliła: ${attacker.recipe.name}.`);
       } else if (this.combatState.selectedTargetId === attacker.id) {
         this.combatState.selectedTargetId = remainingHostiles[0].id;
       }
@@ -894,7 +889,10 @@ export class OstrzeEngineState extends CrpgGameState {
     this.persistentMarkers.clear();
     this.wasCombatActive = false;
     this.activeCustomSceneId = sceneId;
-    this.map = scene.map;
+    this.map = {
+      ...scene.map,
+      props: scene.map.props.map((p) => ({ ...p }))
+    };
     this.fov = new FovGridState(this.map.width, this.map.height);
     this.rebuildPropGrid();
     this.bumpMapRevision();
@@ -1437,19 +1435,15 @@ export class OstrzeEngineState extends CrpgGameState {
       this.activeOstrzeState?.character?.perks.includes('finta') &&
         this.feintUsedRound !== this.combatState.round
     );
+    const wasTargetDefending = Boolean(enemy?.combat?.defending);
+    const prevFeintUsedRound = this.feintUsedRound;
     const guardBreak = evaluateGuardBreak({
-      targetDefending: Boolean(enemy?.combat?.defending),
+      targetDefending: wasTargetDefending,
       attackMode: mode,
       isFeint: hasFeint
     });
     if (hasFeint && enemy?.combat) {
-      this.feintUsedRound = this.combatState.round;
       this.pendingPlayerFeintActive = true;
-      this.addCombatLog(
-        guardBreak.triggered
-          ? `⚔️ Mistrz finty! Zmyłka przełamuje gardę ${enemy.recipe.name} (+15% trafienia).`
-          : `⚔️ Mistrz finty! Pierwszy cios w rundzie (+15% trafienia).`
-      );
     }
     if (guardBreak.triggered && enemy?.combat) {
       enemy.combat.defending = false;
@@ -1475,18 +1469,6 @@ export class OstrzeEngineState extends CrpgGameState {
         };
 
     const isSurprise = this.pendingSurpriseAttack;
-    if (isSurprise && enemy) {
-      this.addCombatLog(
-        `⚡ ATAK Z ZASKOCZENIA na ${enemy.recipe.name}! (+20% obrażeń, +15% szansy na kryta)`
-      );
-      this.pushFloatingCombatText(
-        enemy.x,
-        enemy.y,
-        enemy.z + 2.35,
-        '⚡ Z ZASKOCZENIA!',
-        0xffd54f
-      );
-    }
 
     const momentumBonus = evaluateMomentumBonus(this.combatMomentum);
     const executionBonus = enemy?.combat
@@ -1519,8 +1501,39 @@ export class OstrzeEngineState extends CrpgGameState {
       this.pendingPlayerHitBonusPct = 0;
       this.pendingPlayerCritBonusPct = 0;
       this.pendingPlayerFeintActive = false;
-      this.pendingSurpriseAttack = false;
       this.pendingTimedStrikeGrade = 'none';
+    }
+
+    if (!outcome) {
+      // Attack was rejected (out of range / insufficient AP / not player turn):
+      // restore pre-attack enemy guard, feint availability, and surprise flag.
+      if (guardBreak.triggered && enemy?.combat) {
+        enemy.combat.defending = wasTargetDefending;
+      }
+      this.feintUsedRound = prevFeintUsedRound;
+      return null;
+    }
+
+    this.pendingSurpriseAttack = false;
+    if (hasFeint && enemy?.combat) {
+      this.feintUsedRound = this.combatState.round;
+      this.addCombatLog(
+        guardBreak.triggered
+          ? `⚔️ Mistrz finty! Zmyłka przełamuje gardę ${enemy.recipe.name} (+15% trafienia).`
+          : `⚔️ Mistrz finty! Pierwszy cios w rundzie (+15% trafienia).`
+      );
+    }
+    if (isSurprise && enemy) {
+      this.addCombatLog(
+        `⚡ ATAK Z ZASKOCZENIA na ${enemy.recipe.name}! (+20% obrażeń, +15% szansy na kryta)`
+      );
+      this.pushFloatingCombatText(
+        enemy.x,
+        enemy.y,
+        enemy.z + 2.35,
+        '⚡ Z ZASKOCZENIA!',
+        0xffd54f
+      );
     }
 
     if (outcome?.hit && enemy?.combat) {
@@ -1638,9 +1651,7 @@ export class OstrzeEngineState extends CrpgGameState {
         this.grantKillRushOnEnemyDefeat(enemy);
         const remainingHostiles = this.npcs.filter((n) => n.combat?.isHostile && n.combat.isAlive);
         if (remainingHostiles.length === 0 && this.combatState.active) {
-          this.combatState.active = false;
-          this.resetCombatTacticalSessions();
-          this.onCombatEnded?.('victory');
+          this.completeCombatVictory();
         }
       } else {
         this.checkAndRecordEnemyKill(enemy, originId);
@@ -1702,6 +1713,13 @@ export class OstrzeEngineState extends CrpgGameState {
     const pCombat = this.player.combat;
     if (!this.combatState.active || !pCombat || !pCombat.isAlive) {
       return { maneuver, cooldownLeft, canUse: false, reason: 'Tylko w walce' };
+    }
+    if (
+      (this.combatState.activeTurnActorId !== null &&
+        this.combatState.activeTurnActorId !== this.player.id) ||
+      this.isSequentialEnemyTurnActive
+    ) {
+      return { maneuver, cooldownLeft, canUse: false, reason: 'Tura wroga' };
     }
     if (cooldownLeft > 0) {
       return { maneuver, cooldownLeft, canUse: false, reason: `Odnowienie: ${cooldownLeft} t.` };
@@ -1915,6 +1933,8 @@ export class OstrzeEngineState extends CrpgGameState {
           target.tileY = kb.y;
           target.x = kb.x + 0.5;
           target.y = kb.y + 0.5;
+          target.z = this.map.tiles[kb.y]?.[kb.x]?.z ?? target.z;
+          target.path = [];
           extraNote = ' (odepchnięty, -1 AP)';
         } else {
           extraNote = ' (-1 AP)';
@@ -2008,9 +2028,7 @@ export class OstrzeEngineState extends CrpgGameState {
     // Check if all enemies died
     const anyAlive = this.npcs.some((n) => n.combat?.isHostile && n.combat.isAlive);
     if (!anyAlive) {
-      this.combatState.active = false;
-      this.resetCombatTacticalSessions();
-      this.onCombatEnded?.('victory');
+      this.completeCombatVictory();
     }
 
     return { ok: true, damage: finalDmg, secondaryDamage, message: msg };
@@ -2038,6 +2056,13 @@ export class OstrzeEngineState extends CrpgGameState {
     if (!this.combatState.active || !this.player.combat || !this.player.combat.isAlive) {
       return { ok: false, hitCount: 0, totalDamage: 0, message: 'Tylko podczas walki.' };
     }
+    if (
+      (this.combatState.activeTurnActorId !== null &&
+        this.combatState.activeTurnActorId !== this.player.id) ||
+      this.isSequentialEnemyTurnActive
+    ) {
+      return { ok: false, hitCount: 0, totalDamage: 0, message: 'Poczekaj na swoją turę.' };
+    }
     if (this.player.combat.ap < OIL_BARREL_AP_COST) {
       return { ok: false, hitCount: 0, totalDamage: 0, message: `Wymaga ${OIL_BARREL_AP_COST} AP.` };
     }
@@ -2053,6 +2078,8 @@ export class OstrzeEngineState extends CrpgGameState {
     const idx = this.map.props.findIndex((p) => p.id === barrel.id);
     if (idx >= 0) {
       this.map.props.splice(idx, 1);
+      this.rebuildPropGrid();
+      this.bumpMapRevision();
     }
 
     let hitCount = 0;
@@ -2116,12 +2143,20 @@ export class OstrzeEngineState extends CrpgGameState {
 
     const anyAlive = this.npcs.some((n) => n.combat?.isHostile && n.combat.isAlive);
     if (!anyAlive) {
-      this.combatState.active = false;
-      this.resetCombatTacticalSessions();
-      this.onCombatEnded?.('victory');
+      this.completeCombatVictory();
     }
 
     return { ok: true, hitCount, totalDamage, message: msg };
+  }
+
+  private completeCombatVictory(victoryLog?: string): void {
+    this.combatState.active = false;
+    this.wasCombatActive = false;
+    this.resetCombatTacticalSessions();
+    if (victoryLog) {
+      this.addLog(victoryLog, 'important');
+    }
+    this.onCombatEnded?.('victory');
   }
 
   private checkAndRecordEnemyKill(enemy: ActorEntity, originId: string | null): void {

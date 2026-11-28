@@ -126,10 +126,26 @@ export class ChronicleUxController {
   private hubResizeObserver: ResizeObserver | null = null;
   private hudMutationObserver: MutationObserver | null = null;
   private observedHubEl: Element | null = null;
+  private mouseMoveRafId: number | null = null;
+  private pendingMouseX = 0;
+  private pendingMouseY = 0;
+  private cachedChronicleEl: HTMLElement | null = null;
   private disposed = false;
 
   private readonly handleMouseMove = (e: MouseEvent): void => {
-    this.updatePointerProximity(e.clientX, e.clientY);
+    this.pendingMouseX = e.clientX;
+    this.pendingMouseY = e.clientY;
+    if (this.mouseMoveRafId !== null) return;
+    if (typeof requestAnimationFrame === 'function') {
+      this.mouseMoveRafId = requestAnimationFrame(() => {
+        this.mouseMoveRafId = null;
+        if (!this.disposed) {
+          this.updatePointerProximity(this.pendingMouseX, this.pendingMouseY);
+        }
+      });
+    } else {
+      this.updatePointerProximity(this.pendingMouseX, this.pendingMouseY);
+    }
   };
 
   private readonly handleMouseLeave = (): void => {
@@ -182,6 +198,7 @@ export class ChronicleUxController {
     if (this.disposed) return;
 
     const chronicleEl = this.hudRoot.querySelector<HTMLElement>('.chronicle-log');
+    this.cachedChronicleEl = chronicleEl;
     const isExpanded = Boolean(chronicleEl?.classList.contains('expanded'));
 
     // Observe the top-right hub panel if it appeared or changed
@@ -233,6 +250,11 @@ export class ChronicleUxController {
   public dispose(): void {
     this.disposed = true;
     this.stopAnimationLoop();
+    if (this.mouseMoveRafId !== null && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(this.mouseMoveRafId);
+      this.mouseMoveRafId = null;
+    }
+    this.cachedChronicleEl = null;
     window.removeEventListener('mousemove', this.handleMouseMove);
     document.removeEventListener('mouseleave', this.handleMouseLeave);
     window.removeEventListener('resize', this.handleResize);
@@ -254,7 +276,10 @@ export class ChronicleUxController {
   }
 
   private updatePointerProximity(clientX: number, clientY: number): void {
-    const chronicleEl = this.hudRoot.querySelector<HTMLElement>('.chronicle-log');
+    const chronicleEl =
+      this.cachedChronicleEl && this.cachedChronicleEl.isConnected
+        ? this.cachedChronicleEl
+        : (this.cachedChronicleEl = this.hudRoot.querySelector<HTMLElement>('.chronicle-log'));
     if (!chronicleEl || chronicleEl.classList.contains('expanded')) {
       this.setPointerNear(false);
       return;

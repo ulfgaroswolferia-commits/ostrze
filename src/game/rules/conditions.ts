@@ -67,7 +67,8 @@ export function evaluateCondition(
         return state.world.knownPlaces.includes(value as string);
       case 'questStatus': {
         const spec = value as { id: string; is: string };
-        return (state.quests[spec.id] ?? 'none') === spec.is;
+        const expected = spec.is === 'done' ? 'completed' : spec.is;
+        return (state.quests[spec.id] ?? 'none') === expected;
       }
       case 'item': {
         if (!state.character) return false;

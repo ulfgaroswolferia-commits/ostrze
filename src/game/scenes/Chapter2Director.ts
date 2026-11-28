@@ -353,9 +353,14 @@ export class Chapter2Director {
     );
   }
 
+  public resetRuntimeState(): void {
+    this.activeCombatStage = 'none';
+    this.chapter2Completed = false;
+  }
+
   public enterGluszec(opts?: { skipIntro?: boolean }): void {
     this.bindHooks();
-    this.activeCombatStage = 'none';
+    this.resetRuntimeState();
     this.state.world.location = 'gluszec';
     markOstrzeLocationVisited(this.state, 'gluszec');
     this.engine.registerCustomScene(createGluszecScene());
@@ -1142,6 +1147,7 @@ export class Chapter2Director {
     if (outcome === 'victory' && this.state.character) {
       if (stage === 'bor_klusownikow_hunt') {
         this.state.flags.bor_maruderzy_pokonani = true;
+        this.state.flags.gajowy_zamkniete = true;
         this.state.quests.klusownik_i_gajowy = 'completed';
         this.state.character.money += 45;
         const xp = grantXp(this.state, 95, this.data);
@@ -1152,6 +1158,7 @@ export class Chapter2Director {
         this.ui?.showToast('Obóz maruderów oczyszczony (+45 gr, +95 XP)', 'success');
       } else if (stage === 'stary_trakt_hunt') {
         this.state.flags.stary_trakt_wilki_pokonane = true;
+        this.state.flags.furman_zamkniety = true;
         this.state.quests.zaginiona_karawana = 'completed';
         this.state.character.money += 35;
         const xp = grantXp(this.state, 75, this.data);
@@ -1162,6 +1169,7 @@ export class Chapter2Director {
         this.ui?.showToast('Wataha pokonana (+35 gr, +75 XP)', 'success');
       } else if (stage === 'kamieniolom_hunt') {
         this.state.flags.kamieniolom_oczyszczony = true;
+        this.state.flags.dozorca_zamkniete = true;
         this.state.quests.rannego_nie_zostawia_sie = 'completed';
         this.state.character.money += 40;
         const xp = grantXp(this.state, 80, this.data);
@@ -1347,7 +1355,7 @@ export class Chapter2Director {
 
   public restoreFromSave(sceneId: string): void {
     this.bindHooks();
-    this.activeCombatStage = 'none';
+    this.resetRuntimeState();
     const targetScene = CHAPTER2_SCENES.has(sceneId) ? sceneId : 'gluszec';
     this.state.world.location = targetScene;
     if (targetScene === 'gluszec') {

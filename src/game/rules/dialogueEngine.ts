@@ -1,3 +1,4 @@
+import lootTablesJson from '../../../origin/data/loot.json';
 import type {
   DialogueActionSpec,
   DialogueFileDef,
@@ -147,8 +148,37 @@ export function executeDialogueActions(
     if (act.giveMoney && state.character) {
       state.character.money += act.giveMoney;
     }
-    if (act.giveXp && state.character) {
-      grantXp(state, act.giveXp, data);
+    const xpReward = act.giveXp ?? (act as { xp?: number }).xp;
+    if (typeof xpReward === 'number' && xpReward > 0 && state.character) {
+      grantXp(state, xpReward, data);
+    }
+    const randomLootId = (act as { giveRandom?: string }).giveRandom;
+    if (typeof randomLootId === 'string' && randomLootId.length > 0) {
+      const tables = (
+        lootTablesJson as {
+          tables?: Array<{
+            id: string;
+            entries: Array<{ item: string; qty: number | number[]; weight?: number }>;
+          }>;
+        }
+      ).tables ?? [];
+      const table = tables.find((t) => t.id === randomLootId);
+      if (table && table.entries.length > 0) {
+        const totalWeight = table.entries.reduce((sum, e) => sum + Math.max(1, e.weight ?? 1), 0);
+        let roll = Math.random() * totalWeight;
+        let picked = table.entries[0];
+        for (const entry of table.entries) {
+          roll -= Math.max(1, entry.weight ?? 1);
+          if (roll <= 0) {
+            picked = entry;
+            break;
+          }
+        }
+        const qty = Array.isArray(picked.qty)
+          ? picked.qty[0] + Math.floor(Math.random() * ((picked.qty[1] ?? picked.qty[0]) - picked.qty[0] + 1))
+          : picked.qty;
+        addInventoryItem(state, picked.item, Math.max(1, qty));
+      }
     }
     if (act.applyEffect) {
       applyEffectToState(state, act.applyEffect, data);

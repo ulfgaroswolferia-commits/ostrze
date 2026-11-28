@@ -1,12 +1,7 @@
 import type { WorldPropEntity } from '@ulf/core/worldMap';
+import type { PropVisualTransform } from '@ulf/renderer/isoSceneView';
 
-export interface PropVisualTransform {
-  scaleX: number;
-  scaleY: number;
-  centerOnFootprint: boolean;
-  offsetY: number;
-  aoScale: number;
-}
+export type { PropVisualTransform };
 
 const IDENTITY_TRANSFORM: PropVisualTransform = {
   scaleX: 1,

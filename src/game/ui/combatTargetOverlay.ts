@@ -44,6 +44,7 @@ export class CombatTargetOverlay {
   private critFlashUntil = 0;
   private lastRenderedKey: string | null = null;
   public onRequestManeuver?: (targetId: string) => void;
+  public onUiMutated?: () => void;
 
   constructor(engine: OstrzeEngineState, data: OriginGameData) {
     this.engine = engine;
@@ -53,6 +54,56 @@ export class CombatTargetOverlay {
     this.root = document.createElement('div');
     this.root.id = 'ostrze-combat-target-root';
     document.body.appendChild(this.root);
+
+    // Single delegated click listener prevents leaking per-render AbortSignal listeners.
+    this.root.addEventListener?.(
+      'click',
+      (e) => {
+        const el = e.target as HTMLElement | null;
+        if (!el) return;
+
+        const maneuverBtn = el.closest<HTMLElement>('[data-combat-maneuver]');
+        if (maneuverBtn) {
+          const targetId = this.selectedEnemyId ?? this.engine.combatState.selectedTargetId;
+          if (!targetId) return;
+          if (this.onRequestManeuver) {
+            this.onRequestManeuver(targetId);
+            return;
+          }
+          const res = this.engine.performPlayerWeaponManeuver(targetId);
+          if (res.ok) {
+            ostrzeAudio.playManeuverSfx();
+            this.sync();
+            this.onUiMutated?.();
+          }
+          return;
+        }
+
+        const barrelBtn = el.closest<HTMLElement>('[data-combat-barrel]');
+        if (barrelBtn) {
+          const bId = barrelBtn.dataset.combatBarrel;
+          const res = this.engine.detonateOilBarrel(bId);
+          if (res.ok) {
+            ostrzeAudio.playExplosionSfx();
+            this.sync();
+            this.onUiMutated?.();
+          }
+          return;
+        }
+
+        const targetBtn = el.closest<HTMLElement>('[data-combat-target]');
+        if (targetBtn) {
+          const id = targetBtn.dataset.combatTarget ?? null;
+          if (id && id !== this.selectedEnemyId) {
+            this.selectedEnemyId = id;
+            this.engine.combatState.selectedTargetId = id;
+            ostrzeAudio.playUiClick();
+            this.sync();
+          }
+        }
+      },
+      { signal: this.abortController.signal }
+    );
   }
 
   public destroy(): void {
@@ -530,54 +581,5 @@ export class CombatTargetOverlay {
         ${tacticalActionsHtml}
       </aside>
     `;
-
-    this.root.querySelectorAll<HTMLElement>('[data-combat-maneuver]').forEach((btn) => {
-      btn.addEventListener(
-        'click',
-        () => {
-          if (this.onRequestManeuver) {
-            this.onRequestManeuver(target.id);
-            return;
-          }
-          const res = this.engine.performPlayerWeaponManeuver(target.id);
-          if (res.ok) {
-            ostrzeAudio.playManeuverSfx();
-            this.sync();
-          }
-        },
-        { signal: this.abortController.signal }
-      );
-    });
-
-    this.root.querySelectorAll<HTMLElement>('[data-combat-barrel]').forEach((btn) => {
-      btn.addEventListener(
-        'click',
-        () => {
-          const bId = btn.dataset.combatBarrel;
-          const res = this.engine.detonateOilBarrel(bId);
-          if (res.ok) {
-            ostrzeAudio.playExplosionSfx();
-            this.sync();
-          }
-        },
-        { signal: this.abortController.signal }
-      );
-    });
-
-    this.root.querySelectorAll<HTMLElement>('[data-combat-target]').forEach((btn) => {
-      btn.addEventListener(
-        'click',
-        () => {
-          const id = btn.dataset.combatTarget ?? null;
-          if (id && id !== this.selectedEnemyId) {
-            this.selectedEnemyId = id;
-            this.engine.combatState.selectedTargetId = id;
-            ostrzeAudio.playUiClick();
-            this.sync();
-          }
-        },
-        { signal: this.abortController.signal }
-      );
-    });
   }
 }

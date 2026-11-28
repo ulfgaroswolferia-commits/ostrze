@@ -94,6 +94,8 @@ export class CombatFeelOverlay {
       { capture: true, signal: this.abortController.signal }
     );
 
+    let suppressClicksUntilMs = 0;
+
     window.addEventListener(
       'pointerdown',
       (e) => {
@@ -101,9 +103,25 @@ export class CombatFeelOverlay {
         // Ignore the synthetic/original click frame that launched the bar (< 60ms)
         const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
         if (nowMs - this.activeStrike.startTimeMs < 60) return;
+        suppressClicksUntilMs = nowMs + 280;
         e.preventDefault();
         e.stopImmediatePropagation();
         this.lockInCurrentStrike();
+      },
+      { capture: true, signal: this.abortController.signal }
+    );
+
+    // Suppress the trailing click event after locking in a Timed Strike via pointerdown
+    // so it does not bleed through to HUD buttons underneath the cursor.
+    window.addEventListener(
+      'click',
+      (e) => {
+        const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        if (nowMs < suppressClicksUntilMs) {
+          suppressClicksUntilMs = 0;
+          e.preventDefault();
+          e.stopImmediatePropagation();
+        }
       },
       { capture: true, signal: this.abortController.signal }
     );

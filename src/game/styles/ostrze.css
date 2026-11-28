@@ -1533,8 +1533,10 @@ body:has(.combat-mode-active) .ostrze-toast-stack {
   position: fixed;
   top: 16px;
   right: 16px;
-  z-index: 950;
+  z-index: 965;
   width: min(332px, calc(100vw - 32px));
+  max-height: calc(100vh - 150px);
+  overflow-y: auto;
   padding: 12px 14px;
   border-radius: 6px;
   background: linear-gradient(180deg, rgba(22, 25, 33, 0.96) 0%, rgba(13, 15, 20, 0.96) 100%);
@@ -5493,6 +5495,8 @@ h3 .ostrze-kbd {
   line-height: 1.68;
   color: #ebe0cb;
   max-width: 68ch;
+  max-height: none;
+  overflow-y: visible;
   white-space: normal;
 }
 
@@ -6399,7 +6403,8 @@ h3 .ostrze-kbd {
 .ostrze-card.ostrze-welcome-card {
   width: min(560px, 100%);
   padding: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   text-align: center;
 }
 
@@ -6512,7 +6517,8 @@ h3 .ostrze-kbd {
 
 .ostrze-card.ostrze-narrative-card.has-vista {
   padding: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .ostrze-narrative-card.has-vista .ostrze-narrative-art-frame {

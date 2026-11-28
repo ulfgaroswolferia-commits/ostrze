@@ -83,7 +83,6 @@ async function bootstrapOstrze(): Promise<void> {
   const statusVignette = document.createElement('div');
   statusVignette.className = 'ostrze-status-vignette';
   statusVignette.setAttribute('aria-hidden', 'true');
-  viewportContainer.appendChild(statusVignette);
 
   const syncStatusVignette = (): void => {
     const hideForModal = modalUi.hasOpenModal();
@@ -168,6 +167,7 @@ async function bootstrapOstrze(): Promise<void> {
   }
 
   await sceneView.mount(viewportContainer);
+  viewportContainer.appendChild(statusVignette);
   engine.onSceneLoaded = () => {
     sceneView.centerCameraOnPlayer();
   };
@@ -397,7 +397,7 @@ async function bootstrapOstrze(): Promise<void> {
   const hasAvailableSave = (): boolean =>
     hasOstrzeSave() || (isDevMode && hasOstrzeSaveForKey(OSTRZE_DEV_SAVE_KEY));
 
-  const performSave = (silent = false): void => {
+  const buildCurrentSaveSnapshot = () => {
     prologue.state.rngState = prologue.rng.getState();
     const fallbackScene =
       activeChapter === 'chapter2'
@@ -405,12 +405,16 @@ async function bootstrapOstrze(): Promise<void> {
         : activeChapter === 'chapter1'
           ? 'wilczy_brod'
           : 'brzezina_dziedziniec';
-    const ok = saveOstrzeGame({
+    return {
       chapter: activeChapter,
       sceneId: engine.activeCustomSceneId ?? fallbackScene,
       prologueStep: activeChapter === 'prologue' ? prologue.phase : undefined,
       state: prologue.state
-    }, activeSaveKey);
+    };
+  };
+
+  const performSave = (silent = false): void => {
+    const ok = saveOstrzeGame(buildCurrentSaveSnapshot(), activeSaveKey);
     if (!silent) {
       modalUi.showToast(ok ? 'Gra zapisana.' : 'Nie udało się zapisać gry.', ok ? 'success' : 'info');
     }
@@ -423,40 +427,49 @@ async function bootstrapOstrze(): Promise<void> {
     }
   };
 
-  const applyLoadedPayload = (loaded: OstrzeSavePayload): void => {
-    const clonedState = JSON.parse(JSON.stringify(loaded.state)) as typeof prologue.state;
-    Object.assign(prologue.state, clonedState);
-    prologue.rng.setState(clonedState.rngState);
-    activeChapter = loaded.chapter;
-    if (loaded.chapter === 'chapter2') {
-      void ensureChapter2().then((ch2) => {
+  const applyLoadedPayload = async (loaded: OstrzeSavePayload): Promise<boolean> => {
+    try {
+      const clonedState = JSON.parse(JSON.stringify(loaded.state)) as typeof prologue.state;
+      Object.assign(prologue.state, clonedState);
+      prologue.rng.setState(clonedState.rngState);
+      modalUi.resetShopStock();
+      chapter1.resetRuntimeState();
+      chapter2?.resetRuntimeState();
+      activeChapter = loaded.chapter;
+      if (loaded.chapter === 'chapter2') {
+        const ch2 = await ensureChapter2();
         ch2.restoreFromSave(loaded.sceneId);
         refreshUi();
-      });
-    } else if (loaded.chapter === 'chapter1') {
-      chapter1.restoreFromSave(loaded.sceneId);
-    } else {
-      prologue.restoreFromSave((loaded.prologueStep as ProloguePhase) ?? 'brzezina_gnieworad', loaded.sceneId);
+      } else if (loaded.chapter === 'chapter1') {
+        chapter1.restoreFromSave(loaded.sceneId);
+      } else {
+        prologue.restoreFromSave((loaded.prologueStep as ProloguePhase) ?? 'brzezina_gnieworad', loaded.sceneId);
+      }
+      return true;
+    } catch (error) {
+      console.error('Failed to restore loaded save payload:', error);
+      modalUi.showToast('Nie udało się wczytać zapisu gry.', 'info');
+      return false;
     }
   };
 
   const performLoad = (): void => {
-    const loaded = loadOstrzeGame() ?? (isDevMode ? loadOstrzeGame(OSTRZE_DEV_SAVE_KEY) : null);
+    const loaded = isDevMode
+      ? loadOstrzeGame(OSTRZE_DEV_SAVE_KEY) ?? loadOstrzeGame()
+      : loadOstrzeGame();
     if (!loaded) {
       modalUi.showToast('Brak prawidłowego zapisu gry.', 'info');
       return;
     }
-    applyLoadedPayload(loaded);
-    modalUi.showToast('Wczytano zapis gry.', 'success');
+    void applyLoadedPayload(loaded).then((ok) => {
+      if (ok) {
+        modalUi.showToast('Wczytano zapis gry.', 'success');
+      }
+    });
   };
 
   const openSaveKeyModal = (onClosed?: () => void): void => {
-    const currentKey = exportSaveKey({
-      chapter: activeChapter,
-      sceneId: engine.activeCustomSceneId ?? (activeChapter === 'chapter1' ? 'wilczy_brod' : 'brzezina_dziedziniec'),
-      prologueStep: activeChapter === 'prologue' ? prologue.phase : undefined,
-      state: prologue.state
-    });
+    const currentKey = exportSaveKey(buildCurrentSaveSnapshot());
     modalUi.showSaveKeyModal(
       currentKey,
       (rawKey) => {
@@ -468,8 +481,11 @@ async function bootstrapOstrze(): Promise<void> {
           prologueStep: parsed.prologueStep,
           state: parsed.state
         }, activeSaveKey);
-        applyLoadedPayload(parsed);
-        modalUi.showToast('Wczytano grę z klucza rozgrywki.', 'success');
+        void applyLoadedPayload(parsed).then((ok) => {
+          if (ok) {
+            modalUi.showToast('Wczytano grę z klucza rozgrywki.', 'success');
+          }
+        });
         return true;
       },
       onClosed
@@ -482,13 +498,17 @@ async function bootstrapOstrze(): Promise<void> {
     Object.assign(prologue.state, fresh);
     prologue.rng.setState(fresh.rngState);
     modalUi.resetShopStock();
+    chapter1.resetRuntimeState();
+    chapter2?.resetRuntimeState();
     activeChapter = 'prologue';
     modalUi.setDraftName(prevName);
     prologue.startPrologue();
   };
 
   const startNewGame = (): void => {
-    clearOstrzeSave(isDevMode ? OSTRZE_DEV_SAVE_KEY : undefined);
+    if (!isDevMode) {
+      clearOstrzeSave();
+    }
     returnToPrologueStart();
   };
 
@@ -560,7 +580,12 @@ async function bootstrapOstrze(): Promise<void> {
     };
 
     if (location.chapter === 'chapter2') {
-      void ensureChapter2().then((ch2) => finishTeleport(ch2));
+      void ensureChapter2()
+        .then((ch2) => finishTeleport(ch2))
+        .catch((error) => {
+          console.error('Failed to load Chapter 2 for DEV teleport:', error);
+          modalUi.showToast('Nie udało się załadować Aktu II.', 'info');
+        });
     } else {
       finishTeleport();
     }
@@ -660,7 +685,10 @@ async function bootstrapOstrze(): Promise<void> {
     onToggleAudio: (muted) => {
       ostrzeAudio.setMuted(muted);
     },
-    onEscapeNoModal: openPauseMenu
+    onEscapeNoModal: openPauseMenu,
+    isExternalModalOpen: () => modalUi.hasOpenModal(),
+    disableMuteHotkey: true,
+    disableCharacterSheetHotkeys: true
   });
 
   prologue.onPrologueCompleted = () => {
@@ -831,6 +859,9 @@ async function bootstrapOstrze(): Promise<void> {
   combatTargetOverlay.onRequestManeuver = (targetId) => {
     launchTimedManeuver(targetId);
   };
+  combatTargetOverlay.onUiMutated = () => {
+    refreshUi();
+  };
 
   // Capture-phase hook for [2] Silny Cios & HUD power-strike button -> Timed Strike bar
   window.addEventListener(
@@ -903,7 +934,7 @@ async function bootstrapOstrze(): Promise<void> {
     }
 
     if (key === 'k') {
-      if (!prologue.state.character || modalUi.hasOpenModal()) return;
+      if (!prologue.state.character || (modalUi.hasOpenModal() && !modalUi.isCharacterSheetOpen())) return;
       e.preventDefault();
       modalUi.showCharacterSheet(() => {
         engine.syncFromOstrzeState(prologue.state, prologue.data);
@@ -917,7 +948,7 @@ async function bootstrapOstrze(): Promise<void> {
     }
 
     if (key === 'i') {
-      if (!prologue.state.character || modalUi.hasOpenModal()) return;
+      if (!prologue.state.character || (modalUi.hasOpenModal() && !modalUi.isCharacterSheetOpen())) return;
       e.preventDefault();
       modalUi.showCharacterSheet(() => {
         engine.syncFromOstrzeState(prologue.state, prologue.data);
@@ -931,7 +962,7 @@ async function bootstrapOstrze(): Promise<void> {
     }
 
     if (key === 'b') {
-      if (!prologue.state.character || modalUi.hasOpenModal()) return;
+      if (!prologue.state.character || (modalUi.hasOpenModal() && !modalUi.isCharacterSheetOpen())) return;
       e.preventDefault();
       modalUi.showCharacterSheet(() => {
         engine.syncFromOstrzeState(prologue.state, prologue.data);
@@ -945,7 +976,7 @@ async function bootstrapOstrze(): Promise<void> {
     }
 
     if (key === 'j') {
-      if (!prologue.state.character || modalUi.hasOpenModal()) return;
+      if (!prologue.state.character || (modalUi.hasOpenModal() && !modalUi.isCharacterSheetOpen())) return;
       e.preventDefault();
       modalUi.showCharacterSheet(() => {
         engine.syncFromOstrzeState(prologue.state, prologue.data);

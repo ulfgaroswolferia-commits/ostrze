@@ -282,6 +282,7 @@ export class OstrzeModalUi {
 
         if (e.key !== 'Escape') return;
         if (this.activeHelp) {
+          e.stopImmediatePropagation();
           const cb = this.activeHelp.onClosed;
           this.activeHelp = null;
           this.lastEscapeClosedAt = performance.now();
@@ -290,6 +291,7 @@ export class OstrzeModalUi {
           return;
         }
         if (this.activePauseMenu) {
+          e.stopImmediatePropagation();
           const cb = this.activePauseMenu.onClosed;
           this.activePauseMenu = null;
           this.lastEscapeClosedAt = performance.now();
@@ -298,6 +300,7 @@ export class OstrzeModalUi {
           return;
         }
         if (this.activeCampfire) {
+          e.stopImmediatePropagation();
           const cb = this.activeCampfire.onClosed;
           this.activeCampfire = null;
           this.lastEscapeClosedAt = performance.now();
@@ -306,28 +309,32 @@ export class OstrzeModalUi {
           return;
         }
         if (this.activeSaveKey) {
+          e.stopImmediatePropagation();
           const cb = this.activeSaveKey.onClosed;
           this.activeSaveKey = null;
           this.lastEscapeClosedAt = performance.now();
           this.render();
           cb?.();
         } else if (this.activeCharacterSheet) {
+          e.stopImmediatePropagation();
           this.lastEscapeClosedAt = performance.now();
           this.attemptCloseCharacterSheet();
         } else if (this.activeNoticeBoard) {
+          e.stopImmediatePropagation();
           const cb = this.activeNoticeBoard.onClosed;
           this.activeNoticeBoard = null;
-          this.activeTravel = null;
           this.lastEscapeClosedAt = performance.now();
           this.render();
           cb?.();
         } else if (this.activeTravel) {
+          e.stopImmediatePropagation();
           const cb = this.activeTravel.onClosed;
           this.activeTravel = null;
           this.lastEscapeClosedAt = performance.now();
           this.render();
           cb?.();
         } else if (this.activeShop) {
+          e.stopImmediatePropagation();
           const cb = this.activeShop.onClosed;
           this.activeShop = null;
           this.lastEscapeClosedAt = performance.now();
@@ -461,6 +468,10 @@ export class OstrzeModalUi {
     this.activeCharacterSheet = null;
     this.render();
     cb?.();
+  }
+
+  public isCharacterSheetOpen(): boolean {
+    return Boolean(this.activeCharacterSheet);
   }
 
   public hasOpenModal(): boolean {
@@ -663,6 +674,9 @@ export class OstrzeModalUi {
     if (
       !this.hubPanel ||
       this.isCombatActiveFn?.() ||
+      this.activeHelp ||
+      this.activePauseMenu ||
+      this.activeCampaignSummary ||
       this.activeWelcome ||
       this.activeSaveKey ||
       this.activeNarrative ||

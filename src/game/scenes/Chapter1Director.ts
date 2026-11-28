@@ -1497,10 +1497,15 @@ export class Chapter1Director {
     });
   }
 
+  public resetRuntimeState(): void {
+    this.activeCombatStage = 'none';
+    this.pendingTravel = null;
+    this.chapter1Completed = false;
+  }
+
   public restoreFromSave(sceneId: string): void {
     this.bindHubHooks();
-    this.activeCombatStage = 'none';
-    this.chapter1Completed = false;
+    this.resetRuntimeState();
     this.engine.clearAllNpcMarkers();
     const validScenes = new Set([
       'wilczy_brod',
@@ -1515,8 +1520,24 @@ export class Chapter1Director {
     const targetScene = validScenes.has(sceneId) ? sceneId : 'wilczy_brod';
     this.state.world.location = targetScene;
     const isNight = timeOfDay(this.state.time.minutes, this.data.rules) === 'noc';
-    if (targetScene === 'stary_mlyn') {
+    if (targetScene === 'wilczy_brod') {
+      this.engine.registerCustomScene(createWilczyBrodScene());
+    } else if (targetScene === 'wilcza_nora') {
+      this.engine.registerCustomScene(createWilczaNoraScene());
+      this.activeCombatStage = 'wilcza_nora';
+    } else if (targetScene === 'kamienna_przelecz') {
+      this.engine.registerCustomScene(createKamiennaPrzeleczScene());
+      this.activeCombatStage = 'eskorta_ostromira';
+    } else if (targetScene === 'wilczy_las') {
+      this.engine.registerCustomScene(createWilczyLasScene({ withHunt: false }));
+    } else if (targetScene === 'stary_mlyn') {
       this.engine.registerCustomScene(createStaryMlynScene({ isNight }));
+    } else if (targetScene === 'trakt_kupiecki') {
+      this.engine.registerCustomScene(createTraktKupieckiScene({ withHunt: false }));
+    } else if (targetScene === 'lesniczowka') {
+      this.engine.registerCustomScene(createLesniczowkaScene({ withHunt: false }));
+    } else if (targetScene === 'ruiny_straznicy') {
+      this.engine.registerCustomScene(createRuinyStraznicyScene({ withHunt: false }));
     }
     this.engine.loadCustomScene(targetScene);
     ostrzeAudio.setAmbience(

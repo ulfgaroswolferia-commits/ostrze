@@ -5,3 +5,5 @@ dist/
 .superpowers/
 __pycache__/
 *.local
+test-results/
+.playwright-results/

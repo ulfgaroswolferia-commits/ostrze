@@ -3,10 +3,7 @@ import { expect, test } from '@playwright/test';
 test('Live combat HUD redesign, Timed Strike [2]/[R], Space capture, Momentum & Execution audit', async ({
   page
 }, testInfo) => {
-  const shotPath = (name: string): string =>
-    process.env.OSTRZE_AUDIT_SHOT_DIR
-      ? `${process.env.OSTRZE_AUDIT_SHOT_DIR}/${name}`
-      : testInfo.outputPath(name);
+  const shotPath = (name: string): string => testInfo.outputPath(name);
   test.setTimeout(60_000);
   const pageErrors: string[] = [];
   const consoleErrors: string[] = [];
