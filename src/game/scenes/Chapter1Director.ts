@@ -1540,6 +1540,16 @@ export class Chapter1Director {
       this.engine.registerCustomScene(createRuinyStraznicyScene({ withHunt: false }));
     }
     this.engine.loadCustomScene(targetScene);
+    if (targetScene === 'wilcza_nora') {
+      this.engine.npcs.forEach((n) => {
+        if (n.id.startsWith('enemy_wilk_')) {
+          n.recipe.id = n.id;
+          n.recipe.equipment.head = null;
+          n.recipe.equipment.mainHand = null;
+          n.recipe.equipment.offHand = null;
+        }
+      });
+    }
     ostrzeAudio.setAmbience(
       targetScene === 'wilcza_nora' ||
         targetScene === 'ruiny_straznicy' ||

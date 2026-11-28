@@ -165,6 +165,8 @@ export interface DialogueActionSpec {
   takeMoney?: number;
   giveMoney?: number;
   giveXp?: number;
+  xp?: number;
+  giveRandom?: string;
   applyEffect?: string | { id: string; stacks?: number };
   addEffect?: string | { id: string; stacks?: number };
   healFull?: boolean;

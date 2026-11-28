@@ -28,7 +28,17 @@ test('Audit regressions: hotkeys [M]/[C] yield to modals, status vignette mounte
   });
   await expect(page.locator('.ostrze-welcome-card')).toHaveCount(0);
 
-  // 3. [M] must NOT mute global audio when opening World Map
+  // 3. [K] opens Character Sheet and toggles it closed (after perk-guard ack if level-up perk is pending)
+  await page.keyboard.press('k');
+  await expect(page.locator('.ostrze-cs-card')).toBeVisible();
+  await page.keyboard.press('k');
+  // If dev character has an unspent perk pick, 1st close triggers guard; 2nd closes cleanly
+  if (await page.locator('.ostrze-cs-card').isVisible()) {
+    await page.keyboard.press('k');
+  }
+  await expect(page.locator('.ostrze-cs-card')).toHaveCount(0);
+
+  // 4. [M] must NOT mute global audio when opening World Map
   const muteBtn = page.locator('.discrete-audio-btn').first();
   await expect(muteBtn).toBeVisible();
   const textBeforeM = (await muteBtn.textContent())?.trim();

@@ -891,7 +891,11 @@ export class OstrzeEngineState extends CrpgGameState {
     this.activeCustomSceneId = sceneId;
     this.map = {
       ...scene.map,
-      props: scene.map.props.map((p) => ({ ...p }))
+      props: scene.map.props.map((p) => ({
+        ...p,
+        lootItems: p.lootItems ? [...p.lootItems] : undefined
+      })),
+      lights: scene.map.lights.map((l) => ({ ...l }))
     };
     this.fov = new FovGridState(this.map.width, this.map.height);
     this.rebuildPropGrid();

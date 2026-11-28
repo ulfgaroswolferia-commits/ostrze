@@ -429,6 +429,8 @@ async function bootstrapOstrze(): Promise<void> {
 
   const applyLoadedPayload = async (loaded: OstrzeSavePayload): Promise<boolean> => {
     try {
+      // Load lazy Chapter 2 module BEFORE mutating live game state so failures stay atomic.
+      const ch2 = loaded.chapter === 'chapter2' ? await ensureChapter2() : null;
       const clonedState = JSON.parse(JSON.stringify(loaded.state)) as typeof prologue.state;
       Object.assign(prologue.state, clonedState);
       prologue.rng.setState(clonedState.rngState);
@@ -436,8 +438,7 @@ async function bootstrapOstrze(): Promise<void> {
       chapter1.resetRuntimeState();
       chapter2?.resetRuntimeState();
       activeChapter = loaded.chapter;
-      if (loaded.chapter === 'chapter2') {
-        const ch2 = await ensureChapter2();
+      if (loaded.chapter === 'chapter2' && ch2) {
         ch2.restoreFromSave(loaded.sceneId);
         refreshUi();
       } else if (loaded.chapter === 'chapter1') {

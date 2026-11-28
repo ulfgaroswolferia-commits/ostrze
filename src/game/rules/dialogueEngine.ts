@@ -148,11 +148,11 @@ export function executeDialogueActions(
     if (act.giveMoney && state.character) {
       state.character.money += act.giveMoney;
     }
-    const xpReward = act.giveXp ?? (act as { xp?: number }).xp;
+    const xpReward = act.giveXp ?? act.xp;
     if (typeof xpReward === 'number' && xpReward > 0 && state.character) {
       grantXp(state, xpReward, data);
     }
-    const randomLootId = (act as { giveRandom?: string }).giveRandom;
+    const randomLootId = act.giveRandom;
     if (typeof randomLootId === 'string' && randomLootId.length > 0) {
       const tables = (
         lootTablesJson as {

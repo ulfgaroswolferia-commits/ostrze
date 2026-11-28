@@ -103,7 +103,7 @@ export class CombatFeelOverlay {
         // Ignore the synthetic/original click frame that launched the bar (< 60ms)
         const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
         if (nowMs - this.activeStrike.startTimeMs < 60) return;
-        suppressClicksUntilMs = nowMs + 280;
+        suppressClicksUntilMs = nowMs + 500;
         e.preventDefault();
         e.stopImmediatePropagation();
         this.lockInCurrentStrike();
